@@ -1,0 +1,830 @@
+{
+  "api_version": "2.0.0",
+  "standard_item_schema": {
+    "type": "object",
+    "required": [
+      "id",
+      "nom",
+      "description",
+      "categorie",
+      "valeur",
+      "modifiable",
+      "exportable",
+      "importable",
+      "supprimable"
+    ],
+    "properties": {
+      "id": { "type": "string" },
+      "nom": { "type": "string" },
+      "description": { "type": "string" },
+      "categorie": { "type": "string" },
+      "valeur": { "type": "string" },
+      "modifiable": { "type": "boolean", "default": true },
+      "exportable": { "type": "boolean", "default": true },
+      "importable": { "type": "boolean", "default": true },
+      "supprimable": { "type": "boolean", "default": true }
+    }
+  },
+  "endpoints": {
+    "/api/admin/config": {
+      "GET": {
+        "route": "GET /api/admin/config",
+        "description": "Retourne la liste paginée et filtrable des éléments de configuration IA et règles métier",
+        "champs_obligatoires": ["success", "status", "data", "total", "page", "limit", "timestamp"],
+        "types_des_champs": {
+          "success": "boolean",
+          "status": "integer",
+          "data": "array<StandardItem>",
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "filtres_appliques": "object",
+          "timestamp": "string"
+        },
+        "valeurs_par_defaut": {
+          "success": true,
+          "status": 200,
+          "page": 1,
+          "limit": 50,
+          "filtres_appliques": { "categorie": "all" }
+        },
+        "format_succes_liste": {
+          "success": true,
+          "status": 200,
+          "total": 3,
+          "page": 1,
+          "limit": 50,
+          "filtres_appliques": {
+            "categorie": "all"
+          },
+          "data": [
+            {
+              "id": "cfg_ai_provider",
+              "nom": "aiProvider",
+              "description": "Moteur LLM principal pour la détection et l'analyse sémantique",
+              "categorie": "variables_ia",
+              "valeur": "groq",
+              "modifiable": true,
+              "exportable": true,
+              "importable": true,
+              "supprimable": false
+            },
+            {
+              "id": "cfg_prompt_audit_greenwashing",
+              "nom": "prompt_audit_anti_greenwashing",
+              "description": "Prompt système pour l'analyse des allégations environnementales",
+              "categorie": "prompts",
+              "valeur": "Agis en auditeur expert ESG et vérifie la conformité de chaque allégation selon la directive UE Green Claims.",
+              "modifiable": true,
+              "exportable": true,
+              "importable": true,
+              "supprimable": true
+            },
+            {
+              "id": "cfg_threshold_conformite",
+              "nom": "seuil_alerte_conformite",
+              "description": "Score seuil en dessous duquel une alerte légale de greenwashing est générée",
+              "categorie": "conformite",
+              "valeur": "65",
+              "modifiable": true,
+              "exportable": true,
+              "importable": true,
+              "supprimable": true
+            }
+          ],
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "format_echec": {
+          "success": false,
+          "status": 401,
+          "code": "AUTH_UNAUTHORIZED",
+          "message": "Authentification requise pour accéder aux configurations administratives.",
+          "details": null,
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "erreurs_possibles": [
+          {
+            "code": 400,
+            "status_text": "Bad Request",
+            "message": "Paramètres de requête ou filtres de catégorie invalides."
+          },
+          {
+            "code": 401,
+            "status_text": "Unauthorized",
+            "message": "Jeton d'authentification absent, révoqué ou expiré."
+          },
+          {
+            "code": 404,
+            "status_text": "Not Found",
+            "message": "Ressource de configuration introuvable pour les critères spécifiés."
+          },
+          {
+            "code": 500,
+            "status_text": "Internal Server Error",
+            "message": "Erreur interne lors de la lecture des tables de configuration."
+          }
+        ]
+      },
+      "POST": {
+        "route": "POST /api/admin/config",
+        "description": "Crée une nouvelle entrée de configuration IA dans le système",
+        "champs_obligatoires": ["success", "status", "message", "data", "timestamp"],
+        "types_des_champs": {
+          "success": "boolean",
+          "status": "integer",
+          "message": "string",
+          "data": "StandardItem",
+          "timestamp": "string"
+        },
+        "valeurs_par_defaut": {
+          "success": true,
+          "status": 201,
+          "data": {
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": true
+          }
+        },
+        "format_succes_unique": {
+          "success": true,
+          "status": 201,
+          "message": "Élément de configuration créé avec succès.",
+          "data": {
+            "id": "cfg_prompt_carbon_eval",
+            "nom": "prompt_calcul_empreinte",
+            "description": "Prompt dédié à l'évaluation des facteurs d'émissions Scope 1-2-3",
+            "categorie": "prompts",
+            "valeur": "Extrait les données chiffrées d'énergie et convertis en kgCO2e selon la base ADEME.",
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": true
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "format_echec": {
+          "success": false,
+          "status": 400,
+          "code": "VALIDATION_FAILED",
+          "message": "Les données de configuration fournies sont incomplètes ou invalides.",
+          "details": {
+            "nom": "Le champ nom est obligatoire et ne peut pas être vide.",
+            "categorie": "La catégorie doit faire partie des 8 catégories autorisées."
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "erreurs_possibles": [
+          {
+            "code": 400,
+            "status_text": "Bad Request",
+            "message": "Schéma JSON d'entrée invalide ou champ requis manquant."
+          },
+          {
+            "code": 401,
+            "status_text": "Unauthorized",
+            "message": "Session non authentifiée ou privilèges insuffisants pour créer une configuration."
+          },
+          {
+            "code": 404,
+            "status_text": "Not Found",
+            "message": "Endpoint ou route introuvable."
+          },
+          {
+            "code": 500,
+            "status_text": "Internal Server Error",
+            "message": "Erreur serveur lors de la persistance de l'élément de configuration."
+          }
+        ]
+      },
+      "PUT": {
+        "route": "PUT /api/admin/config/{id}",
+        "description": "Met à jour un élément de configuration existant par son identifiant unique",
+        "champs_obligatoires": ["success", "status", "message", "data", "timestamp"],
+        "types_des_champs": {
+          "success": "boolean",
+          "status": "integer",
+          "message": "string",
+          "data": "StandardItem",
+          "timestamp": "string"
+        },
+        "valeurs_par_defaut": {
+          "success": true,
+          "status": 200
+        },
+        "format_succes_unique": {
+          "success": true,
+          "status": 200,
+          "message": "Élément de configuration mis à jour avec succès.",
+          "data": {
+            "id": "cfg_ai_temperature",
+            "nom": "aiTemperature",
+            "description": "Degré de variabilité et créativité du modèle IA",
+            "categorie": "variables_ia",
+            "valeur": "0.35",
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": true
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "format_echec": {
+          "success": false,
+          "status": 404,
+          "code": "CONFIG_NOT_FOUND",
+          "message": "Élément de configuration introuvable pour l'identifiant spécifié.",
+          "details": {
+            "id": "cfg_ai_inexistant"
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "erreurs_possibles": [
+          {
+            "code": 400,
+            "status_text": "Bad Request",
+            "message": "Corps de la requête invalide ou tentative de modification d'un élément non modifiable."
+          },
+          {
+            "code": 401,
+            "status_text": "Unauthorized",
+            "message": "Droits d'administration insuffisants pour modifier cette configuration."
+          },
+          {
+            "code": 404,
+            "status_text": "Not Found",
+            "message": "L'identifiant de configuration spécifié dans l'URL n'existe pas."
+          },
+          {
+            "code": 500,
+            "status_text": "Internal Server Error",
+            "message": "Échec de mise à jour lors de l'exécution de la requête en base."
+          }
+        ]
+      },
+      "DELETE": {
+        "route": "DELETE /api/admin/config/{id}",
+        "description": "Supprime définitivement un élément de configuration personnalisable",
+        "champs_obligatoires": ["success", "status", "message", "data", "timestamp"],
+        "types_des_champs": {
+          "success": "boolean",
+          "status": "integer",
+          "message": "string",
+          "data": "StandardItem",
+          "timestamp": "string"
+        },
+        "valeurs_par_defaut": {
+          "success": true,
+          "status": 200
+        },
+        "format_succes_suppression": {
+          "success": true,
+          "status": 200,
+          "message": "Élément de configuration supprimé avec succès.",
+          "data": {
+            "id": "cfg_custom_rule_test",
+            "nom": "regle_prospect_obsolete",
+            "description": "Règle de filtrage prospect supprimée",
+            "categorie": "regles_metier",
+            "valeur": "{\"statut\": \"supprime\", \"actif\": false}",
+            "modifiable": false,
+            "exportable": false,
+            "importable": false,
+            "supprimable": true
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "format_echec": {
+          "success": false,
+          "status": 400,
+          "code": "CONFIG_LOCKED",
+          "message": "Cet élément de configuration système est verrouillé et ne peut être supprimé.",
+          "details": {
+            "id": "cfg_ai_provider",
+            "supprimable": false
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "erreurs_possibles": [
+          {
+            "code": 400,
+            "status_text": "Bad Request",
+            "message": "Tentative de suppression d'une variable critique système non supprimable."
+          },
+          {
+            "code": 401,
+            "status_text": "Unauthorized",
+            "message": "Privilèges Super Admin requis pour supprimer une configuration."
+          },
+          {
+            "code": 404,
+            "status_text": "Not Found",
+            "message": "L'identifiant de configuration à supprimer n'existe pas."
+          },
+          {
+            "code": 500,
+            "status_text": "Internal Server Error",
+            "message": "Erreur serveur lors de la suppression de la ressource."
+          }
+        ]
+      }
+    },
+    "/api/admin/teams": {
+      "GET": {
+        "route": "GET /api/admin/teams",
+        "description": "Retourne la liste des équipes, membres, rôles et permissions",
+        "champs_obligatoires": ["success", "status", "data", "total", "page", "limit", "timestamp"],
+        "types_des_champs": {
+          "success": "boolean",
+          "status": "integer",
+          "data": "array<StandardItem>",
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "filtres_appliques": "object",
+          "timestamp": "string"
+        },
+        "valeurs_par_defaut": {
+          "success": true,
+          "status": 200,
+          "page": 1,
+          "limit": 50,
+          "filtres_appliques": { "groupe": "all" }
+        },
+        "format_succes_liste": {
+          "success": true,
+          "status": 200,
+          "total": 3,
+          "page": 1,
+          "limit": 50,
+          "filtres_appliques": {
+            "groupe": "all"
+          },
+          "data": [
+            {
+              "id": "team_pole_esg",
+              "nom": "Pôle Audit & Conformité RSE",
+              "description": "Équipe en charge des revues d'allégations et de la conformité légale",
+              "categorie": "equipes",
+              "valeur": "{\"groupe\": \"Conformité\", \"membres_count\": 5, \"lead_id\": \"usr_auditeur_01\"}",
+              "modifiable": true,
+              "exportable": true,
+              "importable": true,
+              "supprimable": true
+            },
+            {
+              "id": "usr_auditeur_01",
+              "nom": "Auditeur Climat Local",
+              "description": "Auditeur expert en détection de greenwashing et conformité ESG",
+              "categorie": "membres",
+              "valeur": "{\"email\": \"auditeur@climatlocal.com\", \"role\": \"Auditeur\", \"access_level\": 50, \"statut\": \"actif\"}",
+              "modifiable": true,
+              "exportable": true,
+              "importable": true,
+              "supprimable": true
+            },
+            {
+              "id": "role_super_admin",
+              "nom": "Super Administrateur",
+              "description": "Accès total au cockpit, modification moteur IA et gouvernance des équipes",
+              "categorie": "roles",
+              "valeur": "{\"permissions\": [\"all\", \"config:write\", \"teams:write\", \"audit:write\"], \"level\": 100}",
+              "modifiable": false,
+              "exportable": true,
+              "importable": true,
+              "supprimable": false
+            }
+          ],
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "format_echec": {
+          "success": false,
+          "status": 401,
+          "code": "AUTH_FORBIDDEN",
+          "message": "Accès restreint. Privilèges de gestion d'équipe requis.",
+          "details": null,
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "erreurs_possibles": [
+          {
+            "code": 400,
+            "status_text": "Bad Request",
+            "message": "Filtres d'équipe ou paramètres de pagination invalides."
+          },
+          {
+            "code": 401,
+            "status_text": "Unauthorized",
+            "message": "Token de session absent ou sans autorisation pour l'espace équipes."
+          },
+          {
+            "code": 404,
+            "status_text": "Not Found",
+            "message": "Groupe ou département introuvable."
+          },
+          {
+            "code": 500,
+            "status_text": "Internal Server Error",
+            "message": "Erreur serveur lors de la récupération des membres et équipes."
+          }
+        ]
+      },
+      "POST": {
+        "route": "POST /api/admin/teams",
+        "description": "Ajoute un nouveau membre ou une nouvelle équipe dans l'organisation",
+        "champs_obligatoires": ["success", "status", "message", "data", "timestamp"],
+        "types_des_champs": {
+          "success": "boolean",
+          "status": "integer",
+          "message": "string",
+          "data": "StandardItem",
+          "timestamp": "string"
+        },
+        "valeurs_par_defaut": {
+          "success": true,
+          "status": 201,
+          "data": {
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": true
+          }
+        },
+        "format_succes_unique": {
+          "success": true,
+          "status": 201,
+          "message": "Nouveau membre ajouté à l'équipe avec succès.",
+          "data": {
+            "id": "usr_sales_consultant_02",
+            "nom": "Alexandre Mercier",
+            "description": "Consultant commercial éco-transition et prospection d'impact",
+            "categorie": "membres",
+            "valeur": "{\"email\": \"a.mercier@climatlocal.com\", \"role\": \"Commercial\", \"access_level\": 30, \"equipe_id\": \"team_sales_impact\"}",
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": true
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "format_echec": {
+          "success": false,
+          "status": 400,
+          "code": "EMAIL_ALREADY_EXISTS",
+          "message": "Cette adresse email est déjà associée à un compte membre existant.",
+          "details": {
+            "email": "a.mercier@climatlocal.com"
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "erreurs_possibles": [
+          {
+            "code": 400,
+            "status_text": "Bad Request",
+            "message": "Email invalide, mot de passe trop court ou rôle inexistant."
+          },
+          {
+            "code": 401,
+            "status_text": "Unauthorized",
+            "message": "Session non autorisée à créer des utilisateurs ou assigner des rôles."
+          },
+          {
+            "code": 404,
+            "status_text": "Not Found",
+            "message": "L'équipe de destination spécifiée n'existe pas."
+          },
+          {
+            "code": 500,
+            "status_text": "Internal Server Error",
+            "message": "Erreur serveur lors de la création du compte utilisateur."
+          }
+        ]
+      },
+      "PUT": {
+        "route": "PUT /api/admin/teams/{id}",
+        "description": "Modifie le rôle, le statut ou les informations d'un membre ou d'une équipe",
+        "champs_obligatoires": ["success", "status", "message", "data", "timestamp"],
+        "types_des_champs": {
+          "success": "boolean",
+          "status": "integer",
+          "message": "string",
+          "data": "StandardItem",
+          "timestamp": "string"
+        },
+        "valeurs_par_defaut": {
+          "success": true,
+          "status": 200
+        },
+        "format_succes_unique": {
+          "success": true,
+          "status": 200,
+          "message": "Rôle et autorisations du membre modifiés avec succès.",
+          "data": {
+            "id": "usr_sales_consultant_02",
+            "nom": "Alexandre Mercier",
+            "description": "Lead consultant prospection et revue d'impact",
+            "categorie": "membres",
+            "valeur": "{\"email\": \"a.mercier@climatlocal.com\", \"role\": \"Lead Commercial\", \"access_level\": 45, \"equipe_id\": \"team_sales_impact\"}",
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": true
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "format_echec": {
+          "success": false,
+          "status": 404,
+          "code": "MEMBER_NOT_FOUND",
+          "message": "Membre introuvable pour l'identifiant fourni.",
+          "details": {
+            "id": "usr_inconnu_99"
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "erreurs_possibles": [
+          {
+            "code": 400,
+            "status_text": "Bad Request",
+            "message": "Données de modification invalides ou rôle hiérarchique non autorisé."
+          },
+          {
+            "code": 401,
+            "status_text": "Unauthorized",
+            "message": "Permissions insuffisantes pour élever les privilèges d'un compte."
+          },
+          {
+            "code": 404,
+            "status_text": "Not Found",
+            "message": "Le membre ou l'équipe cible est introuvable."
+          },
+          {
+            "code": 500,
+            "status_text": "Internal Server Error",
+            "message": "Erreur serveur lors de la mise à jour des autorisations."
+          }
+        ]
+      },
+      "DELETE": {
+        "route": "DELETE /api/admin/teams/{id}",
+        "description": "Supprime ou désactive un membre ou une équipe de l'organisation",
+        "champs_obligatoires": ["success", "status", "message", "data", "timestamp"],
+        "types_des_champs": {
+          "success": "boolean",
+          "status": "integer",
+          "message": "string",
+          "data": "StandardItem",
+          "timestamp": "string"
+        },
+        "valeurs_par_defaut": {
+          "success": true,
+          "status": 200
+        },
+        "format_succes_suppression": {
+          "success": true,
+          "status": 200,
+          "message": "Membre supprimé de l'équipe et accès révoqués.",
+          "data": {
+            "id": "usr_temp_contractor",
+            "nom": "Prestataire Décommissionné",
+            "description": "Compte de consulting externe clôturé",
+            "categorie": "membres",
+            "valeur": "{\"email\": \"consultant.ext@climatlocal.com\", \"statut\": \"supprime\", \"actif\": false}",
+            "modifiable": false,
+            "exportable": false,
+            "importable": false,
+            "supprimable": true
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "format_echec": {
+          "success": false,
+          "status": 400,
+          "code": "CANNOT_DELETE_SUPER_ADMIN",
+          "message": "Impossible de supprimer le compte Super Administrateur racine.",
+          "details": {
+            "id": "usr_master_admin",
+            "supprimable": false
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "erreurs_possibles": [
+          {
+            "code": 400,
+            "status_text": "Bad Request",
+            "message": "Tentative de suppression d'un compte protégé ou d'une équipe contenant des membres actifs."
+          },
+          {
+            "code": 401,
+            "status_text": "Unauthorized",
+            "message": "Privilèges Super Admin requis pour supprimer un utilisateur."
+          },
+          {
+            "code": 404,
+            "status_text": "Not Found",
+            "message": "Le membre ou l'équipe spécifié n'existe pas."
+          },
+          {
+            "code": 500,
+            "status_text": "Internal Server Error",
+            "message": "Erreur serveur lors de la révocation et suppression de l'entité."
+          }
+        ]
+      }
+    },
+    "/api/admin/auth": {
+      "POST": {
+        "route": "POST /api/admin/auth/login",
+        "description": "Authentifie un utilisateur et délivre une session sécurisée avec token",
+        "champs_obligatoires": ["success", "status", "message", "token", "data", "timestamp"],
+        "types_des_champs": {
+          "success": "boolean",
+          "status": "integer",
+          "message": "string",
+          "token": "string",
+          "data": "StandardItem",
+          "timestamp": "string"
+        },
+        "valeurs_par_defaut": {
+          "success": true,
+          "status": 200
+        },
+        "format_succes_unique": {
+          "success": true,
+          "status": 200,
+          "message": "Connexion réussie, session administrateur initialisée.",
+          "token": "gh_jwt_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfbWFzdGVyX2FkbWluIn0.signature",
+          "data": {
+            "id": "usr_master_admin",
+            "nom": "Julien Lavaud",
+            "description": "Super Administrateur de la console GreenHumble",
+            "categorie": "utilisateurs",
+            "valeur": "{\"email\": \"contact@climatlocal.com\", \"role\": \"Super Administrateur\", \"access_level\": 100, \"session_id\": \"sess_gh_89f0a2c1b4e578da\"}",
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": false
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "format_echec": {
+          "success": false,
+          "status": 401,
+          "code": "INVALID_CREDENTIALS",
+          "message": "Adresse email ou mot de passe incorrect.",
+          "details": null,
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "erreurs_possibles": [
+          {
+            "code": 400,
+            "status_text": "Bad Request",
+            "message": "Identifiants manquants ou corps JSON malformé."
+          },
+          {
+            "code": 401,
+            "status_text": "Unauthorized",
+            "message": "Combinaison email/mot de passe erronée ou compte suspendu."
+          },
+          {
+            "code": 404,
+            "status_text": "Not Found",
+            "message": "Endpoint d'authentification introuvable."
+          },
+          {
+            "code": 500,
+            "status_text": "Internal Server Error",
+            "message": "Erreur serveur lors de la vérification des identifiants ou de l'émission du token."
+          }
+        ]
+      },
+      "DELETE": {
+        "route": "DELETE /api/admin/auth/logout",
+        "description": "Révoque la session active et invalide le cookie HTTP d'authentification",
+        "champs_obligatoires": ["success", "status", "message", "data", "timestamp"],
+        "types_des_champs": {
+          "success": "boolean",
+          "status": "integer",
+          "message": "string",
+          "data": "StandardItem",
+          "timestamp": "string"
+        },
+        "valeurs_par_defaut": {
+          "success": true,
+          "status": 200
+        },
+        "format_succes_suppression": {
+          "success": true,
+          "status": 200,
+          "message": "Déconnexion réussie, session révoquée.",
+          "data": {
+            "id": "sess_gh_89f0a2c1b4e578da",
+            "nom": "Session Active Révoquée",
+            "description": "Session administrative invalidée côté serveur",
+            "categorie": "sessions",
+            "valeur": "{\"statut\": \"revoquee\", \"logout_at\": \"2026-10-02T09:30:00Z\"}",
+            "modifiable": false,
+            "exportable": false,
+            "importable": false,
+            "supprimable": true
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "format_echec": {
+          "success": false,
+          "status": 401,
+          "code": "NO_ACTIVE_SESSION",
+          "message": "Aucune session active à déconnecter.",
+          "details": null,
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "erreurs_possibles": [
+          {
+            "code": 400,
+            "status_text": "Bad Request",
+            "message": "Requête de déconnexion mal formée."
+          },
+          {
+            "code": 401,
+            "status_text": "Unauthorized",
+            "message": "Session déjà expirée ou token absent."
+          },
+          {
+            "code": 404,
+            "status_text": "Not Found",
+            "message": "Session à révoquer introuvable dans le magasin de sessions."
+          },
+          {
+            "code": 500,
+            "status_text": "Internal Server Error",
+            "message": "Erreur serveur lors de la purge de la session."
+          }
+        ]
+      },
+      "GET": {
+        "route": "GET /api/admin/auth/session",
+        "description": "Récupère les informations de l'utilisateur connecté pour l'affichage du badge UI",
+        "champs_obligatoires": ["success", "status", "authenticated", "data", "timestamp"],
+        "types_des_champs": {
+          "success": "boolean",
+          "status": "integer",
+          "authenticated": "boolean",
+          "data": "StandardItem",
+          "timestamp": "string"
+        },
+        "valeurs_par_defaut": {
+          "success": true,
+          "status": 200,
+          "authenticated": true
+        },
+        "format_succes_unique": {
+          "success": true,
+          "status": 200,
+          "authenticated": true,
+          "data": {
+            "id": "usr_master_admin",
+            "nom": "Julien Lavaud",
+            "description": "Badge utilisateur connecté et privilèges actifs",
+            "categorie": "niveaux_acces",
+            "valeur": "{\"email\": \"contact@climatlocal.com\", \"role\": \"Super Administrateur\", \"access_level\": 100, \"avatar_initials\": \"JL\", \"en_ligne\": true, \"permissions\": [\"all\", \"config:write\", \"teams:write\", \"audit:write\", \"report:export\"]}",
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": false
+          },
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "format_echec": {
+          "success": false,
+          "status": 401,
+          "authenticated": false,
+          "code": "SESSION_EXPIRED",
+          "message": "Session expirée ou non authentifiée. Veuillez vous reconnecter.",
+          "details": null,
+          "timestamp": "2026-10-02T09:30:00Z"
+        },
+        "erreurs_possibles": [
+          {
+            "code": 400,
+            "status_text": "Bad Request",
+            "message": "En-tête d'autorisation ou cookie de session corrompu."
+          },
+          {
+            "code": 401,
+            "status_text": "Unauthorized",
+            "message": "Aucun utilisateur authentifié sur cette session."
+          },
+          {
+            "code": 404,
+            "status_text": "Not Found",
+            "message": "Profil utilisateur associé à la session introuvable."
+          },
+          {
+            "code": 500,
+            "status_text": "Internal Server Error",
+            "message": "Erreur serveur lors de la vérification de validité de session."
+          }
+        ]
+      }
+    }
+  }
+}

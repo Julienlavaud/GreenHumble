@@ -1,0 +1,238 @@
+{
+  "greenhumble_plateforme_complete": {
+    "manifeste": {
+      "nom": "GreenHumble",
+      "version": "3.5.0",
+      "slogan": "Le climat, ensemble.",
+      "affiliation": "Cabinet Climat Local (climatlocal.com)",
+      "statut": "SPECIFICATION_ARCHITECTURE_UNIFIEE_PROD",
+      "description": "Plateforme globale d'audit d'intégrité environnementale, détection du greenwashing, conformité CSRD & Green Claims, génération d'opportunités de transition écologique B2B et gouvernance IA multi-modèles."
+    },
+    "1_backend_complet": {
+      "architecture_serveur": {
+        "environnement": "PHP 8.2+ / Apache mod_rewrite / MySQL 8.0+ & MariaDB 10.5+ / Nginx",
+        "point_d_entree": "/api/router.php",
+        "structure_fichiers": {
+          "api/": {
+            ".htaccess": "Réécriture URL mod_rewrite vers router.php",
+            "router.php": "Front controller, chaîne des middlewares, CORS, dispatch par méthode HTTP et URI",
+            "controllers/": {
+              "ConfigController.php": "Gestion des paramètres IA, prompts, dictionnaires et scoring (/api/admin/config)",
+              "TeamsController.php": "Gestion des collaborateurs, rôles RBAC, assignations et équipes (/api/admin/teams)",
+              "AuthController.php": "Authentification JWT, sessions sécurisées, vérification et révocation (/api/admin/auth)",
+              "AuditController.php": "Ingestion de contenu, pipeline d'analyse IA, scoring et conformité (/api/audit)",
+              "ProspecController.php": "Détection d'opportunités commerciales ESG et génération de pitchs (/api/prospec)",
+              "BackupController.php": "Sauvegardes automatiques/manuelles, versioning et rollback (/api/admin/backup)"
+            },
+            "services/": {
+              "AiEngineService.php": "Orchestrateur multi-fournisseurs (Gemini + Groq, modèles *-last, fallback)",
+              "ScoringService.php": "Calculateur matriciel du score de conformité Green Claims et CSRD",
+              "DatabaseService.php": "Couche d'abstraction PDO avec transactions ACID et requêtes préparées"
+            },
+            "middlewares/": {
+              "AuthMiddleware.php": "Validation stricte du jeton Bearer JWT et vérification dans cl_sessions",
+              "ValidationMiddleware.php": "Validation des schémas d'entrée, types, formats et sanitisation UTF-8",
+              "RateLimitMiddleware.php": "Protection contre les abus (60 requêtes/minute par IP/token)"
+            }
+          }
+        }
+      },
+      "routes_rest": [
+        {
+          "methode": "GET",
+          "uri": "/api/admin/config",
+          "description": "Liste filtrable et paginée des configurations, prompts et paramètres IA",
+          "acces": "SUPER_ADMIN, CONSULTANT"
+        },
+        {
+          "methode": "PUT",
+          "uri": "/api/admin/config",
+          "description": "Mise à jour d'un paramètre IA, d'un prompt système ou d'une règle de scoring",
+          "acces": "SUPER_ADMIN"
+        },
+        {
+          "methode": "GET",
+          "uri": "/api/admin/teams",
+          "description": "Liste des collaborateurs avec charges de dossiers et statut en ligne",
+          "acces": "SUPER_ADMIN, CONSULTANT"
+        },
+        {
+          "methode": "POST",
+          "uri": "/api/admin/teams",
+          "description": "Ajout ou modification d'un collaborateur",
+          "acces": "SUPER_ADMIN"
+        },
+        {
+          "methode": "POST",
+          "uri": "/api/admin/auth/login",
+          "description": "Authentification sécurisée avec émission de jeton JWT signé",
+          "acces": "PUBLIC"
+        },
+        {
+          "methode": "GET",
+          "uri": "/api/admin/auth/verify",
+          "description": "Validation de la session en cours et récupération du profil",
+          "acces": "AUTHENTIFIE"
+        },
+        {
+          "methode": "POST",
+          "uri": "/api/audit",
+          "description": "Orchestrateur de scan sémantique et réglementaire anti-greenwashing",
+          "acces": "PUBLIC_OU_AUTHENTIFIE"
+        },
+        {
+          "methode": "POST",
+          "uri": "/api/prospec",
+          "description": "Moteur IA de qualification d'opportunités de transition écologique",
+          "acces": "CONSULTANT, SUPER_ADMIN"
+        },
+        {
+          "methode": "POST",
+          "uri": "/api/admin/backup/create",
+          "description": "Déclenchement d'un snapshot complet des tables SQL et de la configuration",
+          "acces": "SUPER_ADMIN"
+        }
+      ],
+      "validations_backend": {
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Accept": "application/json"
+        },
+        "contraintes_types": {
+          "score": "Bornage numérique strict 0 à 100",
+          "booleens": "Booleans JSON stricts (true / false), rejet de '1' ou 'true'",
+          "identifiants": "Chaînes non-vides avec préfixes obligatoires (cfg_, usr_, team_, audit_, prsp_)"
+        }
+      },
+      "tables_sql_completes": {
+        "cl_ai_settings": "Stockage des variables clés-valeurs, paramètres d'inférence, prompts et seuils.",
+        "cl_ai_prompts": "Templates de prompts systèmes avec versioning et variables d'injection.",
+        "cl_ai_dictionaries": "Dictionnaires de mots interdits, termes à risque et synonymes de transition.",
+        "cl_ai_rules": "Matrice de scoring, pénalités fixes, bonus et critères d'infraction légale.",
+        "cl_ai_opportunities": "Base des leads B2B qualifiés, signaux faibles, scoring d'appétence et pitchs.",
+        "cl_users": "Comptes utilisateurs, identifiants, hash de mot de passe bcrypt et rôles RBAC.",
+        "cl_teams": "Entités d'équipes et découpage géographique régional.",
+        "cl_roles": "Définition des rôles (SUPER_ADMIN, CONSULTANT, AUDITEUR, CLIENT).",
+        "cl_permissions": "Droits granulaires par endpoint REST.",
+        "cl_sessions": "Table immuable de suivi des jetons JWT, adresses IP, dates d'expiration et révocations."
+      }
+    },
+    "2_moteur_ia_dynamique": {
+      "providers": {
+        "gemini": {
+          "nom": "Google Gemini",
+          "base_url": "https://generativelanguage.googleapis.com/v1beta",
+          "modeles": ["gemini-3.8-flash", "gemini-3.8-pro", "gemini-3.6", "gemini-*-last"],
+          "gestion_last": "Résolution automatique de *-last vers le snapshot le plus récent en production"
+        },
+        "groq": {
+          "nom": "Groq Cloud Llama",
+          "base_url": "https://api.groq.com/openai/v1",
+          "modeles": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "groq-*-last"],
+          "gestion_last": "Résolution automatique vers le snapshot haute cadence disponible"
+        }
+      },
+      "mecanisme_fallback": {
+        "politique": "Double niveau de redondance : Gemini Flash -> Gemini Pro -> Groq Llama 3.3 70B",
+        "declencheurs": ["Timeout HTTP > 6500ms", "Code HTTP 429 (Rate Limit)", "Code HTTP 500 / 503"],
+        "normalisation_reponse": "Validation du schéma JSON renvoyé par regex et sanitisation des guillemets avant injection métier."
+      }
+    },
+    "3_pipelines_avances": {
+      "pipeline_audit": {
+        "etapes": [
+          "1. Extraction et assainissement du corpus textuel (URL ou texte brut)",
+          "2. Confrontation lexicale avec le dictionnaire cl_ai_dictionaries (pénalités immédiates)",
+          "3. Inférence IA Gemini / Groq avec prompt d'évaluation Green Claims",
+          "4. Pondération hybride (40% Réglementaire, 35% IA sémantique, 25% Technique/Eco-conception)",
+          "5. Génération des reformulations certifiées sans greenwashing",
+          "6. Injection de la télémétrie IA et sauvegarde de l'audit"
+        ]
+      },
+      "pipeline_prospec": {
+        "etapes": [
+          "1. Ingestion de l'entreprise cible et de ses allégations publiques",
+          "2. Détection automatisée des signaux faibles de vulnérabilité RSE",
+          "3. Calcul du score de priorité commerciale (0-100)",
+          "4. Génération du pitch commercial sur mesure pour les consultants de transition",
+          "5. Création de l'opportunité dans cl_ai_opportunities avec statut NOUVEAU"
+        ]
+      }
+    },
+    "4_modules_fonctionnels": {
+      "tableau_de_bord": {
+        "composants": "Jauge SVG circulaire de score, 4 cartes KPI macro, formulaire scanner, matrice de risques, radar de signaux, suivi des dossiers d'équipe",
+        "modes_affichage": ["Vue Client Synthétique (rassurante et didactique)", "Vue Consultant Deep (juridique et technique)"]
+      },
+      "module_scoring": {
+        "seuils": {
+          "CONFORME": "Score 80-100 (Risque FAIBLE, allégations étayées)",
+          "RISQUE_MODERE": "Score 60-79 (Vigilance requise, reformulations conseillées)",
+          "NON_CONFORME": "Score 40-59 (Risque ELEVE, exposition aux sanctions)",
+          "CRITIQUE": "Score 0-39 (Greenwashing avéré, infraction caractérisée)"
+        }
+      },
+      "module_sauvegarde_et_maj": {
+        "sauvegarde": "Génération de snapshots JSON horodatés chiffrés de l'ensemble des tables",
+        "mise_a_jour": "Vérification des empreintes SHA-256 du code backend, migration SQL atomique et rollback automatique en cas d'échec",
+        "restauration": "Restauration en un clic vers une version de configuration antérieure"
+      }
+    },
+    "5_design_ui_et_charte_graphique": {
+      "palette_climat_local": {
+        "primaires": {
+          "vert_foret": "#047857",
+          "vert_emeraude": "#059669",
+          "emeraude_profond": "#064E3B",
+          "ardoise_sombre": "#0F172A"
+        },
+        "vigilance_et_alerte": {
+          "ambre_vigilance": "#D97706",
+          "rouge_sanction": "#DC2626",
+          "bleu_loi": "#0284C7"
+        },
+        "surfaces": {
+          "fond_page": "#F8FAFC",
+          "cartes_blanches": "#FFFFFF",
+          "sable_institutionnel": "#FDFBF7"
+        }
+      },
+      "typographies": {
+        "titres": "Playfair Display / Georgia (font-serif d'autorité légale)",
+        "interface": "Inter / Plus Jakarta Sans (font-sans haute clarté)",
+        "technique": "JetBrains Mono (font-mono pour IDs, tokens, latence)"
+      },
+      "composants": {
+        "boutons": "Arrondis rounded-xl (12px), transition 200ms, ombres douces",
+        "cartes": "Arrondis rounded-2xl (16px), bordures fines slate-200, fond blanc",
+        "tableaux": "En-têtes gris perle, lignes zébrées discrètes, cellules aérées"
+      }
+    },
+    "6_identite_et_coherence_globale": {
+      "ton_editorial": "Rigoureux, mesuré, humble, scientifiquement irréprochable et tourné vers l'action territoriale concrète.",
+      "slogan": "Le climat, ensemble.",
+      "formats_reponses_api": {
+        "format_succes": {
+          "success": true,
+          "status": 200,
+          "data": "object",
+          "meta": {
+            "timestamp": "ISO_8601_UTC",
+            "version": "3.5.0",
+            "slogan": "Le climat, ensemble."
+          }
+        },
+        "format_erreur": {
+          "success": false,
+          "status": "integer (400, 401, 403, 404, 422, 500)",
+          "error": {
+            "code": "string",
+            "message": "string",
+            "details": "array<string> | object | null",
+            "timestamp": "ISO_8601_UTC"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,505 @@
+{
+  "api_version": "2.0.0",
+  "project": "GreenHumble Admin Console",
+  "controllers": {
+    "ConfigController": {
+      "nom": "ConfigController",
+      "description": "Contrôleur de gouvernance centrale des configurations d'intelligence artificielle, des prompts métiers, des gabarits JSON, des règles de conformité et des pondérations de scoring.",
+      "perimetre_metier": [
+        "variables_ia",
+        "prompts",
+        "templates_json",
+        "dictionnaires",
+        "regles_metier",
+        "opportunites_metiers",
+        "scoring",
+        "conformite"
+      ],
+      "methodes_rest": [
+        {
+          "nom_methode": "index",
+          "methode_http": "GET",
+          "route": "/api/admin/config",
+          "action_id": "GET_config",
+          "responsabilites_metier": [
+            "Contrôler les habilitations de lecture sur les configurations système",
+            "Filtrer les enregistrements par catégorie métier demandée ou retourner l'ensemble",
+            "Appliquer la pagination et le tri hiérarchique par priorité de configuration",
+            "Restituer les données sous la structure standardisée (id, nom, description, categorie, valeur, modifiable, exportable, importable, supprimable)"
+          ],
+          "parametres_attendus": {
+            "query": {
+              "categorie": {
+                "type": "string",
+                "required": false,
+                "enum": [
+                  "all",
+                  "variables_ia",
+                  "prompts",
+                  "templates_json",
+                  "dictionnaires",
+                  "regles_metier",
+                  "opportunites_metiers",
+                  "scoring",
+                  "conformite"
+                ],
+                "default": "all"
+              },
+              "page": { "type": "integer", "required": false, "default": 1 },
+              "limit": { "type": "integer", "required": false, "default": 50 }
+            }
+          },
+          "reponses_json_attendues": {
+            "succes": {
+              "status": 200,
+              "format": {
+                "success": true,
+                "status": 200,
+                "total": "integer",
+                "page": "integer",
+                "limit": "integer",
+                "filtres_appliques": { "categorie": "string" },
+                "data": "array<StandardConfigItem>",
+                "timestamp": "string (ISO 8601)"
+              }
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Filtre de catégorie invalide ou pagination hors limites" },
+            { "code": 401, "message": "Jeton d'authentification absent ou expiré" },
+            { "code": 403, "message": "Droit config:read requis pour inspecter les paramètres" },
+            { "code": 500, "message": "Défaillance de lecture du magasin de données" }
+          ]
+        },
+        {
+          "nom_methode": "create",
+          "methode_http": "POST",
+          "route": "/api/admin/config",
+          "action_id": "POST_config",
+          "responsabilites_metier": [
+            "Valider la conformité du payload d'entrée et la validité de la catégorie",
+            "Garantir l'unicité du nom technique de configuration",
+            "Générer l'identifiant technique pérenne préfixé 'cfg_'",
+            "Initialiser les attributs de gouvernance (modifiable=true, supprimable=true)",
+            "Persister l'enregistrement et historiser l'action d'ajout"
+          ],
+          "parametres_attendus": {
+            "body": {
+              "nom": { "type": "string", "required": true, "minLength": 2, "maxLength": 100 },
+              "description": { "type": "string", "required": true, "maxLength": 500 },
+              "categorie": {
+                "type": "string",
+                "required": true,
+                "enum": [
+                  "variables_ia",
+                  "prompts",
+                  "templates_json",
+                  "dictionnaires",
+                  "regles_metier",
+                  "opportunites_metiers",
+                  "scoring",
+                  "conformite"
+                ]
+              },
+              "valeur": { "type": "string", "required": true }
+            }
+          },
+          "reponses_json_attendues": {
+            "succes": {
+              "status": 201,
+              "format": {
+                "success": true,
+                "status": 201,
+                "message": "Configuration créée avec succès.",
+                "data": "StandardConfigItem",
+                "timestamp": "string (ISO 8601)"
+              }
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Payload incomplet, nom déjà utilisé ou catégorie non reconnue" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Droit config:write requis pour créer une configuration" },
+            { "code": 500, "message": "Erreur lors de l'insertion en base de données" }
+          ]
+        },
+        {
+          "nom_methode": "update",
+          "methode_http": "PUT",
+          "route": "/api/admin/config/{id}",
+          "action_id": "PUT_config",
+          "responsabilites_metier": [
+            "Vérifier l'existence de l'élément par son identifiant unique",
+            "Vérifier l'autorisation d'écriture (drapeau modifiable == true)",
+            "Exécuter les règles de validation spécifiques aux variables critiques (ex: aiProvider restreint à 'groq' ou 'gemini')",
+            "Mettre à jour la valeur et recalculer l'horodatage d'actualisation",
+            "Invalider le cache mémoire applicatif pour application immédiate dans les moteurs d'audit"
+          ],
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "required": true }
+            },
+            "body": {
+              "valeur": { "type": "string", "required": true },
+              "description": { "type": "string", "required": false }
+            }
+          },
+          "reponses_json_attendues": {
+            "succes": {
+              "status": 200,
+              "format": {
+                "success": true,
+                "status": 200,
+                "message": "Configuration mise à jour avec succès.",
+                "data": "StandardConfigItem",
+                "timestamp": "string (ISO 8601)"
+              }
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Valeur invalide ou tentative de modification d'un élément protégé" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Privilèges insuffisants pour éditer ce paramètre" },
+            { "code": 404, "message": "Identifiant de configuration introuvable" },
+            { "code": 500, "message": "Échec de persistance de la mise à jour" }
+          ]
+        },
+        {
+          "nom_methode": "delete",
+          "methode_http": "DELETE",
+          "route": "/api/admin/config/{id}",
+          "action_id": "DELETE_config",
+          "responsabilites_metier": [
+            "Rechercher l'élément de configuration cible",
+            "Vérifier formellement que l'élément est supprimable (supprimable == true)",
+            "Refuser fermement la suppression des configurations structurelles (ex: aiProvider, provider actif, clés système)",
+            "Exécuter la suppression de l'enregistrement",
+            "Historiser la suppression dans les journaux d'audit"
+          ],
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "required": true }
+            }
+          },
+          "reponses_json_attendues": {
+            "succes": {
+              "status": 200,
+              "format": {
+                "success": true,
+                "status": 200,
+                "message": "Configuration supprimée avec succès.",
+                "data": "StandardConfigItem",
+                "timestamp": "string (ISO 8601)"
+              }
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Impossible de supprimer un paramètre système verrouillé" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Rôle Super Administrateur requis pour supprimer une règle" },
+            { "code": 404, "message": "Configuration introuvable pour l'identifiant spécifié" },
+            { "code": 500, "message": "Erreur serveur lors de la suppression" }
+          ]
+        }
+      ]
+    },
+    "TeamsController": {
+      "nom": "TeamsController",
+      "description": "Contrôleur de gestion de l'organigramme, des comptes collaborateurs, de l'attribution des rôles hiérarchiques, des groupes métiers et des permissions granulaires.",
+      "perimetre_metier": [
+        "equipes",
+        "membres",
+        "roles",
+        "permissions",
+        "groupes_metiers"
+      ],
+      "methodes_rest": [
+        {
+          "nom_methode": "index",
+          "methode_http": "GET",
+          "route": "/api/admin/teams",
+          "action_id": "GET_teams",
+          "responsabilites_metier": [
+            "Contrôler l'accès à l'espace d'administration des ressources humaines",
+            "Agréger les collaborateurs, équipes opérationnelles, rôles et permissions associées",
+            "Filtrer par nature d'entité (equipes, membres, roles) si requis",
+            "Masquer rigoureusement les informations sensibles (empreintes de mots de passe, sels)",
+            "Restituer les entités sous la structure standardisée"
+          ],
+          "parametres_attendus": {
+            "query": {
+              "type": { "type": "string", "required": false, "enum": ["all", "equipes", "membres", "roles"], "default": "all" },
+              "page": { "type": "integer", "required": false, "default": 1 },
+              "limit": { "type": "integer", "required": false, "default": 50 }
+            }
+          },
+          "reponses_json_attendues": {
+            "succes": {
+              "status": 200,
+              "format": {
+                "success": true,
+                "status": 200,
+                "total": "integer",
+                "page": "integer",
+                "limit": "integer",
+                "data": "array<StandardTeamItem>",
+                "timestamp": "string (ISO 8601)"
+              }
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Critères de filtrage d'équipe non valides" },
+            { "code": 401, "message": "Authentification requise pour consulter les équipes" },
+            { "code": 403, "message": "Accès restreint aux gestionnaires habilités" },
+            { "code": 500, "message": "Erreur serveur lors de la récupération des équipes" }
+          ]
+        },
+        {
+          "nom_methode": "create",
+          "methode_http": "POST",
+          "route": "/api/admin/teams",
+          "action_id": "POST_teams",
+          "responsabilites_metier": [
+            "Valider le format du courriel et la solidité du mot de passe",
+            "Contrôler l'unicité de l'adresse courriel dans le registre des utilisateurs",
+            "Hacher le mot de passe de manière irréversible via l'algorithme bcrypt",
+            "Assigner le rôle fonctionnel et rattacher le membre à son équipe métier",
+            "Générer l'identifiant unique 'usr_' ou 'team_' et enregistrer l'entité"
+          ],
+          "parametres_attendus": {
+            "body": {
+              "nom": { "type": "string", "required": true, "minLength": 2 },
+              "email": { "type": "string", "required": true, "format": "email" },
+              "role_id": { "type": "string", "required": true },
+              "team_id": { "type": "string", "required": false },
+              "password": { "type": "string", "required": true, "minLength": 8 }
+            }
+          },
+          "reponses_json_attendues": {
+            "succes": {
+              "status": 201,
+              "format": {
+                "success": true,
+                "status": 201,
+                "message": "Nouveau membre ajouté à l'équipe avec succès.",
+                "data": "StandardTeamItem",
+                "timestamp": "string (ISO 8601)"
+              }
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Email déjà utilisé, mot de passe trop faible ou rôle inexistant" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Droits insuffisants pour créer un nouveau compte utilisateur" },
+            { "code": 404, "message": "Équipe ou rôle cible introuvable" },
+            { "code": 500, "message": "Erreur serveur lors de la création du compte" }
+          ]
+        },
+        {
+          "nom_methode": "update",
+          "methode_http": "PUT",
+          "route": "/api/admin/teams/{id}",
+          "action_id": "PUT_teams",
+          "responsabilites_metier": [
+            "Localiser le collaborateur ou l'équipe cible par son identifiant",
+            "Vérifier les règles RBAC : un utilisateur ne peut pas s'octroyer lui-même un niveau supérieur",
+            "Empêcher la dégradation du Super Administrateur principal",
+            "Mettre à jour le rôle, l'équipe d'affectation et les permissions dérivées",
+            "Historiser la modification de privilèges"
+          ],
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "required": true }
+            },
+            "body": {
+              "role_id": { "type": "string", "required": false },
+              "team_id": { "type": "string", "required": false },
+              "access_level": { "type": "integer", "min": 0, "max": 100, "required": false }
+            }
+          },
+          "reponses_json_attendues": {
+            "succes": {
+              "status": 200,
+              "format": {
+                "success": true,
+                "status": 200,
+                "message": "Rôle et autorisations du membre modifiés avec succès.",
+                "data": "StandardTeamItem",
+                "timestamp": "string (ISO 8601)"
+              }
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Données d'affectation invalides ou niveau d'accès non autorisé" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Interdiction de modifier des privilèges de niveau équivalent ou supérieur" },
+            { "code": 404, "message": "Membre ou équipe cible introuvable" },
+            { "code": 500, "message": "Erreur serveur lors de la modification des autorisations" }
+          ]
+        },
+        {
+          "nom_methode": "delete",
+          "methode_http": "DELETE",
+          "route": "/api/admin/teams/{id}",
+          "action_id": "DELETE_teams",
+          "responsabilites_metier": [
+            "Identifier le compte ou l'équipe à révoquer",
+            "Protéger impérativement le compte Super Administrateur racine contre toute suppression",
+            "Interdire l'auto-suppression du compte exécutant la requête",
+            "Révoquer immédiatement l'intégralité des jetons et sessions actives du collaborateur",
+            "Effectuer la suppression logique ou physique du compte dans le registre"
+          ],
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "required": true }
+            }
+          },
+          "reponses_json_attendues": {
+            "succes": {
+              "status": 200,
+              "format": {
+                "success": true,
+                "status": 200,
+                "message": "Membre supprimé de l'équipe et accès révoqués.",
+                "data": "StandardTeamItem",
+                "timestamp": "string (ISO 8601)"
+              }
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Tentative de suppression du compte Super Admin ou auto-suppression interdite" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Rôle Super Administrateur requis pour supprimer un membre" },
+            { "code": 404, "message": "Membre ou équipe introuvable" },
+            { "code": 500, "message": "Erreur serveur lors de la suppression de l'entité" }
+          ]
+        }
+      ]
+    },
+    "AuthController": {
+      "nom": "AuthController",
+      "description": "Contrôleur d'authentification sécurisée, délivrance et validation de jetons JWT, gestion des sessions étanches, cookies HttpOnly et exposition de l'état de connexion.",
+      "perimetre_metier": [
+        "utilisateurs",
+        "emails",
+        "mots_de_passe_hashes",
+        "niveaux_acces",
+        "tokens",
+        "sessions"
+      ],
+      "methodes_rest": [
+        {
+          "nom_methode": "login",
+          "methode_http": "POST",
+          "route": "/api/admin/auth/login",
+          "action_id": "LOGIN",
+          "responsabilites_metier": [
+            "Réceptionner et assainir les identifiants de connexion (email, mot de passe)",
+            "Rechercher le compte utilisateur actif correspondant à l'email",
+            "Vérifier l'empreinte bcrypt du mot de passe",
+            "Générer un jeton JWT cryptographiquement signé (algorithme HS256, durée 2h)",
+            "Créer l'entrée de session active avec trace d'IP et d'agent utilisateur",
+            "Positionner le cookie de session sécurisé (HttpOnly, Secure, SameSite=Strict)",
+            "Retourner le profil utilisateur avec son niveau d'accès et jeton"
+          ],
+          "parametres_attendus": {
+            "body": {
+              "email": { "type": "string", "required": true, "format": "email" },
+              "password": { "type": "string", "required": true, "minLength": 6 }
+            }
+          },
+          "reponses_json_attendues": {
+            "succes": {
+              "status": 200,
+              "format": {
+                "success": true,
+                "status": 200,
+                "message": "Connexion réussie, session administrateur initialisée.",
+                "token": "string (JWT)",
+                "data": "StandardAuthItem",
+                "timestamp": "string (ISO 8601)"
+              }
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Courriel ou mot de passe manquant dans le corps de requête" },
+            { "code": 401, "message": "Couple email / mot de passe invalide ou compte inactif" },
+            { "code": 404, "message": "Utilisateur non répertorié" },
+            { "code": 500, "message": "Erreur serveur lors de la délivrance du jeton de session" }
+          ]
+        },
+        {
+          "nom_methode": "logout",
+          "methode_http": "DELETE",
+          "route": "/api/admin/auth/logout",
+          "action_id": "LOGOUT",
+          "responsabilites_metier": [
+            "Extraire le jeton de la session active depuis l'en-tête Authorization ou le cookie",
+            "Marquer le jeton comme révoqué dans la table des sessions actives",
+            "Supprimer le cookie HTTP d'authentification en forçant son expiration",
+            "Confirmer la déconnexion et révoquer l'accès aux routes protégées"
+          ],
+          "parametres_attendus": {
+            "headers": {
+              "Authorization": { "type": "string", "required": false, "description": "Bearer <jwt_token>" }
+            }
+          },
+          "reponses_json_attendues": {
+            "succes": {
+              "status": 200,
+              "format": {
+                "success": true,
+                "status": 200,
+                "message": "Déconnexion réussie, session révoquée.",
+                "data": "StandardAuthItem",
+                "timestamp": "string (ISO 8601)"
+              }
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Requête de déconnexion mal formée" },
+            { "code": 401, "message": "Aucune session active ou jeton déjà invalidé" },
+            { "code": 500, "message": "Erreur serveur lors de la purge de la session" }
+          ]
+        },
+        {
+          "nom_methode": "session",
+          "methode_http": "GET",
+          "route": "/api/admin/auth/session",
+          "action_id": "GET_session",
+          "responsabilites_metier": [
+            "Contrôler la validité cryptographique et l'absence d'expiration du jeton",
+            "Vérifier que la session n'est pas révoquée dans la table des sessions",
+            "Extraire les attributs de profil (nom, rôle, niveau d'accès, permissions, statut en ligne)",
+            "Alimenter le badge utilisateur et le menu de navigation de l'interface",
+            "Exclure toute donnée d'authentification sensible"
+          ],
+          "parametres_attendus": {
+            "headers": {
+              "Authorization": { "type": "string", "required": false, "description": "Bearer <jwt_token>" },
+              "Accept": { "type": "string", "required": true, "example": "application/json" }
+            }
+          },
+          "reponses_json_attendues": {
+            "succes": {
+              "status": 200,
+              "format": {
+                "success": true,
+                "status": 200,
+                "authenticated": true,
+                "data": "StandardAuthItem",
+                "timestamp": "string (ISO 8601)"
+              }
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "En-tête de session corrompu" },
+            { "code": 401, "message": "Session expirée ou utilisateur non connecté" },
+            { "code": 404, "message": "Profil utilisateur associé à la session introuvable" },
+            { "code": 500, "message": "Erreur serveur lors de la vérification de validité de session" }
+          ]
+        }
+      ]
+    }
+  }
+}

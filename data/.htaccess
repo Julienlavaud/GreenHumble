@@ -1,0 +1,6 @@
+# Interdire tout accès direct par navigateur aux fichiers JSON de la base de données
+Require all denied
+<FilesMatch ".*">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>

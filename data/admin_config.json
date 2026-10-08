@@ -1,0 +1,585 @@
+{
+  "version": "2.0.0",
+  "generated_at": "2026-10-02T02:02:00Z",
+  "app": "GreenHumble / Climat Local",
+  "variables_ia": [
+    {
+      "id": "var_ai_provider",
+      "nom": "aiProvider",
+      "description": "Fournisseur d'intelligence artificielle actif pour le scanning et la prospection (gemini ou groq)",
+      "categorie": "variables_ia",
+      "valeur": "gemini",
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": false
+    },
+    {
+      "id": "var_ai_model",
+      "nom": "aiModel",
+      "description": "Modèle de calcul IA par défaut (ex: gemini-3.8-flash, llama-3.3-70b-versatile, mixtral-8x7b-32768)",
+      "categorie": "variables_ia",
+      "valeur": "gemini-3.8-flash",
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "var_ai_temperature",
+      "nom": "aiTemperature",
+      "description": "Niveau de créativité / déterminisme de l'IA (0.0 à 1.0)",
+      "categorie": "variables_ia",
+      "valeur": 0.2,
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "var_ai_strict_json",
+      "nom": "aiStrictJson",
+      "description": "Force le retour au format JSON strict application/json",
+      "categorie": "variables_ia",
+      "valeur": true,
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "var_ai_max_tokens",
+      "nom": "aiMaxTokens",
+      "description": "Nombre maximal de tokens en sortie générés par le moteur",
+      "categorie": "variables_ia",
+      "valeur": 8192,
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    }
+  ],
+  "dictionnaires": [
+    {
+      "id": "dict_signaux_faibles",
+      "nom": "signaux_faibles",
+      "description": "Dictionnaire des signaux faibles de greenwashing et de vulnérabilités RSE",
+      "categorie": "dictionnaires",
+      "valeur": [
+        "neutralité carbone revendiquée sans scope 3",
+        "compensation carbone présentée comme annulant les émissions",
+        "utilisation de labels auto-déclarés non audités",
+        "absence de date de référence pour les objectifs 2030 ou 2050",
+        "terminologie 100% vert ou zéro impact sans ACV",
+        "confusion entre démarche d'évitement et compensation volontaire",
+        "allégations écologiques sur produit sans FDES ou EPD",
+        "absence de publication du BEGES réglementaire"
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "dict_besoins_potentiels",
+      "nom": "besoins_potentiels",
+      "description": "Besoins d'accompagnement conseil détectés lors des analyses",
+      "categorie": "dictionnaires",
+      "valeur": [
+        "Audit préalable de conformité Directive EmpCO (UE 2024/825)",
+        "Bilan Carbone Scopes 1, 2 et 3 certifié ADEME / ABC",
+        "Subvention Bpifrance Diag Décarbon'Action",
+        "Analyse de Cycle de Vie (ACV) produit ISO 14040/44",
+        "Publication et mise en conformité CSRD / ESRS E1",
+        "Création de fiches FDES pour la base INIES",
+        "Refonte des allégations marketing et de l'étiquetage Info-Tri",
+        "Mise en place d'une gouvernance RSE et trajectoire SBTi"
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "dict_risques",
+      "nom": "risques",
+      "description": "Typologie des risques juridiques, financiers et réputationnels",
+      "categorie": "dictionnaires",
+      "valeur": [
+        "Sanction DGCCRF pour pratique commerciale trompeuse (L. 121-2 Code Conso)",
+        "Amende administrative jusqu'à 100 000 € ou 4% du CA annuel",
+        "Obligation de publication d'un rectificatif public à la charge de l'entreprise",
+        "Mise en cause par les ONG environnementales (bad buzz)",
+        "Perte de référencement chez les grands donneurs d'ordres (critères RSE)",
+        "Risque de requalification des compensations en greenwashing avéré",
+        "Non-conformité aux exigences de transparence CSRD"
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "dict_opportunites_metiers",
+      "nom": "opportunites_metiers",
+      "description": "Catalogue d'opportunités de missions cabinet Climat Local / GreenHumble",
+      "categorie": "dictionnaires",
+      "valeur": [
+        {"serviceKey": "bc_bpi", "serviceTitle": "Diag Décarbon'Action Bpifrance", "budget": "5 000 €", "aide": "4 000 €", "duree": "3 semaines"},
+        {"serviceKey": "bc_complet", "serviceTitle": "Bilan Carbone Complet Scopes 1-2-3", "budget": "8 500 €", "aide": "Aides régionales", "duree": "6 semaines"},
+        {"serviceKey": "audit_empco", "serviceTitle": "Audit de Conformité Directive EmpCO", "budget": "4 500 €", "aide": "OPCO", "duree": "2 semaines"},
+        {"serviceKey": "acv_produit", "serviceTitle": "Analyse de Cycle de Vie (ACV)", "budget": "7 000 €", "aide": "ADEME", "duree": "5 semaines"},
+        {"serviceKey": "csrd_readiness", "serviceTitle": "Diagnostic CSRD & Double Matérialité", "budget": "12 000 €", "aide": "N/C", "duree": "8 semaines"},
+        {"serviceKey": "com_responsable", "serviceTitle": "Refonte Communication Responsable", "budget": "3 500 €", "aide": "N/C", "duree": "3 semaines"}
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    }
+  ],
+  "regles_metier": [
+    {
+      "id": "regle_green_claims",
+      "nom": "regles_green_claims",
+      "description": "Règles d'évaluation des allégations selon la directive Green Claims et EmpCO",
+      "categorie": "regles_metier",
+      "valeur": [
+        "Interdiction absolue des termes 'neutre en carbone' ou 'zéro émission' basés uniquement sur des crédits carbone.",
+        "Obligation d'une vérification préalable indépendante accréditée pour tout claim environnemental explicite.",
+        "Exigence d'une méthode d'évaluation d'impact environnemental harmonisée (PEF / OEF).",
+        "Interdiction des allégations génériques non assorties d'engagements concrets mesurables.",
+        "Obligation de transparence sur la part des émissions directes vs compensations."
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "regle_rse",
+      "nom": "regles_rse",
+      "description": "Règles d'évaluation de la maturité RSE et climat de l'entreprise",
+      "categorie": "regles_metier",
+      "valeur": [
+        "Niveau 1 (Marketing) : Déclarations d'intention vagues, pas de scopes 1-2-3 audités, allégations à risque.",
+        "Niveau 2 (Actions) : Premiers bilans GES scopes 1 et 2, quelques certifications sectorielles, actions ponctuelles.",
+        "Niveau 3 (Stratégie) : Bilan carbone scopes 1-2-3 complet, trajectoire de réduction validée SBTi, conformité CSRD."
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "regle_prospection",
+      "nom": "regles_prospection",
+      "description": "Règles de qualification commerciale des prospects GreenHumble",
+      "categorie": "regles_metier",
+      "valeur": [
+        "Score prospect 3 (Chaud) : Allégations interdites détectées + éligible à la subvention Bpifrance 4000 €.",
+        "Score prospect 2 (Tiède) : Allégations floues sans chiffres + secteur assujetti à la CSRD d'ici 2026.",
+        "Score prospect 1 (Veille) : Communication prudente avec présence d'un rapport RSE structuré."
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    }
+  ],
+  "prompts": [
+    {
+      "id": "prompt_system_greenhumble",
+      "nom": "system_prompt_greenhumble",
+      "description": "Prompt système expert GreenHumble 7 piliers",
+      "categorie": "prompts",
+      "valeur": "Tu es l’IA experte de GreenHumble, spécialisée en conformité des allégations environnementales (EmpCo / Green Claims / ECGT), analyse RSE/climat/carbone, détection de greenwashing, vérification des preuves, conformité réglementaire UE/France et scoring de maturité.\nRéférentiels obligatoires : EmpCo, Green Claims Directive, ECGT, CSRD/ESRS, Taxonomie UE, SFDR, MACF/CBAM, EU ETS, CRCF, Ecodesign/ESPR, EN 15804/EPD/FDES, CS3D, PPWR, DPEF, Décret BEGES, Loi Climat & Résilience, Code de la consommation.\nFormat de sortie attendu : JSON valide STRICT.",
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "prompt_user_greenhumble",
+      "nom": "user_prompt_greenhumble",
+      "description": "Gabarit de prompt utilisateur pour l'audit et la prospection",
+      "categorie": "prompts",
+      "valeur": "Effectue un audit complet de conformité environnementale et de potentiel de prospection pour : {url}\nMISSION : Analyse chaque phrase pour détecter des allégations trompeuses (greenwashing) selon EmpCO et Green Claims, ET des signaux faibles de prospection (besoins, risques, opportunités).\nRETOUR : JSON strict selon le gabarit GreenHumble.",
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    }
+  ],
+  "templates_json": [
+    {
+      "id": "tpl_audit",
+      "nom": "template_audit",
+      "description": "Gabarit JSON de restitution d'audit de conformité",
+      "categorie": "templates_json",
+      "valeur": {
+        "score": 65,
+        "riskLevel": "modere",
+        "maturityLevel": 2,
+        "summary": "Résumé de l'audit de conformité",
+        "financialImpact": "Estimation du risque de sanction financière",
+        "claims": [
+          {
+            "term": "Neutre en carbone",
+            "quoteInText": "Citation relevée",
+            "category": "generique_interdite",
+            "severity": "interdit_strict",
+            "legalRisk": "Non conforme EmpCO",
+            "lawArticle": "Directive UE 2024/825",
+            "sanction": "Amende jusqu'à 100 000 €",
+            "requiredProof": "Bilan Carbone Scopes 1-2-3",
+            "correctionNote": "Reformuler vers une démarche de réduction"
+          }
+        ]
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "tpl_prospection",
+      "nom": "template_prospection",
+      "description": "Gabarit JSON du kit commercial et de prospection",
+      "categorie": "templates_json",
+      "valeur": {
+        "scoreProspect": 3,
+        "signauxFaibles": ["Allégation neutre en carbone sans Bilan GES"],
+        "besoinsPotentiels": ["Bilan Carbone subventionné Bpifrance", "Audit EmpCO"],
+        "risques": ["Contrôle DGCCRF"],
+        "recommandation": "Proposer le Diag Décarbon'Action subventionné à 80%",
+        "messageApproche": "Bonjour, nous avons analysé votre communication..."
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "tpl_complet",
+      "nom": "template_complet",
+      "description": "Gabarit unifié Audit & Prospection GreenHumble",
+      "categorie": "templates_json",
+      "valeur": {
+        "score": 70,
+        "riskLevel": "modere",
+        "maturityLevel": 2,
+        "summary": "Synthèse globale",
+        "financialImpact": "50 000 €",
+        "claims": [],
+        "prospection": {
+          "scoreProspect": 2,
+          "signauxFaibles": [],
+          "besoinsPotentiels": [],
+          "risques": [],
+          "recommandation": "",
+          "messageApproche": ""
+        },
+        "rseAnalysis": {
+          "hasClimatePlan": false,
+          "hasScopes123": false,
+          "certifications": []
+        },
+        "recommendations": []
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    }
+  ],
+  "scoring": [
+    {
+      "id": "score_audit_weights",
+      "nom": "scoreAuditWeights",
+      "description": "Pondération des 6 piliers pour le score global de conformité sur 100",
+      "categorie": "scoring",
+      "valeur": {
+        "pilier1_mots_bannis": 25,
+        "pilier2_preuves": 20,
+        "pilier3_transparence": 15,
+        "pilier4_risque_legal": 20,
+        "pilier5_eco_conception": 10,
+        "pilier6_action": 10
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "score_prospection_weights",
+      "nom": "scoreProspectionWeights",
+      "description": "Pondération pour le calcul de l'intérêt prospect (1 à 3)",
+      "categorie": "scoring",
+      "valeur": {
+        "nb_claims_interdits_weight": 35,
+        "absence_bilan_carbone_weight": 25,
+        "eligibilite_subvention_weight": 25,
+        "taille_entreprise_ca_weight": 15
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "score_risk_weights",
+      "nom": "riskWeights",
+      "description": "Seuils d'attribution du niveau de risque juridique",
+      "categorie": "scoring",
+      "valeur": {
+        "critique": {"scoreMax": 39, "label": "Critique", "color": "red"},
+        "eleve": {"scoreMax": 59, "label": "Élevé", "color": "orange"},
+        "modere": {"scoreMax": 79, "label": "Modéré", "color": "amber"},
+        "faible": {"scoreMax": 100, "label": "Faible", "color": "emerald"}
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    }
+  ],
+  "conformite": [
+    {
+      "id": "conf_lois",
+      "nom": "lois",
+      "description": "Textes légaux européens et français de référence",
+      "categorie": "conformite",
+      "valeur": [
+        {"code": "EMPCO", "nom": "Directive (UE) 2024/825 (EmpCO)", "juridiction": "europe", "statut": "En vigueur"},
+        {"code": "GREEN_CLAIMS", "nom": "Directive Green Claims (COM/2023/166)", "juridiction": "europe", "statut": "En cours d'adoption"},
+        {"code": "CSRD", "nom": "Directive CSRD (UE 2022/2464) & ESRS E1", "juridiction": "europe", "statut": "En vigueur"},
+        {"code": "LOI_CLIMAT", "nom": "Loi Climat & Résilience (Art. L. 229-68)", "juridiction": "france", "statut": "En vigueur"},
+        {"code": "CODE_CONSO", "nom": "Code de la Consommation (Art. L. 121-2)", "juridiction": "france", "statut": "En vigueur"}
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "conf_articles",
+      "nom": "articles",
+      "description": "Articles de loi opposables en contrôle",
+      "categorie": "conformite",
+      "valeur": [
+        {"article": "Art. 2 Directive EmpCO", "objet": "Interdiction des allégations de neutralité fondées sur la compensation"},
+        {"article": "Art. L. 121-2 Code Conso", "objet": "Pratiques commerciales trompeuses par action ou omission"},
+        {"article": "Décret n° 2022-539", "objet": "Modalités de compensation carbone et bilan des émissions de GES"},
+        {"article": "ESRS E1 Chiffres", "objet": "Obligation de reporting scopes 1, 2 et 3 et trajectoire 1.5°C"}
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "conf_sanctions",
+      "nom": "sanctions",
+      "description": "Grille des sanctions applicables",
+      "categorie": "conformite",
+      "valeur": [
+        {"type": "Amende administrative", "montantMax": "100 000 €", "autorite": "DGCCRF / DDPP"},
+        {"type": "Amende proportionnelle", "montantMax": "Jusqu'à 4% du chiffre d'affaires mondial annuel", "autorite": "UE / DGCCRF"},
+        {"type": "Sanction pénale tromperie", "montantMax": "Jusqu'à 300 000 € et 2 ans d'emprisonnement", "autorite": "Tribunal Correctionnel"},
+        {"type": "Publication obligatoire", "montantMax": "Affichage aux frais du contrevenant", "autorite": "DGCCRF"}
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "conf_preuves_requises",
+      "nom": "preuves_requises",
+      "description": "Preuves obligatoires exigibles pour valider les mentions environnementales",
+      "categorie": "conformite",
+      "valeur": [
+        {"allégation": "Neutre en carbone", "preuve": "Bilan GES complet Scope 1-2-3 certifié + plan de réduction + compensation certifiée Label Bas-Carbone"},
+        {"allégation": "Matériau bas carbone", "preuve": "Fiche FDES ou EPD vérifiée par tierce partie sur la base INIES"},
+        {"allégation": "Produit éco-conçu", "preuve": "Rapport d'ACV comparative normée ISO 14040/14044"},
+        {"allégation": "Origine locale ou bio", "preuve": "Certificat de l'organisme certificateur accrédité (Ecocert, Certipaq...)"}
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    }
+  ],
+  "gestion_equipes": [
+    {
+      "id": "equipe_siege",
+      "nom": "equipes",
+      "description": "Liste des cabinets et agences territoriales",
+      "categorie": "gestion_equipes",
+      "valeur": [
+        {"id": "cab_siege", "nom": "Cabinet Siège Climat Local", "region": "Occitanie / National", "email": "contact@climatlocal.com", "actif": true},
+        {"id": "cab_aura", "nom": "Cabinet Auvergne-Rhône-Alpes", "region": "AURA", "email": "aura@climatlocal.com", "actif": true},
+        {"id": "cab_idf", "nom": "Cabinet Île-de-France", "region": "Île-de-France", "email": "idf@climatlocal.com", "actif": true}
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "equipe_membres",
+      "nom": "membres",
+      "description": "Collaborateurs et consultants rattachés",
+      "categorie": "gestion_equipes",
+      "valeur": [
+        {"id": "collab_admin", "name": "Julien Lavaud", "email": "julien@climatlocal.com", "role": "Administrateur", "cabinet": "Cabinet Siège Climat Local", "actif": true},
+        {"id": "collab_marine", "name": "Marine Delmas", "email": "marine.delmas@climatlocal.com", "role": "Consultante RSE Senior", "cabinet": "Cabinet Siège Climat Local", "actif": true},
+        {"id": "collab_alex", "name": "Alexandre Mercier", "email": "a.mercier@climatlocal.com", "role": "Expert Bilan Carbone", "cabinet": "Cabinet Auvergne-Rhône-Alpes", "actif": true}
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "equipe_roles",
+      "nom": "roles",
+      "description": "Définition des rôles dans la plateforme",
+      "categorie": "gestion_equipes",
+      "valeur": [
+        {"role": "Administrateur", "description": "Accès total configuration, utilisateurs, modèles IA et base SQL"},
+        {"role": "Consultant Climat & Carbone", "description": "Gestion des audits, dossiers clients, génération des kits prospection"},
+        {"role": "Auditeur Junior", "description": "Consultation des audits et saisie des observations"},
+        {"role": "Client / Observateur", "description": "Consultation exclusive du rapport d'audit et du plan d'action"}
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "equipe_permissions",
+      "nom": "permissions",
+      "description": "Matrice des permissions par rôle",
+      "categorie": "gestion_equipes",
+      "valeur": {
+        "Administrateur": ["scan_run", "audit_edit", "audit_delete", "export_pdf", "admin_config", "users_manage", "api_keys_manage"],
+        "Consultant Climat & Carbone": ["scan_run", "audit_edit", "export_pdf", "prospecting_kit_generate"],
+        "Auditeur Junior": ["scan_run", "audit_read", "export_pdf"],
+        "Client / Observateur": ["audit_read", "export_pdf"]
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "equipe_groupes_metiers",
+      "nom": "groupes_metiers",
+      "description": "Groupes d'expertises pour l'assignation des dossiers",
+      "categorie": "gestion_equipes",
+      "valeur": [
+        {"groupe": "Pôle Bilan Carbone & Décarbon'Action", "specialite": "BEGES, Scopes 1-2-3, Bpifrance"},
+        {"groupe": "Pôle Juridique & Green Claims", "specialite": "EmpCO, Code de la consommation, DGCCRF"},
+        {"groupe": "Pôle ACV & Éco-conception", "specialite": "ISO 14040, EPD, FDES, Matériaux"},
+        {"groupe": "Pôle CSRD & Reporting ESG", "specialite": "ESRS, Double matérialité, Taxonomie"}
+      ],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    }
+  ],
+  "gestion_connexion": [
+    {
+      "id": "auth_utilisateurs",
+      "nom": "utilisateurs",
+      "description": "Identifiants uniques des comptes de connexion",
+      "categorie": "gestion_connexion",
+      "valeur": ["admin_julien", "collab_marine", "collab_alex"],
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "auth_emails",
+      "nom": "emails",
+      "description": "Adresses emails rattachées pour authentification et alertes",
+      "categorie": "gestion_connexion",
+      "valeur": {
+        "admin_julien": "julien@climatlocal.com",
+        "collab_marine": "marine.delmas@climatlocal.com",
+        "collab_alex": "a.mercier@climatlocal.com"
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "auth_mots_de_passe_hashes",
+      "nom": "mots_de_passe_hashes",
+      "description": "Empreintes de sécurité / mots de passe configurés pour chaque utilisateur",
+      "categorie": "gestion_connexion",
+      "valeur": {
+        "admin_julien": "$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+        "collab_marine": "$2y$10$TKh8H1.PfQx37YgCzwiKb.KjNyWgaHb9cbcoQgdIVFlYg7B77UdFm",
+        "collab_alex": "$2y$10$O0N8lOq1s6z7M3Q0Z4oE2.s9Nf7O1W.pQ7X5rT3Y1V2Z3X4W5V6U7"
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "auth_niveaux_acces",
+      "nom": "niveaux_acces",
+      "description": "Niveaux d'habilitation système (1: invité, 2: collaborateur, 3: superviseur, 4: superadmin)",
+      "categorie": "gestion_connexion",
+      "valeur": {
+        "admin_julien": 4,
+        "collab_marine": 2,
+        "collab_alex": 2
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "auth_tokens",
+      "nom": "tokens",
+      "description": "Gestion des jetons de session et d'API",
+      "categorie": "gestion_connexion",
+      "valeur": {
+        "ttl_secondes": 86400,
+        "algo": "HS256",
+        "header_key": "X-GreenHumble-Token"
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    },
+    {
+      "id": "auth_sessions",
+      "nom": "sessions",
+      "description": "Paramètres de persistance et de sécurité des sessions",
+      "categorie": "gestion_connexion",
+      "valeur": {
+        "cookie_name": "greenhumble_session",
+        "cookie_lifetime": 604800,
+        "secure_only": false,
+        "samesite": "Lax",
+        "auto_logout_inactivity_minutes": 120
+      },
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    }
+  ]
+}

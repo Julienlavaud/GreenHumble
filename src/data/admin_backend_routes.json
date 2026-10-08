@@ -1,0 +1,471 @@
+{
+  "api_title": "GreenHumble Admin REST Routes Definition",
+  "version": "2.0.0",
+  "base_url": "/api/admin",
+  "routes": [
+    {
+      "method": "GET",
+      "url": "/api/admin/config",
+      "endpoint": "/api/admin/config",
+      "action_id": "GET_config",
+      "description": "Récupère la liste filtrable et paginée de tous les éléments de configuration du moteur IA, variables, prompts, templates, règles métier, opportunités métiers, scoring et conformité.",
+      "parametres_attendus": {
+        "headers": {
+          "Authorization": { "type": "string", "required": false, "description": "Bearer <jwt_token>" },
+          "Accept": { "type": "string", "required": true, "example": "application/json" }
+        },
+        "query": {
+          "categorie": {
+            "type": "string",
+            "required": false,
+            "enum": [
+              "all",
+              "variables_ia",
+              "prompts",
+              "templates_json",
+              "dictionnaires",
+              "regles_metier",
+              "opportunites_metiers",
+              "scoring",
+              "conformite"
+            ],
+            "default": "all",
+            "description": "Filtre par catégorie de configuration"
+          },
+          "page": { "type": "integer", "required": false, "default": 1, "description": "Numéro de la page" },
+          "limit": { "type": "integer", "required": false, "default": 50, "description": "Nombre d'éléments par page" }
+        },
+        "path": {},
+        "body": null
+      },
+      "reponses_json": {
+        "200": {
+          "description": "Liste paginée des configurations récupérée avec succès",
+          "content_type": "application/json",
+          "schema": {
+            "success": "boolean",
+            "status": "integer",
+            "total": "integer",
+            "page": "integer",
+            "limit": "integer",
+            "filtres_appliques": "object",
+            "data": "array<StandardConfigItem>",
+            "timestamp": "string (ISO 8601)"
+          }
+        }
+      },
+      "erreurs_possibles": [
+        { "code": 400, "status_text": "Bad Request", "message": "Paramètres de pagination ou catégorie invalides" },
+        { "code": 401, "status_text": "Unauthorized", "message": "Session invalide ou jeton JWT manquant" },
+        { "code": 403, "status_text": "Forbidden", "message": "Permissions insuffisantes pour lire les configurations" },
+        { "code": 500, "status_text": "Internal Server Error", "message": "Erreur serveur lors de la lecture des tables de configuration" }
+      ]
+    },
+    {
+      "method": "POST",
+      "url": "/api/admin/config",
+      "endpoint": "/api/admin/config",
+      "action_id": "POST_config",
+      "description": "Crée un nouvel élément de configuration IA ou règle métier personnalisée dans la base.",
+      "parametres_attendus": {
+        "headers": {
+          "Authorization": { "type": "string", "required": true, "description": "Bearer <jwt_token>" },
+          "Content-Type": { "type": "string", "required": true, "example": "application/json" }
+        },
+        "query": {},
+        "path": {},
+        "body": {
+          "nom": { "type": "string", "required": true, "minLength": 2, "maxLength": 100, "description": "Nom unique du paramètre" },
+          "description": { "type": "string", "required": true, "maxLength": 500, "description": "Description du rôle de la configuration" },
+          "categorie": {
+            "type": "string",
+            "required": true,
+            "enum": [
+              "variables_ia",
+              "prompts",
+              "templates_json",
+              "dictionnaires",
+              "regles_metier",
+              "opportunites_metiers",
+              "scoring",
+              "conformite"
+            ],
+            "description": "Catégorie d'appartenance"
+          },
+          "valeur": { "type": "string", "required": true, "description": "Valeur ou charge utile JSON sérialisée" }
+        }
+      },
+      "reponses_json": {
+        "201": {
+          "description": "Configuration créée avec succès",
+          "content_type": "application/json",
+          "schema": {
+            "success": "boolean",
+            "status": "integer",
+            "message": "string",
+            "data": "StandardConfigItem",
+            "timestamp": "string (ISO 8601)"
+          }
+        }
+      },
+      "erreurs_possibles": [
+        { "code": 400, "status_text": "Bad Request", "message": "Données incomplètes ou nom déjà existant" },
+        { "code": 401, "status_text": "Unauthorized", "message": "Authentification requise" },
+        { "code": 403, "status_text": "Forbidden", "message": "Droits Super Admin ou config:write requis" },
+        { "code": 500, "status_text": "Internal Server Error", "message": "Erreur serveur lors de la création de la configuration" }
+      ]
+    },
+    {
+      "method": "PUT",
+      "url": "/api/admin/config/{id}",
+      "endpoint": "/api/admin/config",
+      "action_id": "PUT_config",
+      "description": "Met à jour la valeur et la description d'un élément de configuration existant désigné par son identifiant.",
+      "parametres_attendus": {
+        "headers": {
+          "Authorization": { "type": "string", "required": true, "description": "Bearer <jwt_token>" },
+          "Content-Type": { "type": "string", "required": true, "example": "application/json" }
+        },
+        "query": {},
+        "path": {
+          "id": { "type": "string", "required": true, "description": "Identifiant unique de la configuration à mettre à jour" }
+        },
+        "body": {
+          "valeur": { "type": "string", "required": true, "description": "Nouvelle valeur de la configuration" },
+          "description": { "type": "string", "required": false, "description": "Description mise à jour (optionnel)" }
+        }
+      },
+      "reponses_json": {
+        "200": {
+          "description": "Configuration mise à jour avec succès",
+          "content_type": "application/json",
+          "schema": {
+            "success": "boolean",
+            "status": "integer",
+            "message": "string",
+            "data": "StandardConfigItem",
+            "timestamp": "string (ISO 8601)"
+          }
+        }
+      },
+      "erreurs_possibles": [
+        { "code": 400, "status_text": "Bad Request", "message": "Corps de requête invalide ou élément non modifiable" },
+        { "code": 401, "status_text": "Unauthorized", "message": "Authentification requise" },
+        { "code": 403, "status_text": "Forbidden", "message": "Permissions insuffisantes pour modifier cette configuration" },
+        { "code": 404, "status_text": "Not Found", "message": "Identifiant de configuration introuvable" },
+        { "code": 500, "status_text": "Internal Server Error", "message": "Erreur serveur lors de la mise à jour" }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/admin/config/{id}",
+      "endpoint": "/api/admin/config",
+      "action_id": "DELETE_config",
+      "description": "Supprime définitivement un paramètre de configuration personnalisable si celui-ci n'est pas verrouillé par le système.",
+      "parametres_attendus": {
+        "headers": {
+          "Authorization": { "type": "string", "required": true, "description": "Bearer <jwt_token>" }
+        },
+        "query": {},
+        "path": {
+          "id": { "type": "string", "required": true, "description": "Identifiant unique de la configuration à supprimer" }
+        },
+        "body": null
+      },
+      "reponses_json": {
+        "200": {
+          "description": "Configuration supprimée avec succès",
+          "content_type": "application/json",
+          "schema": {
+            "success": "boolean",
+            "status": "integer",
+            "message": "string",
+            "data": "StandardConfigItem",
+            "timestamp": "string (ISO 8601)"
+          }
+        }
+      },
+      "erreurs_possibles": [
+        { "code": 400, "status_text": "Bad Request", "message": "Tentative de suppression d'une configuration système non supprimable" },
+        { "code": 401, "status_text": "Unauthorized", "message": "Authentification requise" },
+        { "code": 403, "status_text": "Forbidden", "message": "Droits Super Admin requis pour supprimer une configuration" },
+        { "code": 404, "status_text": "Not Found", "message": "Identifiant de configuration introuvable" },
+        { "code": 500, "status_text": "Internal Server Error", "message": "Erreur serveur lors de la suppression" }
+      ]
+    },
+    {
+      "method": "GET",
+      "url": "/api/admin/teams",
+      "endpoint": "/api/admin/teams",
+      "action_id": "GET_teams",
+      "description": "Récupère l'organigramme complet, incluant la liste des équipes, des collaborateurs, des rôles et de leurs permissions associées.",
+      "parametres_attendus": {
+        "headers": {
+          "Authorization": { "type": "string", "required": false, "description": "Bearer <jwt_token>" },
+          "Accept": { "type": "string", "required": true, "example": "application/json" }
+        },
+        "query": {
+          "type": {
+            "type": "string",
+            "required": false,
+            "enum": ["all", "equipes", "membres", "roles"],
+            "default": "all",
+            "description": "Filtre par type d'entité d'équipe"
+          },
+          "page": { "type": "integer", "required": false, "default": 1, "description": "Numéro de la page" },
+          "limit": { "type": "integer", "required": false, "default": 50, "description": "Nombre d'éléments par page" }
+        },
+        "path": {},
+        "body": null
+      },
+      "reponses_json": {
+        "200": {
+          "description": "Liste consolidée des équipes, membres et rôles récupérée",
+          "content_type": "application/json",
+          "schema": {
+            "success": "boolean",
+            "status": "integer",
+            "total": "integer",
+            "page": "integer",
+            "limit": "integer",
+            "data": "array<StandardTeamItem>",
+            "timestamp": "string (ISO 8601)"
+          }
+        }
+      },
+      "erreurs_possibles": [
+        { "code": 400, "status_text": "Bad Request", "message": "Paramètres de requête invalides" },
+        { "code": 401, "status_text": "Unauthorized", "message": "Session non authentifiée" },
+        { "code": 403, "status_text": "Forbidden", "message": "Accès restreint à la gestion des équipes" },
+        { "code": 500, "status_text": "Internal Server Error", "message": "Erreur serveur lors de la récupération des équipes" }
+      ]
+    },
+    {
+      "method": "POST",
+      "url": "/api/admin/teams",
+      "endpoint": "/api/admin/teams",
+      "action_id": "POST_teams",
+      "description": "Crée un nouvel utilisateur membre ou une nouvelle équipe dans l'organisation.",
+      "parametres_attendus": {
+        "headers": {
+          "Authorization": { "type": "string", "required": true, "description": "Bearer <jwt_token>" },
+          "Content-Type": { "type": "string", "required": true, "example": "application/json" }
+        },
+        "query": {},
+        "path": {},
+        "body": {
+          "nom": { "type": "string", "required": true, "minLength": 2, "description": "Nom complet du membre ou nom de l'équipe" },
+          "email": { "type": "string", "required": true, "format": "email", "description": "Adresse email professionnelle" },
+          "role_id": { "type": "string", "required": true, "description": "Identifiant du rôle attribué" },
+          "team_id": { "type": "string", "required": false, "description": "Identifiant de l'équipe d'affectation" },
+          "password": { "type": "string", "required": true, "minLength": 8, "description": "Mot de passe initial sécurisé" }
+        }
+      },
+      "reponses_json": {
+        "201": {
+          "description": "Membre ou équipe créé avec succès",
+          "content_type": "application/json",
+          "schema": {
+            "success": "boolean",
+            "status": "integer",
+            "message": "string",
+            "data": "StandardTeamItem",
+            "timestamp": "string (ISO 8601)"
+          }
+        }
+      },
+      "erreurs_possibles": [
+        { "code": 400, "status_text": "Bad Request", "message": "Adresse email déjà existante ou mot de passe non conforme" },
+        { "code": 401, "status_text": "Unauthorized", "message": "Session non authentifiée" },
+        { "code": 403, "status_text": "Forbidden", "message": "Droits teams:write requis pour ajouter un membre" },
+        { "code": 404, "status_text": "Not Found", "message": "Équipe ou rôle d'affectation introuvable" },
+        { "code": 500, "status_text": "Internal Server Error", "message": "Erreur serveur lors de la création du compte" }
+      ]
+    },
+    {
+      "method": "PUT",
+      "url": "/api/admin/teams/{id}",
+      "endpoint": "/api/admin/teams",
+      "action_id": "PUT_teams",
+      "description": "Modifie les attributs d'un membre ou d'une équipe : rôle, équipe de rattachement ou statut d'activation.",
+      "parametres_attendus": {
+        "headers": {
+          "Authorization": { "type": "string", "required": true, "description": "Bearer <jwt_token>" },
+          "Content-Type": { "type": "string", "required": true, "example": "application/json" }
+        },
+        "query": {},
+        "path": {
+          "id": { "type": "string", "required": true, "description": "Identifiant unique du membre ou de l'équipe" }
+        },
+        "body": {
+          "role_id": { "type": "string", "required": false, "description": "Nouvel identifiant de rôle" },
+          "team_id": { "type": "string", "required": false, "description": "Nouvelle équipe de rattachement" },
+          "access_level": { "type": "integer", "min": 0, "max": 100, "required": false, "description": "Niveau d'accès explicite" }
+        }
+      },
+      "reponses_json": {
+        "200": {
+          "description": "Membre ou équipe mis à jour avec succès",
+          "content_type": "application/json",
+          "schema": {
+            "success": "boolean",
+            "status": "integer",
+            "message": "string",
+            "data": "StandardTeamItem",
+            "timestamp": "string (ISO 8601)"
+          }
+        }
+      },
+      "erreurs_possibles": [
+        { "code": 400, "status_text": "Bad Request", "message": "Données de modification invalides" },
+        { "code": 401, "status_text": "Unauthorized", "message": "Session non authentifiée" },
+        { "code": 403, "status_text": "Forbidden", "message": "Permissions insuffisantes pour élever les privilèges d'un compte" },
+        { "code": 404, "status_text": "Not Found", "message": "Membre ou équipe cible introuvable" },
+        { "code": 500, "status_text": "Internal Server Error", "message": "Erreur serveur lors de la mise à jour des équipes" }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/admin/teams/{id}",
+      "endpoint": "/api/admin/teams",
+      "action_id": "DELETE_teams",
+      "description": "Supprime ou désactive un membre ou une équipe. Protège formellement le compte Super Administrateur.",
+      "parametres_attendus": {
+        "headers": {
+          "Authorization": { "type": "string", "required": true, "description": "Bearer <jwt_token>" }
+        },
+        "query": {},
+        "path": {
+          "id": { "type": "string", "required": true, "description": "Identifiant unique du membre ou de l'équipe à supprimer" }
+        },
+        "body": null
+      },
+      "reponses_json": {
+        "200": {
+          "description": "Membre ou équipe supprimé avec succès",
+          "content_type": "application/json",
+          "schema": {
+            "success": "boolean",
+            "status": "integer",
+            "message": "string",
+            "data": "StandardTeamItem",
+            "timestamp": "string (ISO 8601)"
+          }
+        }
+      },
+      "erreurs_possibles": [
+        { "code": 400, "status_text": "Bad Request", "message": "Tentative d'auto-suppression ou de suppression du Super Admin racine" },
+        { "code": 401, "status_text": "Unauthorized", "message": "Session non authentifiée" },
+        { "code": 403, "status_text": "Forbidden", "message": "Droits Super Admin requis pour supprimer un membre" },
+        { "code": 404, "status_text": "Not Found", "message": "Membre ou équipe introuvable" },
+        { "code": 500, "status_text": "Internal Server Error", "message": "Erreur serveur lors de la suppression de l'entité" }
+      ]
+    },
+    {
+      "method": "POST",
+      "url": "/api/admin/auth/login",
+      "endpoint": "/api/admin/auth",
+      "action_id": "LOGIN",
+      "description": "Authentifie un utilisateur via son email et mot de passe, délivre un token JWT signé et pose le cookie de session sécurisé.",
+      "parametres_attendus": {
+        "headers": {
+          "Content-Type": { "type": "string", "required": true, "example": "application/json" }
+        },
+        "query": {},
+        "path": {},
+        "body": {
+          "email": { "type": "string", "required": true, "format": "email", "description": "Adresse email de l'administrateur" },
+          "password": { "type": "string", "required": true, "minLength": 6, "description": "Mot de passe en clair à vérifier" }
+        }
+      },
+      "reponses_json": {
+        "200": {
+          "description": "Connexion réussie, session initialisée",
+          "content_type": "application/json",
+          "schema": {
+            "success": "boolean",
+            "status": "integer",
+            "message": "string",
+            "token": "string (JWT)",
+            "data": "StandardAuthItem",
+            "timestamp": "string (ISO 8601)"
+          }
+        }
+      },
+      "erreurs_possibles": [
+        { "code": 400, "status_text": "Bad Request", "message": "Email ou mot de passe manquant dans le corps de la requête" },
+        { "code": 401, "status_text": "Unauthorized", "message": "Identifiants invalides ou compte inactif" },
+        { "code": 404, "status_text": "Not Found", "message": "Compte utilisateur non répertorié" },
+        { "code": 500, "status_text": "Internal Server Error", "message": "Erreur serveur lors de l'authentification et émission du token" }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "url": "/api/admin/auth/logout",
+      "endpoint": "/api/admin/auth",
+      "action_id": "LOGOUT",
+      "description": "Révoque la session active, invalide le token côté serveur et détruit le cookie d'authentification.",
+      "parametres_attendus": {
+        "headers": {
+          "Authorization": { "type": "string", "required": false, "description": "Bearer <jwt_token>" }
+        },
+        "query": {},
+        "path": {},
+        "body": null
+      },
+      "reponses_json": {
+        "200": {
+          "description": "Déconnexion réussie, session invalidée",
+          "content_type": "application/json",
+          "schema": {
+            "success": "boolean",
+            "status": "integer",
+            "message": "string",
+            "data": "StandardAuthItem",
+            "timestamp": "string (ISO 8601)"
+          }
+        }
+      },
+      "erreurs_possibles": [
+        { "code": 400, "status_text": "Bad Request", "message": "Requête de déconnexion mal formée" },
+        { "code": 401, "status_text": "Unauthorized", "message": "Aucune session active identifiée" },
+        { "code": 500, "status_text": "Internal Server Error", "message": "Erreur serveur lors de la révocation de la session" }
+      ]
+    },
+    {
+      "method": "GET",
+      "url": "/api/admin/auth/session",
+      "endpoint": "/api/admin/auth",
+      "action_id": "GET_session",
+      "description": "Valide la session active et retourne le profil de l'utilisateur connecté, son statut en ligne et ses permissions pour alimenter le badge UI.",
+      "parametres_attendus": {
+        "headers": {
+          "Authorization": { "type": "string", "required": false, "description": "Bearer <jwt_token>" },
+          "Accept": { "type": "string", "required": true, "example": "application/json" }
+        },
+        "query": {},
+        "path": {},
+        "body": null
+      },
+      "reponses_json": {
+        "200": {
+          "description": "Informations de session et utilisateur connecté récupérées avec succès",
+          "content_type": "application/json",
+          "schema": {
+            "success": "boolean",
+            "status": "integer",
+            "authenticated": "boolean",
+            "data": "StandardAuthItem",
+            "timestamp": "string (ISO 8601)"
+          }
+        }
+      },
+      "erreurs_possibles": [
+        { "code": 400, "status_text": "Bad Request", "message": "En-tête d'autorisation ou cookie de session malformé" },
+        { "code": 401, "status_text": "Unauthorized", "message": "Session expirée ou utilisateur non connecté" },
+        { "code": 404, "status_text": "Not Found", "message": "Profil utilisateur associé à la session introuvable" },
+        { "code": 500, "status_text": "Internal Server Error", "message": "Erreur serveur lors de la vérification de session" }
+      ]
+    }
+  ]
+}

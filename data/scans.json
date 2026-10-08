@@ -1,0 +1,77 @@
+[
+  {
+    "id": "scan_1791455532168_z8mfr",
+    "url": "https://www.aaelectronique.fr",
+    "type_scan": "diagnostic",
+    "projet_id": "proj_1791455532168",
+    "date_scan": "2026-10-08T10:32:12.169Z",
+    "entreprise_secteur": "Industrie électronique / Sous-traitance",
+    "entreprise_salaries": "11-50",
+    "entreprise_ca": "2M€-10M€",
+    "resultat_ia": {
+      "score": 95,
+      "summary": "Diagnostic réévalué : allégation relation client requalifiée. Note de conformité portée à 95/100.",
+      "risks": [],
+      "prospection": {
+        "targetPersona": "Gérant / Responsable Qualité",
+        "executiveSummary": "AAE est une SCOP avec une forte culture humaine. L'opportunité est de transformer cette culture en une stratégie RSE et décarbonation certifiée.",
+        "phonePitch": {
+          "hook": "Bonjour, je suis expert chez Climat Local. J'ai analysé votre positionnement en tant que SCOP et votre expertise EMS.",
+          "keyFact": "La directive Green Claims impose désormais de prouver toute allégation de durabilité.",
+          "legalWarning": "Directive (UE) 2024/825",
+          "callToAction": "Je vous propose un point de 15 minutes pour mobiliser les 4 000 € de subvention Bpifrance pour votre Bilan Carbone.",
+          "objectionResponses": [
+            {
+              "objection": "Nous sommes déjà engagés socialement",
+              "answer": "C'est un excellent socle. Le Bilan Carbone va permettre de compléter votre pilier social par un pilier environnemental robuste."
+            }
+          ]
+        },
+        "emailProspecting": {
+          "legalSecurity": {
+            "subject": "Sécurisation de vos allégations environnementales",
+            "body": "Bonjour, votre statut de SCOP est un atout. Cependant, la nouvelle directive Green Claims impose une rigueur accrue sur les termes utilisés. Nous pouvons vous aider à sécuriser votre communication."
+          },
+          "businessTransformation": {
+            "subject": "Financement Bilan Carbone Bpifrance pour AAElectronique",
+            "body": "Bonjour, en tant qu'industriel, vous êtes éligible au Diag Décarbon'Action de Bpifrance. Climat Local vous accompagne pour réaliser votre Bilan Carbone avec 4 000 € de subvention."
+          }
+        },
+        "climatLocalProposal": {
+          "recommendedPackage": "Pack Diagnostic Conformité + Bilan Carbone",
+          "pricingEstimate": "5 000 € HT (Reste à charge 1 000 € après subvention)",
+          "subsidies": "Éligible Diag Décarbon’Action Bpifrance 4 000 €",
+          "timeline": "4 à 6 semaines"
+        }
+      },
+      "recommendations": [
+        "Audit de communication: Préciser le terme 'durable' pour éviter toute confusion avec une allégation environnementale.",
+        "Bilan Carbone Scopes 1-2-3: Mesurer l'empreinte réelle de l'assemblage électronique avec l'aide Bpifrance.",
+        "Reporting RSE: Formaliser les engagements sociaux et environnementaux dans un rapport annuel."
+      ],
+      "raw": {
+        "model": "gemini-3.1-flash-lite"
+      },
+      "type_audit": "full",
+      "entreprise_secteur": "Industrie électronique / Sous-traitance",
+      "entreprise_salaries": "11-50",
+      "entreprise_ca": "2M€-10M€",
+      "score_global": 95,
+      "riskLevel": "faible"
+    },
+    "statut": "ok",
+    "utilisateur": "Julien Lavaud",
+    "type_audit": "full",
+    "liste_pre_audit": [
+      "list_1791454405390"
+    ],
+    "score": 95,
+    "prospectEmail": "contact@aaelectronique.fr",
+    "leadContact": {
+      "name": "Direction Générale & RSE (SCOP AAE)",
+      "email": "contact@aaelectronique.fr",
+      "phone": "04 71 76 00 00",
+      "role": "Direction & RSE"
+    }
+  }
+]

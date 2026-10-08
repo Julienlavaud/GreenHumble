@@ -1,0 +1,293 @@
+{
+  "title": "GreenHumble SQL Schema Definition",
+  "version": "2.0.0",
+  "description": "Structure logique normalisée des 10 tables SQL du backend GreenHumble (colonnes, types, contraintes, clés primaires et étrangères, relations, règles d'intégrité et index recommandés).",
+  "tables": [
+    {
+      "nom_table": "cl_ai_settings",
+      "description": "Registre centralisé des paramètres d'inférence IA, hyperparamètres, templates JSON et coefficients de pondération",
+      "colonnes": [
+        { "nom": "id", "type": "INT UNSIGNED", "contraintes": "NOT NULL AUTO_INCREMENT", "description": "Identifiant interne auto-incrémenté" },
+        { "nom": "setting_key", "type": "VARCHAR(80)", "contraintes": "NOT NULL UNIQUE", "description": "Clé technique immuable (ex: aiProvider, aiModel, scoreAuditWeights)" },
+        { "nom": "setting_name", "type": "VARCHAR(120)", "contraintes": "NOT NULL", "description": "Libellé lisible affiché dans l'interface" },
+        { "nom": "category", "type": "ENUM('variables_ia', 'prompts', 'templates_json', 'dictionnaires', 'regles_metier', 'opportunites_metiers', 'scoring', 'conformite')", "contraintes": "NOT NULL", "description": "Catégorisation fonctionnelle" },
+        { "nom": "setting_value", "type": "LONGTEXT", "contraintes": "NOT NULL", "description": "Valeur scalaire ou objet/tableau encodé en JSON" },
+        { "nom": "is_editable", "type": "TINYINT(1)", "contraintes": "NOT NULL DEFAULT 1", "description": "Indique si la valeur peut être modifiée par l'utilisateur" },
+        { "nom": "is_deletable", "type": "TINYINT(1)", "contraintes": "NOT NULL DEFAULT 1", "description": "Indique si la ligne peut être supprimée" },
+        { "nom": "created_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP", "description": "Horodatage de création" },
+        { "nom": "updated_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP", "description": "Horodatage de dernière modification" }
+      ],
+      "cle_primaire": ["id"],
+      "cles_etrangeres": [],
+      "relations": [
+        { "type": "OneToMany", "table_cible": "cl_ai_prompts", "description": "Une catégorie de configuration peut regrouper plusieurs versions de prompts associés." }
+      ],
+      "regles_integrite": [
+        "Unicité absolue sur 'setting_key'.",
+        "Interdiction de suppression logicielle si 'is_deletable = 0'."
+      ],
+      "index_recommandes": [
+        { "nom": "uniq_cl_ai_settings_key", "colonnes": ["setting_key"], "type": "UNIQUE" },
+        { "nom": "idx_cl_ai_settings_cat", "colonnes": ["category"], "type": "INDEX" }
+      ]
+    },
+    {
+      "nom_table": "cl_ai_prompts",
+      "description": "Stockage versionné des prompts d'instruction système et utilisateur adressés aux LLMs",
+      "colonnes": [
+        { "nom": "id", "type": "INT UNSIGNED", "contraintes": "NOT NULL AUTO_INCREMENT", "description": "Identifiant unique" },
+        { "nom": "prompt_code", "type": "VARCHAR(64)", "contraintes": "NOT NULL UNIQUE", "description": "Code d'identification (ex: system_prompt_greenhumble, user_prompt_greenhumble)" },
+        { "nom": "title", "type": "VARCHAR(150)", "contraintes": "NOT NULL", "description": "Titre du modèle d'instruction" },
+        { "nom": "prompt_type", "type": "ENUM('system', 'user', 'assistant')", "contraintes": "NOT NULL DEFAULT 'system'", "description": "Rôle du prompt" },
+        { "nom": "prompt_text", "type": "LONGTEXT", "contraintes": "NOT NULL", "description": "Corps textuel des directives d'analyse" },
+        { "nom": "version", "type": "VARCHAR(20)", "contraintes": "NOT NULL DEFAULT '1.0.0'", "description": "Numérotation sémantique de version" },
+        { "nom": "is_active", "type": "TINYINT(1)", "contraintes": "NOT NULL DEFAULT 1", "description": "Prompt actuellement utilisé par le pipeline" },
+        { "nom": "created_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP", "description": "Date d'ajout" },
+        { "nom": "updated_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP", "description": "Date de révision" }
+      ],
+      "cle_primaire": ["id"],
+      "cles_etrangeres": [],
+      "relations": [
+        { "type": "OneToOne", "table_cible": "cl_ai_settings", "description": "Référencé dans cl_ai_settings par setting_key pour l'exécution rapide." }
+      ],
+      "regles_integrite": [
+        "Unicité sur 'prompt_code'.",
+        "Longueur minimale de 'prompt_text' supérieure à 10 caractères."
+      ],
+      "index_recommandes": [
+        { "nom": "uniq_cl_ai_prompts_code", "colonnes": ["prompt_code"], "type": "UNIQUE" },
+        { "nom": "idx_cl_ai_prompts_active", "colonnes": ["is_active", "prompt_type"], "type": "INDEX" }
+      ]
+    },
+    {
+      "nom_table": "cl_ai_dictionaries",
+      "description": "Lexiques spécialisés : signaux faibles d'allégations, besoins d'audit, matrices de risques et opportunités",
+      "colonnes": [
+        { "nom": "id", "type": "INT UNSIGNED", "contraintes": "NOT NULL AUTO_INCREMENT", "description": "Clé primaire" },
+        { "nom": "dictionary_type", "type": "ENUM('signaux_faibles', 'besoins_potentiels', 'risques', 'opportunites_metiers')", "contraintes": "NOT NULL", "description": "Type de lexique" },
+        { "nom": "term", "type": "VARCHAR(150)", "contraintes": "NOT NULL", "description": "Terme ou expression surveillée (ex: neutre en carbone, ACV ISO 14040)" },
+        { "nom": "severity_or_weight", "type": "DECIMAL(4,2)", "contraintes": "NOT NULL DEFAULT 1.00", "description": "Poids de scoring ou coefficient de gravité" },
+        { "nom": "description", "type": "TEXT", "contraintes": "NULL", "description": "Contexte d'application ou article juridique associé" },
+        { "nom": "is_active", "type": "TINYINT(1)", "contraintes": "NOT NULL DEFAULT 1", "description": "Activation du terme dans le scanner" },
+        { "nom": "created_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP", "description": "Date d'enregistrement" }
+      ],
+      "cle_primaire": ["id"],
+      "cles_etrangeres": [],
+      "relations": [
+        { "type": "ManyToMany", "table_cible": "cl_ai_rules", "description": "Les termes du dictionnaire activent le déclenchement de règles métier précises." }
+      ],
+      "regles_integrite": [
+        "Index d'unicité composé sur (dictionary_type, term) pour éviter les doublons lexicaux."
+      ],
+      "index_recommandes": [
+        { "nom": "uniq_dict_type_term", "colonnes": ["dictionary_type", "term"], "type": "UNIQUE" },
+        { "nom": "idx_dict_active", "colonnes": ["is_active"], "type": "INDEX" }
+      ]
+    },
+    {
+      "nom_table": "cl_ai_rules",
+      "description": "Règles métier contraignantes d'audit : Green Claims, exigences RSE et scoring de prospection",
+      "colonnes": [
+        { "nom": "id", "type": "INT UNSIGNED", "contraintes": "NOT NULL AUTO_INCREMENT", "description": "Clé primaire" },
+        { "nom": "rule_code", "type": "VARCHAR(64)", "contraintes": "NOT NULL UNIQUE", "description": "Code normé (ex: regle_green_claims_neutralite, regle_rse_oti)" },
+        { "nom": "rule_category", "type": "ENUM('regles_green_claims', 'regles_rse', 'regles_prospection')", "contraintes": "NOT NULL", "description": "Catégorie juridique ou commerciale" },
+        { "nom": "title", "type": "VARCHAR(180)", "contraintes": "NOT NULL", "description": "Intitulé de la règle d'analyse" },
+        { "nom": "rule_definition", "type": "LONGTEXT", "contraintes": "NOT NULL", "description": "Texte de la règle impérative injecté au prompt" },
+        { "nom": "legal_reference", "type": "VARCHAR(120)", "contraintes": "NULL", "description": "Article de loi ou directive (ex: Art. L. 229-68 Code Environnement)" },
+        { "nom": "fine_amount_max", "type": "DECIMAL(12,2)", "contraintes": "NULL", "description": "Montant maximal de l'amende encourue en euros" },
+        { "nom": "is_strict", "type": "TINYINT(1)", "contraintes": "NOT NULL DEFAULT 1", "description": "Non-conformité bloquante ou avertissement" },
+        { "nom": "created_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP", "description": "Date de création" }
+      ],
+      "cle_primaire": ["id"],
+      "cles_etrangeres": [],
+      "relations": [
+        { "type": "OneToMany", "table_cible": "cl_ai_opportunities", "description": "Une infraction à une règle déclenche la suggestion d'une opportunité d'accompagnement." }
+      ],
+      "regles_integrite": [
+        "Unicité sur 'rule_code'.",
+        "Amende maximale positive ou nulle."
+      ],
+      "index_recommandes": [
+        { "nom": "uniq_cl_ai_rules_code", "colonnes": ["rule_code"], "type": "UNIQUE" },
+        { "nom": "idx_cl_ai_rules_cat", "colonnes": ["rule_category"], "type": "INDEX" }
+      ]
+    },
+    {
+      "nom_table": "cl_ai_opportunities",
+      "description": "Catalogue et historique des opportunités de mission générées par l'analyse IA",
+      "colonnes": [
+        { "nom": "id", "type": "INT UNSIGNED", "contraintes": "NOT NULL AUTO_INCREMENT", "description": "Clé primaire" },
+        { "nom": "opportunity_key", "type": "VARCHAR(64)", "contraintes": "NOT NULL UNIQUE", "description": "Clé d'opportunité (ex: opp_bilan_ges_scope3, opp_label_bcorp)" },
+        { "nom": "title", "type": "VARCHAR(150)", "contraintes": "NOT NULL", "description": "Intitulé commercial de la mission" },
+        { "nom": "target_segment", "type": "VARCHAR(80)", "contraintes": "NULL", "description": "Segment cible (PME, ETI, Grand Compte)" },
+        { "nom": "pitch_argument", "type": "TEXT", "contraintes": "NOT NULL", "description": "Argumentaire de valeur et opportunité réglementaire" },
+        { "nom": "estimated_budget", "type": "VARCHAR(60)", "contraintes": "NULL", "description": "Estimation budgétaire indicative (ex: 5 000 € à 10 000 €)" },
+        { "nom": "subsidy_eligible", "type": "VARCHAR(100)", "contraintes": "NULL", "description": "Subventions applicables (Bpifrance, Tremplin ADEME)" },
+        { "nom": "is_active", "type": "TINYINT(1)", "contraintes": "NOT NULL DEFAULT 1", "description": "Actif dans les suggestions de prospection" },
+        { "nom": "created_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP", "description": "Horodatage de création" }
+      ],
+      "cle_primaire": ["id"],
+      "cles_etrangeres": [],
+      "relations": [
+        { "type": "ManyToMany", "table_cible": "cl_users", "description": "Opportunités affectées aux consultants ou commerciaux pour traitement." }
+      ],
+      "regles_integrite": [
+        "Unicité sur 'opportunity_key'."
+      ],
+      "index_recommandes": [
+        { "nom": "uniq_cl_ai_opp_key", "colonnes": ["opportunity_key"], "type": "UNIQUE" },
+        { "nom": "idx_cl_ai_opp_active", "colonnes": ["is_active"], "type": "INDEX" }
+      ]
+    },
+    {
+      "nom_table": "cl_users",
+      "description": "Comptes utilisateurs, collaborateurs, identifiants chiffrés et niveaux d'accréditation",
+      "colonnes": [
+        { "nom": "id", "type": "INT UNSIGNED", "contraintes": "NOT NULL AUTO_INCREMENT", "description": "Identifiant utilisateur" },
+        { "nom": "username", "type": "VARCHAR(64)", "contraintes": "NOT NULL UNIQUE", "description": "Identifiant de connexion" },
+        { "nom": "email", "type": "VARCHAR(120)", "contraintes": "NOT NULL UNIQUE", "description": "Adresse de courrier électronique" },
+        { "nom": "password_hash", "type": "VARCHAR(255)", "contraintes": "NOT NULL", "description": "Empreinte cryptographique bcrypt du mot de passe" },
+        { "nom": "full_name", "type": "VARCHAR(100)", "contraintes": "NOT NULL", "description": "Prénom et nom du collaborateur" },
+        { "nom": "role_id", "type": "INT UNSIGNED", "contraintes": "NOT NULL", "description": "Clé étrangère vers le rôle RBAC" },
+        { "nom": "team_id", "type": "INT UNSIGNED", "contraintes": "NULL", "description": "Clé étrangère vers l'équipe de rattachement" },
+        { "nom": "access_level", "type": "INT UNSIGNED", "contraintes": "NOT NULL DEFAULT 10", "description": "Score d'accréditation (100 = SuperAdmin, 50 = Auditeur, 30 = Commercial)" },
+        { "nom": "status", "type": "ENUM('actif', 'suspendu', 'invité')", "contraintes": "NOT NULL DEFAULT 'actif'", "description": "État du compte" },
+        { "nom": "failed_login_attempts", "type": "TINYINT UNSIGNED", "contraintes": "NOT NULL DEFAULT 0", "description": "Compteur de tentatives d'authentification infructueuses" },
+        { "nom": "locked_until", "type": "DATETIME", "contraintes": "NULL", "description": "Date d'expiration du verrouillage anti-force-brute" },
+        { "nom": "created_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP", "description": "Date d'inscription" },
+        { "nom": "updated_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP", "description": "Date de mise à jour" }
+      ],
+      "cle_primaire": ["id"],
+      "cles_etrangeres": [
+        { "colonne": "role_id", "table_reference": "cl_roles", "colonne_reference": "id", "on_delete": "RESTRICT", "on_update": "CASCADE" },
+        { "colonne": "team_id", "table_reference": "cl_teams", "colonne_reference": "id", "on_delete": "SET NULL", "on_update": "CASCADE" }
+      ],
+      "relations": [
+        { "type": "ManyToOne", "table_cible": "cl_roles", "description": "Chaque utilisateur possède un rôle RBAC obligatoire." },
+        { "type": "ManyToOne", "table_cible": "cl_teams", "description": "Chaque utilisateur peut être rattaché à une équipe ou pôle régional." },
+        { "type": "OneToMany", "table_cible": "cl_sessions", "description": "Un utilisateur peut détenir plusieurs sessions de connexion actives." }
+      ],
+      "regles_integrite": [
+        "Unicité sur 'username' et 'email'.",
+        "Interdiction de suppression du dernier compte utilisateur ayant un 'access_level = 100'."
+      ],
+      "index_recommandes": [
+        { "nom": "uniq_cl_users_email", "colonnes": ["email"], "type": "UNIQUE" },
+        { "nom": "uniq_cl_users_username", "colonnes": ["username"], "type": "UNIQUE" },
+        { "nom": "idx_cl_users_role_team", "colonnes": ["role_id", "team_id"], "type": "INDEX" },
+        { "nom": "idx_cl_users_status", "colonnes": ["status"], "type": "INDEX" }
+      ]
+    },
+    {
+      "nom_table": "cl_teams",
+      "description": "Pôles territoriaux, cabinets régionaux et groupes d'expertise métier",
+      "colonnes": [
+        { "nom": "id", "type": "INT UNSIGNED", "contraintes": "NOT NULL AUTO_INCREMENT", "description": "Clé primaire de l'équipe" },
+        { "nom": "team_code", "type": "VARCHAR(64)", "contraintes": "NOT NULL UNIQUE", "description": "Code technique (ex: team_rse_siege, team_idf)" },
+        { "nom": "name", "type": "VARCHAR(120)", "contraintes": "NOT NULL", "description": "Nom complet de l'équipe ou du cabinet" },
+        { "nom": "region", "type": "VARCHAR(100)", "contraintes": "NULL", "description": "Zone géographique couverte" },
+        { "nom": "business_group", "type": "VARCHAR(100)", "contraintes": "NULL", "description": "Groupe métier rattaché (ex: Experts Climat & ACV, Juristes Green Claims)" },
+        { "nom": "manager_email", "type": "VARCHAR(120)", "contraintes": "NULL", "description": "Email du responsable d'équipe" },
+        { "nom": "phone", "type": "VARCHAR(30)", "contraintes": "NULL", "description": "Numéro de téléphone du cabinet" },
+        { "nom": "is_active", "type": "TINYINT(1)", "contraintes": "NOT NULL DEFAULT 1", "description": "Statut actif ou archivé" },
+        { "nom": "created_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP", "description": "Date de création" }
+      ],
+      "cle_primaire": ["id"],
+      "cles_etrangeres": [],
+      "relations": [
+        { "type": "OneToMany", "table_cible": "cl_users", "description": "Une équipe regroupe plusieurs collaborateurs consultants." }
+      ],
+      "regles_integrite": [
+        "Unicité sur 'team_code'."
+      ],
+      "index_recommandes": [
+        { "nom": "uniq_cl_teams_code", "colonnes": ["team_code"], "type": "UNIQUE" },
+        { "nom": "idx_cl_teams_region", "colonnes": ["region"], "type": "INDEX" },
+        { "nom": "idx_cl_teams_group", "colonnes": ["business_group"], "type": "INDEX" }
+      ]
+    },
+    {
+      "nom_table": "cl_roles",
+      "description": "Rôles fonctionnels RBAC assignables aux utilisateurs",
+      "colonnes": [
+        { "nom": "id", "type": "INT UNSIGNED", "contraintes": "NOT NULL AUTO_INCREMENT", "description": "Identifiant du rôle" },
+        { "nom": "role_code", "type": "VARCHAR(40)", "contraintes": "NOT NULL UNIQUE", "description": "Code technique immuable (ex: super_admin, auditeur_rse, commercial_b2b)" },
+        { "nom": "title", "type": "VARCHAR(100)", "contraintes": "NOT NULL", "description": "Titre lisible du rôle" },
+        { "nom": "access_level", "type": "INT UNSIGNED", "contraintes": "NOT NULL DEFAULT 10", "description": "Hiérarchie numérique de pouvoir (1 à 100)" },
+        { "nom": "description", "type": "VARCHAR(255)", "contraintes": "NULL", "description": "Périmètre de responsabilités" },
+        { "nom": "is_system", "type": "TINYINT(1)", "contraintes": "NOT NULL DEFAULT 0", "description": "Rôle système non supprimable" },
+        { "nom": "created_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP", "description": "Date de création" }
+      ],
+      "cle_primaire": ["id"],
+      "cles_etrangeres": [],
+      "relations": [
+        { "type": "OneToMany", "table_cible": "cl_users", "description": "Un rôle est assigné à plusieurs utilisateurs." },
+        { "type": "ManyToMany", "table_cible": "cl_permissions", "description": "Un rôle détient plusieurs permissions via la table d'association cl_role_permissions." }
+      ],
+      "regles_integrite": [
+        "Unicité sur 'role_code'.",
+        "Interdiction de suppression si 'is_system = 1'."
+      ],
+      "index_recommandes": [
+        { "nom": "uniq_cl_roles_code", "colonnes": ["role_code"], "type": "UNIQUE" },
+        { "nom": "idx_cl_roles_level", "colonnes": ["access_level"], "type": "INDEX" }
+      ]
+    },
+    {
+      "nom_table": "cl_permissions",
+      "description": "Catalogue granulaire des permissions et habilitations applicatives",
+      "colonnes": [
+        { "nom": "id", "type": "INT UNSIGNED", "contraintes": "NOT NULL AUTO_INCREMENT", "description": "Identifiant de la permission" },
+        { "nom": "permission_code", "type": "VARCHAR(64)", "contraintes": "NOT NULL UNIQUE", "description": "Code normalisé (ex: config:ai:write, audit:run, teams:admin, report:export)" },
+        { "nom": "label", "type": "VARCHAR(120)", "contraintes": "NOT NULL", "description": "Libellé de l'autorisation" },
+        { "nom": "module", "type": "VARCHAR(50)", "contraintes": "NOT NULL", "description": "Module fonctionnel (config, audit, teams, auth, report)" },
+        { "nom": "description", "type": "VARCHAR(255)", "contraintes": "NULL", "description": "Détail de l'opération autorisée" },
+        { "nom": "created_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP", "description": "Date d'enregistrement" }
+      ],
+      "cle_primaire": ["id"],
+      "cles_etrangeres": [],
+      "relations": [
+        { "type": "ManyToMany", "table_cible": "cl_roles", "description": "Attribuée aux rôles dans la table pivot cl_role_permissions." }
+      ],
+      "regles_integrite": [
+        "Unicité sur 'permission_code'."
+      ],
+      "index_recommandes": [
+        { "nom": "uniq_cl_perm_code", "colonnes": ["permission_code"], "type": "UNIQUE" },
+        { "nom": "idx_cl_perm_module", "colonnes": ["module"], "type": "INDEX" }
+      ]
+    },
+    {
+      "nom_table": "cl_sessions",
+      "description": "Suivi des sessions actives, jetons JWT délivrés, adresse IP et validité temporelle",
+      "colonnes": [
+        { "nom": "id", "type": "BIGINT UNSIGNED", "contraintes": "NOT NULL AUTO_INCREMENT", "description": "Identifiant de la session" },
+        { "nom": "user_id", "type": "INT UNSIGNED", "contraintes": "NOT NULL", "description": "Clé étrangère vers l'utilisateur connecté" },
+        { "nom": "token_hash", "type": "VARCHAR(64)", "contraintes": "NOT NULL UNIQUE", "description": "Empreinte SHA-256 du jeton JWT pour vérification sans stockage en clair" },
+        { "nom": "ip_address", "type": "VARCHAR(45)", "contraintes": "NOT NULL", "description": "Adresse IP IPv4 ou IPv6 du client" },
+        { "nom": "user_agent", "type": "VARCHAR(255)", "contraintes": "NULL", "description": "Navigateur et système d'exploitation du client" },
+        { "nom": "is_revoked", "type": "TINYINT(1)", "contraintes": "NOT NULL DEFAULT 0", "description": "Drapeau d'invalidation anticipée (déconnexion)" },
+        { "nom": "last_activity", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP", "description": "Dernière requête enregistrée" },
+        { "nom": "expires_at", "type": "DATETIME", "contraintes": "NOT NULL", "description": "Date et heure limite de validité" },
+        { "nom": "created_at", "type": "DATETIME", "contraintes": "NOT NULL DEFAULT CURRENT_TIMESTAMP", "description": "Horodatage de connexion initiale" }
+      ],
+      "cle_primaire": ["id"],
+      "cles_etrangeres": [
+        { "colonne": "user_id", "table_reference": "cl_users", "colonne_reference": "id", "on_delete": "CASCADE", "on_update": "CASCADE" }
+      ],
+      "relations": [
+        { "type": "ManyToOne", "table_cible": "cl_users", "description": "Chaque session est rattachée à un compte utilisateur spécifique." }
+      ],
+      "regles_integrite": [
+        "Unicité sur 'token_hash'.",
+        "Suppression en cascade automatique des sessions lors de la suppression de l'utilisateur.",
+        "'expires_at' doit être strictement supérieure à 'created_at'."
+      ],
+      "index_recommandes": [
+        { "nom": "uniq_cl_sess_token", "colonnes": ["token_hash"], "type": "UNIQUE" },
+        { "nom": "idx_cl_sess_user_active", "colonnes": ["user_id", "is_revoked", "expires_at"], "type": "INDEX" },
+        { "nom": "idx_cl_sess_expires", "colonnes": ["expires_at"], "type": "INDEX" }
+      ]
+    }
+  ]
+}

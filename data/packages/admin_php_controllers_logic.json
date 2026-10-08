@@ -1,0 +1,687 @@
+{
+  "controleurs_backend_php": {
+    "ConfigController": {
+      "classe_php": "ConfigController",
+      "fichier_source": "/api/controllers/ConfigController.php",
+      "description_generale": "Contrôleur responsable de la persistance, du filtrage et de la gouvernance des paramètres de l'intelligence artificielle, des prompts, des dictionnaires sémantiques, des templates de réponse et des règles de scoring de conformité.",
+      "perimetre_donnees": [
+        "variables_ia",
+        "prompts",
+        "templates_json",
+        "dictionnaires",
+        "regles_metier",
+        "opportunites_metiers",
+        "scoring",
+        "conformite"
+      ],
+      "methodes_rest": [
+        {
+          "nom_methode_php": "index",
+          "methode_http": "GET",
+          "route_exacte": "/api/admin/config",
+          "action_rest": "GET_config",
+          "responsabilites_metier": [
+            "Contrôler la validité de l'authentification et les privilèges de lecture",
+            "Extraire les paramètres de filtrage par catégorie et les paramètres de pagination",
+            "Exécuter la requête de recherche paginée dans la table cl_ai_settings",
+            "Restituer les configurations sous le format standardisé attendu par le composant AI Studio 'Table de configuration IA'"
+          ],
+          "parametres_attendus": {
+            "headers": {
+              "Authorization": "Bearer <jwt_token> (optionnel si cookie de session valide)",
+              "Accept": "application/json"
+            },
+            "query": {
+              "categorie": {
+                "type": "string",
+                "requis": false,
+                "valeur_par_defaut": "all",
+                "valeurs_autorisees": [
+                  "all",
+                  "variables_ia",
+                  "prompts",
+                  "templates_json",
+                  "dictionnaires",
+                  "regles_metier",
+                  "opportunites_metiers",
+                  "scoring",
+                  "conformite"
+                ]
+              },
+              "page": { "type": "integer", "requis": false, "valeur_par_defaut": 1 },
+              "limit": { "type": "integer", "requis": false, "valeur_par_defaut": 50 }
+            }
+          },
+          "formats_json_a_renvoyer": {
+            "succes_200": {
+              "success": true,
+              "status": 200,
+              "total": 3,
+              "page": 1,
+              "limit": 50,
+              "filtres_appliques": { "categorie": "all" },
+              "data": [
+                {
+                  "id": "cfg_ai_provider",
+                  "nom": "aiProvider",
+                  "description": "Moteur LLM principal (groq ou gemini)",
+                  "categorie": "variables_ia",
+                  "valeur": "groq",
+                  "modifiable": true,
+                  "exportable": true,
+                  "importable": true,
+                  "supprimable": false
+                }
+              ],
+              "timestamp": "2026-10-02T03:15:00Z"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Catégorie inconnue ou numéro de page invalide" },
+            { "code": 401, "message": "Session non authentifiée ou jeton expiré" },
+            { "code": 403, "message": "Permissions de lecture de configuration refusées" },
+            { "code": 500, "message": "Erreur serveur lors de la lecture des tables" }
+          ],
+          "logique_metier_a_implementer": [
+            "Étape 1 : Interroger le middleware d'authentification pour vérifier le jeton JWT ou le cookie gh_admin_session.",
+            "Étape 2 : Vérifier que l'utilisateur possède la permission 'config:read' ou 'all'.",
+            "Étape 3 : Récupérer et assainir $_GET['categorie'], $_GET['page'] et $_GET['limit'].",
+            "Étape 4 : Construire la requête SQL filtrée sur cl_ai_settings avec calcul du total global d'enregistrements (SQL_CALC_FOUND_ROWS ou COUNT).",
+            "Étape 5 : Formater chaque enregistrement SQL pour forcer les types booléens natifs sur 'modifiable', 'exportable', 'importable', 'supprimable'.",
+            "Étape 6 : Renvoyer la réponse JSON avec le code HTTP 200."
+          ]
+        },
+        {
+          "nom_methode_php": "create",
+          "methode_http": "POST",
+          "route_exacte": "/api/admin/config",
+          "action_rest": "POST_config",
+          "responsabilites_metier": [
+            "Valider la complétude et la conformité des données reçues depuis le formulaire d'ajout AI Studio",
+            "Garantir l'unicité de la clé de configuration dans le système",
+            "Attribuer un identifiant unique immuable préfixé 'cfg_'",
+            "Persister la nouvelle entrée dans la table cl_ai_settings",
+            "Invalider le cache de configuration de l'application"
+          ],
+          "parametres_attendus": {
+            "headers": {
+              "Authorization": "Bearer <jwt_token>",
+              "Content-Type": "application/json"
+            },
+            "body": {
+              "nom": { "type": "string", "requis": true, "longueur_min": 2, "longueur_max": 100 },
+              "description": { "type": "string", "requis": true, "longueur_max": 500 },
+              "categorie": {
+                "type": "string",
+                "requis": true,
+                "valeurs_autorisees": [
+                  "variables_ia",
+                  "prompts",
+                  "templates_json",
+                  "dictionnaires",
+                  "regles_metier",
+                  "opportunites_metiers",
+                  "scoring",
+                  "conformite"
+                ]
+              },
+              "valeur": { "type": "string", "requis": true }
+            }
+          },
+          "formats_json_a_renvoyer": {
+            "succes_201": {
+              "success": true,
+              "status": 201,
+              "message": "Configuration créée avec succès.",
+              "data": {
+                "id": "cfg_custom_rule_99",
+                "nom": "regle_prospect_bio",
+                "description": "Vérification des allégations biologiques",
+                "categorie": "regles_metier",
+                "valeur": "{\"certification\": true}",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:15:00Z"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Champs obligatoires manquants ou nom de paramètre déjà utilisé" },
+            { "code": 401, "message": "Authentification requise" },
+            { "code": 403, "message": "Droit config:write requis pour ajouter une configuration" },
+            { "code": 500, "message": "Erreur serveur lors de l'insertion en base" }
+          ],
+          "logique_metier_a_implementer": [
+            "Étape 1 : Décoder le corps de requête brut JSON (php://input).",
+            "Étape 2 : Vérifier la présence obligatoire des champs 'nom', 'description', 'categorie', 'valeur'.",
+            "Étape 3 : Contrôler dans cl_ai_settings qu'aucun paramètre ne porte déjà ce nom technique.",
+            "Étape 4 : Générer un identifiant technique unique de type 'cfg_' suivi d'une chaîne aléatoire ou du slug nettoyé.",
+            "Étape 5 : Insérer l'enregistrement avec modifiable=1, exportable=1, importable=1, supprimable=1.",
+            "Étape 6 : Purger les caches d'inférence IA et renvoyer l'objet créé avec HTTP 201."
+          ]
+        },
+        {
+          "nom_methode_php": "update",
+          "methode_http": "PUT",
+          "route_exacte": "/api/admin/config/{id}",
+          "action_rest": "PUT_config",
+          "responsabilites_metier": [
+            "Contrôler l'existence de la configuration à mettre à jour",
+            "Vérifier le droit de modification (drapeau modifiable == true)",
+            "Valider les contraintes de valeur métier pour les variables système sensibles (ex: aiProvider restreint à 'groq' ou 'gemini')",
+            "Mettre à jour la valeur et la description de la configuration",
+            "Diffuser la mise à jour aux modules dépendants"
+          ],
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "requis": true }
+            },
+            "body": {
+              "valeur": { "type": "string", "requis": true },
+              "description": { "type": "string", "requis": false }
+            }
+          },
+          "formats_json_a_renvoyer": {
+            "succes_200": {
+              "success": true,
+              "status": 200,
+              "message": "Configuration mise à jour avec succès.",
+              "data": {
+                "id": "cfg_ai_provider",
+                "nom": "aiProvider",
+                "description": "Fournisseur d'IA actif pour l'inférence",
+                "categorie": "variables_ia",
+                "valeur": "gemini",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": false
+              },
+              "timestamp": "2026-10-02T03:15:00Z"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Valeur invalide ou tentative de modifier une ressource protégée" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Permissions insuffisantes pour éditer cette configuration" },
+            { "code": 404, "message": "Identifiant de configuration introuvable" },
+            { "code": 500, "message": "Erreur serveur lors de la mise à jour" }
+          ],
+          "logique_metier_a_implementer": [
+            "Étape 1 : Récupérer l'identifiant {id} depuis l'URL de routage.",
+            "Étape 2 : Charger l'enregistrement correspondant dans cl_ai_settings. Si absent, retourner HTTP 404.",
+            "Étape 3 : Contrôler le champ 'modifiable' : si la valeur vaut 0, rejeter avec HTTP 400 'CONFIGURATION_LOCKED'.",
+            "Étape 4 : Si l'identifiant ou le nom correspond à 'aiProvider', vérifier strictement que la valeur transmise vaut 'groq' ou 'gemini'.",
+            "Étape 5 : Exécuter l'instruction UPDATE en mettant à jour 'valeur', éventuellement 'description', et 'updated_at'.",
+            "Étape 6 : Renvoyer l'objet actualisé avec code HTTP 200."
+          ]
+        },
+        {
+          "nom_methode_php": "delete",
+          "methode_http": "DELETE",
+          "route_exacte": "/api/admin/config/{id}",
+          "action_rest": "DELETE_config",
+          "responsabilites_metier": [
+            "Vérifier l'existence de l'élément cible",
+            "Vérifier l'autorisation de suppression (drapeau supprimable == true)",
+            "Protéger impérativement les paramètres fondamentaux de fonctionnement",
+            "Supprimer l'enregistrement de la base de données",
+            "Tracer l'action dans le journal d'administration"
+          ],
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "requis": true }
+            }
+          },
+          "formats_json_a_renvoyer": {
+            "succes_200": {
+              "success": true,
+              "status": 200,
+              "message": "Configuration supprimée avec succès.",
+              "data": {
+                "id": "cfg_custom_rule_99",
+                "nom": "regle_prospect_bio",
+                "description": "Règle supprimée",
+                "categorie": "regles_metier",
+                "valeur": "{}",
+                "modifiable": false,
+                "exportable": false,
+                "importable": false,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:15:00Z"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Cette configuration est critique et protégée contre la suppression" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Droits Super Admin requis pour supprimer une règle" },
+            { "code": 404, "message": "Identifiant de configuration introuvable" },
+            { "code": 500, "message": "Erreur serveur lors de la suppression" }
+          ],
+          "logique_metier_a_implementer": [
+            "Étape 1 : Récupérer {id} et vérifier son existence dans cl_ai_settings.",
+            "Étape 2 : Vérifier que 'supprimable' vaut 1. Si supprimable == 0, bloquer immédiatement avec code 400.",
+            "Étape 3 : Supprimer l'enregistrement de cl_ai_settings via DELETE FROM cl_ai_settings WHERE id = :id.",
+            "Étape 4 : Journaliser l'identifiant et l'auteur de la suppression.",
+            "Étape 5 : Retourner les métadonnées de l'élément supprimé avec HTTP 200."
+          ]
+        }
+      ]
+    },
+    "TeamsController": {
+      "classe_php": "TeamsController",
+      "fichier_source": "/api/controllers/TeamsController.php",
+      "description_generale": "Contrôleur responsable de la gestion des équipes, des collaborateurs, de l'attribution des rôles et des habilitations de sécurité.",
+      "perimetre_donnees": [
+        "equipes",
+        "membres",
+        "roles",
+        "permissions",
+        "groupes_metiers"
+      ],
+      "methodes_rest": [
+        {
+          "nom_methode_php": "index",
+          "methode_http": "GET",
+          "route_exacte": "/api/admin/teams",
+          "action_rest": "GET_teams",
+          "responsabilites_metier": [
+            "Contrôler l'accès aux données des collaborateurs",
+            "Effectuer les jointures SQL entre cl_users, cl_roles et cl_teams",
+            "Exclure obligatoirement les empreintes de mots de passe de la restitution",
+            "Restituer les équipes et membres au format standard pour le composant AI Studio 'Table équipes'"
+          ],
+          "parametres_attendus": {
+            "query": {
+              "type": { "type": "string", "requis": false, "valeur_par_defaut": "all", "valeurs_autorisees": ["all", "equipes", "membres", "roles"] },
+              "page": { "type": "integer", "requis": false, "valeur_par_defaut": 1 },
+              "limit": { "type": "integer", "requis": false, "valeur_par_defaut": 50 }
+            }
+          },
+          "formats_json_a_renvoyer": {
+            "succes_200": {
+              "success": true,
+              "status": 200,
+              "total": 3,
+              "page": 1,
+              "limit": 50,
+              "filtres_appliques": { "type": "all" },
+              "data": [
+                {
+                  "id": "team_pole_esg",
+                  "nom": "Pôle Audit & Conformité RSE",
+                  "description": "Équipe de contrôle et revue d'impact",
+                  "categorie": "equipes",
+                  "valeur": "{\"groupe\": \"Conformité\", \"membres_count\": 5}",
+                  "modifiable": true,
+                  "exportable": true,
+                  "importable": true,
+                  "supprimable": true
+                },
+                {
+                  "id": "usr_auditeur_01",
+                  "nom": "Auditeur Climat Local",
+                  "description": "Auditeur expert ESG",
+                  "categorie": "membres",
+                  "valeur": "{\"email\": \"auditeur@climatlocal.com\", \"role\": \"Auditeur\", \"access_level\": 50}",
+                  "modifiable": true,
+                  "exportable": true,
+                  "importable": true,
+                  "supprimable": true
+                }
+              ],
+              "timestamp": "2026-10-02T03:15:00Z"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Filtre de type non reconnu" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Accès restreint à la gestion des équipes" },
+            { "code": 500, "message": "Erreur serveur lors de la récupération des données" }
+          ],
+          "logique_metier_a_implementer": [
+            "Étape 1 : Valider le niveau d'accès de l'utilisateur authentifié (niveau >= 30 requis).",
+            "Étape 2 : Récupérer la liste des pôles (cl_teams) et des membres actifs (cl_users).",
+            "Étape 3 : Effectuer la jointure avec cl_roles pour injecter les libellés et permissions associés.",
+            "Étape 4 : Mapper chaque entité vers la structure standard (id, nom, description, categorie, valeur, modifiable, exportable, importable, supprimable).",
+            "Étape 5 : Exclure tout champ 'password_hash' ou jeton confidentiel.",
+            "Étape 6 : Renvoyer le tableau consolidé avec code HTTP 200."
+          ]
+        },
+        {
+          "nom_methode_php": "create",
+          "methode_http": "POST",
+          "route_exacte": "/api/admin/teams",
+          "action_rest": "POST_teams",
+          "responsabilites_metier": [
+            "Valider les données du nouveau collaborateur depuis le formulaire 'Ajout membre'",
+            "Vérifier le format et l'unicité de l'adresse email",
+            "Hacher le mot de passe initial avec bcrypt",
+            "Rattacher l'utilisateur au rôle et à l'équipe spécifiés",
+            "Créer l'utilisateur dans cl_users"
+          ],
+          "parametres_attendus": {
+            "body": {
+              "nom": { "type": "string", "requis": true, "longueur_min": 2 },
+              "email": { "type": "string", "requis": true, "format": "email" },
+              "role_id": { "type": "string", "requis": true },
+              "team_id": { "type": "string", "requis": false },
+              "password": { "type": "string", "requis": true, "longueur_min": 8 }
+            }
+          },
+          "formats_json_a_renvoyer": {
+            "succes_201": {
+              "success": true,
+              "status": 201,
+              "message": "Nouveau membre ajouté à l'équipe avec succès.",
+              "data": {
+                "id": "usr_sales_consultant_02",
+                "nom": "Alexandre Mercier",
+                "description": "Consultant commercial éco-transition",
+                "categorie": "membres",
+                "valeur": "{\"email\": \"a.mercier@climatlocal.com\", \"role\": \"Commercial\", \"access_level\": 30}",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:15:00Z"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Adresse email déjà existante ou mot de passe inférieur à 8 caractères" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Permissions insuffisantes pour créer des comptes" },
+            { "code": 404, "message": "Rôle ou équipe de destination introuvable" },
+            { "code": 500, "message": "Erreur serveur lors de la création du compte" }
+          ],
+          "logique_metier_a_implementer": [
+            "Étape 1 : Vérifier la validité de l'email via filter_var() et tester sa présence dans cl_users.",
+            "Étape 2 : Vérifier que le rôle 'role_id' existe dans cl_roles.",
+            "Étape 3 : Hacher le mot de passe à l'aide de password_hash($password, PASSWORD_BCRYPT).",
+            "Étape 4 : Déterminer le niveau d'accès par défaut associé au rôle.",
+            "Étape 5 : Générer l'identifiant 'usr_' et insérer l'enregistrement dans cl_users.",
+            "Étape 6 : Renvoyer les informations créées avec le code HTTP 201."
+          ]
+        },
+        {
+          "nom_methode_php": "update",
+          "methode_http": "PUT",
+          "route_exacte": "/api/admin/teams/{id}",
+          "action_rest": "PUT_teams",
+          "responsabilites_metier": [
+            "Contrôler l'existence du membre ou de l'équipe",
+            "Appliquer les règles d'intégrité RBAC : interdire l'élévation illégitime de privilèges",
+            "Mettre à jour le rôle ou l'équipe de rattachement",
+            "Consigner la modification de profil"
+          ],
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "requis": true }
+            },
+            "body": {
+              "role_id": { "type": "string", "requis": false },
+              "team_id": { "type": "string", "requis": false },
+              "access_level": { "type": "integer", "requis": false, "min": 0, "max": 100 }
+            }
+          },
+          "formats_json_a_renvoyer": {
+            "succes_200": {
+              "success": true,
+              "status": 200,
+              "message": "Rôle et autorisations du membre modifiés avec succès.",
+              "data": {
+                "id": "usr_sales_consultant_02",
+                "nom": "Alexandre Mercier",
+                "description": "Lead consultant prospection",
+                "categorie": "membres",
+                "valeur": "{\"email\": \"a.mercier@climatlocal.com\", \"role\": \"Lead Commercial\", \"access_level\": 45}",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:15:00Z"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Paramètres de modification invalides" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Interdiction de modifier un utilisateur de rang supérieur" },
+            { "code": 404, "message": "Membre introuvable" },
+            { "code": 500, "message": "Erreur serveur lors de la mise à jour des autorisations" }
+          ],
+          "logique_metier_a_implementer": [
+            "Étape 1 : Localiser l'utilisateur ciblé par son identifiant dans cl_users.",
+            "Étape 2 : Empêcher un utilisateur de dégrader le Super Administrateur racine 'usr_master_admin'.",
+            "Étape 3 : Si role_id est fourni, valider son existence dans cl_roles.",
+            "Étape 4 : Exécuter la mise à jour SQL dans cl_users.",
+            "Étape 5 : Récupérer le profil mis à jour et renvoyer la réponse avec code HTTP 200."
+          ]
+        },
+        {
+          "nom_methode_php": "delete",
+          "methode_http": "DELETE",
+          "route_exacte": "/api/admin/teams/{id}",
+          "action_rest": "DELETE_teams",
+          "responsabilites_metier": [
+            "Protéger le compte racine 'usr_master_admin' contre toute suppression",
+            "Empêcher l'auto-suppression du compte connecté",
+            "Révoquer toutes les sessions actives dans cl_sessions",
+            "Supprimer le compte ou marquer is_active = 0"
+          ],
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "requis": true }
+            }
+          },
+          "formats_json_a_renvoyer": {
+            "succes_200": {
+              "success": true,
+              "status": 200,
+              "message": "Membre supprimé de l'équipe et accès révoqués.",
+              "data": {
+                "id": "usr_temp_contractor",
+                "nom": "Prestataire Décommissionné",
+                "description": "Compte clôturé",
+                "categorie": "membres",
+                "valeur": "{\"statut\": \"supprime\"}",
+                "modifiable": false,
+                "exportable": false,
+                "importable": false,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:15:00Z"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Tentative d'auto-suppression ou de suppression du Super Admin" },
+            { "code": 401, "message": "Session non authentifiée" },
+            { "code": 403, "message": "Droits Super Admin requis pour supprimer un membre" },
+            { "code": 404, "message": "Membre introuvable" },
+            { "code": 500, "message": "Erreur serveur lors de la révocation de l'accès" }
+          ],
+          "logique_metier_a_implementer": [
+            "Étape 1 : Vérifier si {id} correspond au Super Administrateur ('usr_master_admin') ; si oui, lever HTTP 400.",
+            "Étape 2 : Vérifier si {id} correspond à l'utilisateur actuellement connecté ; si oui, interdire l'auto-suppression.",
+            "Étape 3 : Supprimer les entrées associées dans cl_sessions pour forcer la déconnexion immédiate.",
+            "Étape 4 : Supprimer ou désactiver l'enregistrement dans cl_users.",
+            "Étape 5 : Renvoyer l'objet supprimé avec code HTTP 200."
+          ]
+        }
+      ]
+    },
+    "AuthController": {
+      "classe_php": "AuthController",
+      "fichier_source": "/api/controllers/AuthController.php",
+      "description_generale": "Contrôleur responsable de l'authentification des utilisateurs, de la gestion étanche des sessions, des cookies sécurisés et de l'exposition de l'état de connexion.",
+      "perimetre_donnees": [
+        "utilisateurs",
+        "emails",
+        "mots_de_passe_hashes",
+        "niveaux_acces",
+        "tokens",
+        "sessions"
+      ],
+      "methodes_rest": [
+        {
+          "nom_methode_php": "login",
+          "methode_http": "POST",
+          "route_exacte": "/api/admin/auth/login",
+          "action_rest": "LOGIN",
+          "responsabilites_metier": [
+            "Réceptionner les identifiants envoyés depuis le composant AI Studio 'Formulaire de connexion'",
+            "Rechercher le compte dans cl_users et valider le mot de passe via password_verify()",
+            "Générer un jeton JWT cryptographiquement signé",
+            "Créer une session active dans cl_sessions avec empreinte d'IP et navigateur",
+            "Positionner le cookie sécurisé 'gh_admin_session' (HttpOnly, Secure, SameSite=Strict)",
+            "Restituer le token et le profil utilisateur"
+          ],
+          "parametres_attendus": {
+            "body": {
+              "email": { "type": "string", "requis": true, "format": "email" },
+              "password": { "type": "string", "requis": true, "longueur_min": 6 }
+            }
+          },
+          "formats_json_a_renvoyer": {
+            "succes_200": {
+              "success": true,
+              "status": 200,
+              "message": "Connexion réussie, session administrateur initialisée.",
+              "token": "gh_jwt_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.signature",
+              "data": {
+                "id": "usr_master_admin",
+                "nom": "Julien Lavaud",
+                "description": "Super Administrateur",
+                "categorie": "utilisateurs",
+                "valeur": "{\"email\": \"contact@climatlocal.com\", \"role\": \"Super Administrateur\", \"access_level\": 100}",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": false
+              },
+              "timestamp": "2026-10-02T03:15:00Z"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Email ou mot de passe manquant" },
+            { "code": 401, "message": "Identifiants invalides ou compte inactif" },
+            { "code": 404, "message": "Utilisateur non trouvé" },
+            { "code": 500, "message": "Erreur serveur lors de la création de session" }
+          ],
+          "logique_metier_a_implementer": [
+            "Étape 1 : Récupérer 'email' et 'password' depuis le JSON d'entrée.",
+            "Étape 2 : Rechercher l'utilisateur actif dans cl_users par son email.",
+            "Étape 3 : Si l'utilisateur n'existe pas ou si is_active=0, retourner HTTP 401 'INVALID_CREDENTIALS'.",
+            "Étape 4 : Vérifier l'empreinte bcrypt du mot de passe avec password_verify($password, $user['password_hash']).",
+            "Étape 5 : Si validation réussie, générer un jeton JWT avec payload (sub: id, exp: now + 7200s, role: role_id).",
+            "Étape 6 : Stocker la session active dans cl_sessions (token_hash, user_id, ip_address, expires_at).",
+            "Étape 7 : Configurer le cookie HttpOnly SameSite=Strict via setcookie().",
+            "Étape 8 : Renvoyer le token et le profil au format standardisé avec code HTTP 200."
+          ]
+        },
+        {
+          "nom_methode_php": "logout",
+          "methode_http": "DELETE",
+          "route_exacte": "/api/admin/auth/logout",
+          "action_rest": "LOGOUT",
+          "responsabilites_metier": [
+            "Identifier la session de l'utilisateur actif",
+            "Marquer la session comme révoquée dans cl_sessions",
+            "Détruire le cookie de session côté client",
+            "Confirmer la révocation des accès"
+          ],
+          "parametres_attendus": {
+            "headers": {
+              "Authorization": "Bearer <jwt_token> (optionnel si cookie présent)"
+            }
+          },
+          "formats_json_a_renvoyer": {
+            "succes_200": {
+              "success": true,
+              "status": 200,
+              "message": "Déconnexion réussie, session révoquée.",
+              "data": {
+                "id": "sess_active_revoked",
+                "nom": "Session Active Révoquée",
+                "description": "Session invalidée",
+                "categorie": "sessions",
+                "valeur": "{\"statut\": \"revoquee\"}",
+                "modifiable": false,
+                "exportable": false,
+                "importable": false,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:15:00Z"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "Requête de déconnexion mal formée" },
+            { "code": 401, "message": "Aucune session active identifiée" },
+            { "code": 500, "message": "Erreur serveur lors de la purge de session" }
+          ],
+          "logique_metier_a_implementer": [
+            "Étape 1 : Extraire le jeton de session courant depuis l'en-tête Authorization ou le cookie gh_admin_session.",
+            "Étape 2 : Mettre à jour cl_sessions en positionnant is_revoked = 1 pour ce token.",
+            "Étape 3 : Supprimer le cookie gh_admin_session en envoyant un cookie expiré (Max-Age = -3600).",
+            "Étape 4 : Renvoyer la confirmation de déconnexion avec code HTTP 200."
+          ]
+        },
+        {
+          "nom_methode_php": "session",
+          "methode_http": "GET",
+          "route_exacte": "/api/admin/auth/session",
+          "action_rest": "GET_session",
+          "responsabilites_metier": [
+            "Valider la validité temporelle et cryptographique de la session",
+            "Vérifier que la session n'a pas été révoquée",
+            "Récupérer le profil complet de l'utilisateur, son niveau d'accès et ses permissions",
+            "Fournir les données pour le composant AI Studio 'Badge utilisateur connecté'"
+          ],
+          "parametres_attendus": {
+            "headers": {
+              "Authorization": "Bearer <jwt_token> (optionnel si cookie présent)",
+              "Accept": "application/json"
+            }
+          },
+          "formats_json_a_renvoyer": {
+            "succes_200": {
+              "success": true,
+              "status": 200,
+              "authenticated": true,
+              "data": {
+                "id": "usr_master_admin",
+                "nom": "Julien Lavaud",
+                "description": "Badge utilisateur connecté et privilèges",
+                "categorie": "niveaux_acces",
+                "valeur": "{\"email\": \"contact@climatlocal.com\", \"role\": \"Super Administrateur\", \"access_level\": 100, \"avatar_initials\": \"JL\", \"en_ligne\": true, \"permissions\": [\"all\", \"config:write\", \"teams:write\", \"audit:write\"]}",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": false
+              },
+              "timestamp": "2026-10-02T03:15:00Z"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "message": "En-tête de session malformé" },
+            { "code": 401, "message": "Session expirée ou non authentifiée" },
+            { "code": 404, "message": "Profil utilisateur introuvable" },
+            { "code": 500, "message": "Erreur serveur lors de la vérification de session" }
+          ],
+          "logique_metier_a_implementer": [
+            "Étape 1 : Récupérer le token depuis le cookie ou l'en-tête Authorization.",
+            "Étape 2 : Vérifier la signature JWT et vérifier dans cl_sessions que is_revoked = 0 et expires_at > NOW().",
+            "Étape 3 : Si invalide ou expiré, retourner HTTP 401 'SESSION_EXPIRED' avec authenticated = false.",
+            "Étape 4 : Récupérer les informations du profil utilisateur dans cl_users avec la liste de ses permissions.",
+            "Étape 5 : Structurer l'objet pour alimenter le badge UI avec ses initiales d'avatar, son rôle et son statut en ligne.",
+            "Étape 6 : Renvoyer l'objet avec code HTTP 200."
+          ]
+        }
+      ]
+    }
+  }
+}

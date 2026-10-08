@@ -1,0 +1,295 @@
+{
+  "charte_ui_greenhumble": {
+    "titre": "Charte Graphique & Système UI GreenHumble",
+    "version": "2.0.0",
+    "affiliation_marque": "Inspirée et alignée avec l'identité de Climat Local (climatlocal.com)",
+    "philosophie_design": {
+      "concept": "Rigueur juridique, sobriété environnementale et distinction de cabinet d'audit ESG.",
+      "approche_visuelle": "Alliance d'une typographie serif d'autorité pour les titres, d'une interface sans-serif haute lisibilité pour le cockpit, de teintes émeraude forestières profondes associées aux nuances minérales d'ardoise et tempérées d'accents de vigilance ambrés.",
+      "anti_greenwashing_visuel": "Bannissement des artifices superficiels, contrastes nets respectant les critères d'accessibilité WCAG AAA, surfaces blanches et sable minéral chaleureux."
+    },
+    "palette_de_couleurs_exacte": {
+      "couleurs_primaires": {
+        "emerald_dark": {
+          "hex": "#064E3B",
+          "tailwind": "emerald-900",
+          "usage": "Bannières d'en-tête, fonds contrastés d'audit, boutons majeurs foncés"
+        },
+        "forest_green": {
+          "hex": "#047857",
+          "tailwind": "emerald-700",
+          "usage": "Boutons d'action principale, icônes d'impact, validation légale"
+        },
+        "emerald_main": {
+          "hex": "#059669",
+          "tailwind": "emerald-600",
+          "usage": "Accents de conformité, liens actifs, jauges de score positif"
+        },
+        "deep_slate": {
+          "hex": "#0F172A",
+          "tailwind": "slate-900",
+          "usage": "Titres principaux, logo GreenHumble, typographie maîtresse"
+        }
+      },
+      "couleurs_secondaires": {
+        "teal_ocean": {
+          "hex": "#0F766E",
+          "tailwind": "teal-700",
+          "usage": "Dégradés de logo, badges de méthodologie, sections d'analyse"
+        },
+        "teal_medium": {
+          "hex": "#0D9488",
+          "tailwind": "teal-600",
+          "usage": "États de survol, onglets secondaires actifs"
+        },
+        "mint_light": {
+          "hex": "#ECFDF5",
+          "tailwind": "emerald-50",
+          "usage": "Arrière-plan des blocs de conformité validée, badges positifs"
+        },
+        "mint_border": {
+          "hex": "#A7F3D0",
+          "tailwind": "emerald-200",
+          "usage": "Bordures des fiches validées sans risque de greenwashing"
+        }
+      },
+      "couleurs_accents_et_vigilance": {
+        "warning_amber": {
+          "hex": "#D97706",
+          "tailwind": "amber-600",
+          "usage": "Alertes de risque modéré, badges Green Claims à corriger"
+        },
+        "warning_bg": {
+          "hex": "#FEF3C7",
+          "tailwind": "amber-100",
+          "usage": "Fond des avertissements réglementaires et notifications de vigilance"
+        },
+        "danger_crimson": {
+          "hex": "#DC2626",
+          "tailwind": "red-600",
+          "usage": "Allégations non conformes, risques de sanction DGCCRF, boutons destructifs"
+        },
+        "danger_bg": {
+          "hex": "#FEE2E2",
+          "tailwind": "red-100",
+          "usage": "Fond des non-conformités critiques et alertes de blocage"
+        },
+        "info_sky": {
+          "hex": "#0284C7",
+          "tailwind": "sky-600",
+          "usage": "Références aux directives européennes et articles de loi"
+        }
+      },
+      "surfaces_et_fonds": {
+        "app_background": {
+          "hex": "#F8FAFC",
+          "tailwind": "slate-50",
+          "usage": "Arrière-plan général de l'application"
+        },
+        "card_background": {
+          "hex": "#FFFFFF",
+          "tailwind": "white",
+          "usage": "Cartes de tableau de bord, formulaires, tiroirs modaux"
+        },
+        "sand_warm_neutral": {
+          "hex": "#FDFBF7",
+          "tailwind": "neutral-50/50",
+          "usage": "Fonds institutionnels et certificats d'audit imprimables"
+        },
+        "border_subtle": {
+          "hex": "#E2E8F0",
+          "tailwind": "slate-200",
+          "usage": "Séparateurs de tableaux et bordures de conteneurs"
+        },
+        "border_hover": {
+          "hex": "#CBD5E1",
+          "tailwind": "slate-300",
+          "usage": "Bordures réactives lors du focus ou survol"
+        }
+      }
+    },
+    "typographies": {
+      "police_titres": {
+        "famille": "font-serif (Playfair Display, Georgia, Cambria, serif)",
+        "poids": "font-black / font-bold",
+        "style": "Éditorial, digne des grands cabinets d'expertise légale et climat",
+        "usage": "Titre GreenHumble du logo, h1 de rapports, titres de sections clés"
+      },
+      "police_interface": {
+        "famille": "font-sans (Inter, Plus Jakarta Sans, system-ui, sans-serif)",
+        "poids": "font-medium / font-semibold / font-bold",
+        "style": "Net, précis, optimisé pour les interfaces denses et les tableaux de données",
+        "usage": "Boutons, labels de formulaires, textes de cartes, navigation"
+      },
+      "police_technique_et_code": {
+        "famille": "font-mono (JetBrains Mono, Fira Code, monospace)",
+        "poids": "font-normal / font-medium",
+        "style": "Code, tokens, horodatages ISO, télémétrie IA",
+        "usage": "IDs de configuration, json brut, badges de statut technique"
+      },
+      "echelle_typographique": {
+        "h1": "text-2xl sm:text-3xl lg:text-4xl font-black font-serif text-slate-900 tracking-tight leading-tight",
+        "h2": "text-xl sm:text-2xl font-bold font-serif text-slate-800 tracking-tight",
+        "h3": "text-lg sm:text-xl font-bold font-sans text-slate-900",
+        "h4": "text-base font-semibold font-sans text-slate-800",
+        "body_lg": "text-base text-slate-700 leading-relaxed",
+        "body_md": "text-sm text-slate-600 leading-normal",
+        "body_sm": "text-xs text-slate-500",
+        "badge_label": "text-xs font-bold uppercase tracking-wider"
+      }
+    },
+    "styles_de_boutons": {
+      "primaire": {
+        "classes": "inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+        "usage": "Lancer un audit, valider une configuration, enregistrer un membre"
+      },
+      "secondaire": {
+        "classes": "inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-slate-700 bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-300 shadow-2xs transition-all duration-200 cursor-pointer",
+        "usage": "Annuler, exporter, filtrer, ouvrir un tiroir secondaire"
+      },
+      "accent_vigilance": {
+        "classes": "inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 shadow-2xs transition-all duration-200 cursor-pointer",
+        "usage": "Signaler une non-conformité, marquer une revue manuelle"
+      },
+      "danger_destructif": {
+        "classes": "inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all duration-200 cursor-pointer",
+        "usage": "Supprimer un collaborateur, révoquer une session, écraser un paramètre"
+      },
+      "fantome_icone": {
+        "classes": "p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer",
+        "usage": "Fermeture de modal, actions d'icônes en bout de tableau"
+      }
+    },
+    "styles_de_cartes": {
+      "carte_standard": {
+        "classes": "bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow duration-200 p-6",
+        "usage": "Fiches d'allégations, formulaires de configuration, cartes d'équipe"
+      },
+      "carte_vedette_kpi": {
+        "classes": "bg-gradient-to-br from-white via-slate-50 to-emerald-50/40 rounded-2xl border border-emerald-200/70 shadow-2xs p-6 relative overflow-hidden",
+        "usage": "Scores d'impact, indicateurs clés de conformité, synthèse globale"
+      },
+      "carte_alerte_greenwashing": {
+        "classes": "bg-gradient-to-r from-amber-50/80 to-rose-50/80 rounded-2xl border border-amber-200 p-6",
+        "usage": "Signalement des allégations trompeuses et risques de sanctions"
+      },
+      "carte_opportunite_commerciale": {
+        "classes": "bg-white rounded-2xl border-l-4 border-l-emerald-600 border-y border-r border-slate-200 shadow-2xs p-6 hover:border-slate-300 transition-all",
+        "usage": "Opportunités générées dans l'espace prospection B2B"
+      }
+    },
+    "styles_de_formulaires": {
+      "champs_texte_et_url": {
+        "classes": "w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors shadow-2xs",
+        "usage": "Nom d'entreprise, URL du site, secteur, adresses emails"
+      },
+      "zones_de_texte": {
+        "classes": "w-full bg-white border border-slate-300 rounded-xl p-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors shadow-2xs resize-y min-h-[120px]",
+        "usage": "Saisie des allégations textuelles brutes, notes de prospection"
+      },
+      "menus_deroulants": {
+        "classes": "w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors shadow-2xs cursor-pointer",
+        "usage": "Choix du modèle IA, sélection de catégorie, filtrage des équipes"
+      },
+      "etiquettes_labels": {
+        "classes": "block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2",
+        "usage": "Titres descriptifs au-dessus de chaque champ de saisie"
+      }
+    },
+    "styles_de_tableaux": {
+      "conteneur": {
+        "classes": "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs",
+        "usage": "Tableaux d'administration config, collaborateurs et historique d'audits"
+      },
+      "en_tete_th": {
+        "classes": "bg-slate-50 border-b border-slate-200 px-6 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-600",
+        "usage": "Ligne d'en-tête de colonnes"
+      },
+      "ligne_tr": {
+        "classes": "border-b border-slate-100 hover:bg-slate-50/70 transition-colors duration-150 last:border-b-0",
+        "usage": "Lignes de données cliquables"
+      },
+      "cellule_td": {
+        "classes": "px-6 py-4 text-sm text-slate-700 align-middle",
+        "usage": "Cellules de contenu"
+      }
+    },
+    "styles_de_sections": {
+      "header_navigation": {
+        "classes": "sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs px-4 sm:px-8 h-16 sm:h-20 flex items-center justify-between",
+        "usage": "Navigation principale et identité GreenHumble"
+      },
+      "hero_banniere": {
+        "classes": "bg-gradient-to-r from-slate-900 via-emerald-950 to-teal-950 text-white rounded-3xl p-8 sm:p-12 mb-8 shadow-xl relative overflow-hidden",
+        "usage": "Haut de page cockpit et présentation des scores d'impact"
+      },
+      "grille_de_travail": {
+        "classes": "max-w-[1850px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8",
+        "usage": "Gabarit structurel englobant tous les sous-écrans de l'application"
+      }
+    },
+    "marges_paddings_arrondis": {
+      "arrondis": {
+        "sm": "rounded-lg (8px) - mini badges, boutons d'icônes",
+        "md": "rounded-xl (12px) - boutons standards, champs de formulaires",
+        "lg": "rounded-2xl (16px) - cartes de données, conteneurs de tableaux",
+        "xl": "rounded-3xl (24px) - fenêtres modales, bannières hero",
+        "full": "rounded-full - badges de statut, avatar utilisateur"
+      },
+      "espacements": {
+        "gouttiere_grille": "gap-6 ou gap-8",
+        "marge_interne_carte": "p-6 ou p-8",
+        "espacement_vertical_sections": "space-y-8"
+      }
+    },
+    "styles_d_icones": {
+      "bibliotheque": "Lucide React",
+      "epaisseur_trait": "stroke-[2.2] pour les icônes d'identité et de navigation, stroke-[1.8] pour l'informationnel",
+      "badge_logo": {
+        "forme": "Carré arrondi squircle (rounded-2xl) avec dégradé émeraude vers ardoise",
+        "symboles": "Balance de justice (Scale) symbolisant la conformité légale, doublée d'une feuille (Leaf) pour l'impact climatique local"
+      }
+    },
+    "styles_de_notifications": {
+      "succes": {
+        "classes": "bg-emerald-50 border-l-4 border-emerald-600 text-emerald-900 p-4 rounded-xl shadow-xs",
+        "icone": "CheckCircle2 text-emerald-600"
+      },
+      "vigilance": {
+        "classes": "bg-amber-50 border-l-4 border-amber-500 text-amber-900 p-4 rounded-xl shadow-xs",
+        "icone": "AlertTriangle text-amber-600"
+      },
+      "erreur": {
+        "classes": "bg-rose-50 border-l-4 border-rose-600 text-rose-900 p-4 rounded-xl shadow-xs",
+        "icone": "AlertOctagon text-rose-600"
+      },
+      "information": {
+        "classes": "bg-slate-50 border-l-4 border-slate-700 text-slate-800 p-4 rounded-xl shadow-xs",
+        "icone": "Info text-slate-700"
+      }
+    },
+    "styles_de_tableaux_de_bord": {
+      "jauge_score_circulaire": {
+        "forme": "Cercle SVG avec stroke-dasharray",
+        "vert_conforme": "stroke-emerald-600 (score >= 80)",
+        "orange_vigilance": "stroke-amber-500 (score 60-79)",
+        "rouge_alerte": "stroke-rose-600 (score < 60)",
+        "fond_jauge": "stroke-slate-100"
+      },
+      "badge_utilisateur_connecte": {
+        "classes": "inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-900 border border-emerald-200",
+        "pastille_en_ligne": "w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"
+      }
+    },
+    "coherence_identite_climat_local": {
+      "slogan_institutionnel": "GREENHUMBLE — Restons humbles face à l’impact réel.",
+      "site_origine": "https://climatlocal.com",
+      "localisation": "France / Région Auvergne-Rhône-Alpes",
+      "elements_signature": [
+        "Le logo intègre le double symbole historique Balance + Feuille.",
+        "Les palettes émeraude et ardoise reflètent les forêts et la décarbonation territoriale.",
+        "Le vocabulaire est strictement aligné sur la directive européenne Green Claims et la CSRD."
+      ]
+    }
+  }
+}

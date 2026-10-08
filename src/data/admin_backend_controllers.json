@@ -1,0 +1,410 @@
+{
+  "title": "GreenHumble Backend Controllers Architecture",
+  "version": "2.0.0",
+  "description": "Structure logique détaillée des contrôleurs backend REST (ConfigController, TeamsController, AuthController) : responsabilités, méthodes exposées, paramètres, réponses, gestion des erreurs et logique métier abstraite.",
+  "controllers": {
+    "ConfigController": {
+      "nom": "ConfigController",
+      "description": "Contrôleur responsable de l'orchestration du moteur d'IA, des règles d'audit juridique RSE, des templates de restitution, des dictionnaires de signaux faibles et des coefficients de scoring GreenHumble.",
+      "domaines_geres": [
+        "variables_ia",
+        "prompts",
+        "templates_json",
+        "dictionnaires",
+        "regles_metier",
+        "opportunites_metiers",
+        "scoring",
+        "conformite"
+      ],
+      "methodes_rest": [
+        {
+          "methode": "index",
+          "action_http": "GET",
+          "route": "/api/admin/config",
+          "responsabilite": "Restituer la liste paginée ou filtrée des configurations actives pour alimenter le viewer et les moteurs d'audit.",
+          "parametres_attendus": {
+            "query": {
+              "categorie": { "type": "string", "requis": false, "description": "Filtre fonctionnel optionnel" }
+            },
+            "headers": {
+              "Authorization": { "type": "string", "requis": false }
+            }
+          },
+          "type_reponse_json": {
+            "success": "boolean",
+            "endpoint": "string",
+            "total": "integer",
+            "data": "array<ConfigObject>"
+          },
+          "erreurs_possibles": [
+            { "code": 401, "erreur": "Unauthorized", "condition": "Jeton JWT absent ou révoqué" },
+            { "code": 500, "erreur": "InternalServerError", "condition": "Échec de lecture du registre de configuration" }
+          ],
+          "logique_metier": [
+            "1. Vérifier la validité du jeton d'accès si fourni dans les en-têtes.",
+            "2. Charger le registre de configuration depuis le stockage persistant.",
+            "3. Synchroniser à chaud les valeurs clés 'aiProvider' et 'aiModel' avec l'état global du scanner.",
+            "4. Appliquer le filtre de catégorie si le paramètre 'categorie' est présent dans la requête.",
+            "5. Masquer les métadonnées internes ou clés d'API sensibles dans la charge utile de réponse.",
+            "6. Renvoyer la collection formatée avec le décompte total."
+          ]
+        },
+        {
+          "methode": "store",
+          "action_http": "POST",
+          "route": "/api/admin/config",
+          "responsabilite": "Valider et insérer une nouvelle variable, règle d'analyse d'allégations ou dictionnaire métier.",
+          "parametres_attendus": {
+            "body": {
+              "nom": { "type": "string", "requis": true, "format": "slug_sans_espace" },
+              "description": { "type": "string", "requis": true },
+              "categorie": { "type": "string", "requis": true, "enum": ["variables_ia", "prompts", "templates_json", "dictionnaires", "regles_metier", "opportunites_metiers", "scoring", "conformite"] },
+              "valeur": { "type": "string", "requis": true },
+              "modifiable": { "type": "boolean", "defaut": true },
+              "exportable": { "type": "boolean", "defaut": true },
+              "importable": { "type": "boolean", "defaut": true },
+              "supprimable": { "type": "boolean", "defaut": true }
+            }
+          },
+          "type_reponse_json": {
+            "success": "boolean",
+            "message": "string",
+            "item": "ConfigObject"
+          },
+          "erreurs_possibles": [
+            { "code": 400, "erreur": "BadRequest", "condition": "Champs requis manquants ou syntaxe JSON de valeur non valide" },
+            { "code": 401, "erreur": "Unauthorized", "condition": "Authentification requise" },
+            { "code": 403, "erreur": "Forbidden", "condition": "Privilèges insuffisants (rôle inférieur à Super Admin)" },
+            { "code": 409, "erreur": "Conflict", "condition": "Un enregistrement avec ce nom technique existe déjà" }
+          ],
+          "logique_metier": [
+            "1. Contrôler les droits d'écriture de l'administrateur connecté.",
+            "2. Assainir les entrées textuelles contre les injections et vérifier la validité de la syntaxe si la valeur est un JSON sérialisé.",
+            "3. Vérifier l'unicité de la clé 'nom' dans le registre existant.",
+            "4. Générer un identifiant canonique immuable basé sur le nom normalisé.",
+            "5. Persister le nouvel objet dans la source de données.",
+            "6. Émettre un événement d'audit log pour tracer la création.",
+            "7. Renvoyer l'objet nouvellement créé avec le code HTTP 201."
+          ]
+        },
+        {
+          "methode": "update",
+          "action_http": "PUT",
+          "route": "/api/admin/config/{id}",
+          "responsabilite": "Mettre à jour la valeur et la description d'une règle ou d'un paramètre existant.",
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "requis": true }
+            },
+            "body": {
+              "valeur": { "type": "string", "requis": true },
+              "description": { "type": "string", "requis": false }
+            }
+          },
+          "type_reponse_json": {
+            "success": "boolean",
+            "message": "string",
+            "updated": "ConfigObject"
+          },
+          "erreurs_possibles": [
+            { "code": 400, "erreur": "BadRequest", "condition": "Corps de mise à jour vide" },
+            { "code": 401, "erreur": "Unauthorized", "condition": "Session non authentifiée" },
+            { "code": 403, "erreur": "Forbidden", "condition": "L'élément est verrouillé en modification ('modifiable: false')" },
+            { "code": 404, "erreur": "NotFound", "condition": "Aucun élément trouvé avec cet identifiant" }
+          ],
+          "logique_metier": [
+            "1. Rechercher l'élément par son identifiant {id}.",
+            "2. Vérifier si l'attribut 'modifiable' autorise la mise à jour.",
+            "3. Valider la cohérence de la nouvelle valeur en fonction de la catégorie (ex: format numérique pour aiTemperature ou aiMaxTokens, structure JSON pour templates).",
+            "4. Appliquer les modifications et enregistrer l'horodatage de mise à jour.",
+            "5. Si la variable concerne le fournisseur d'IA (aiProvider) ou le modèle (aiModel), répercuter instantanément la modification sur le module de scan actif.",
+            "6. Sauvegarder dans le stockage persistant et retourner l'entité mise à jour."
+          ]
+        },
+        {
+          "methode": "destroy",
+          "action_http": "DELETE",
+          "route": "/api/admin/config/{id}",
+          "responsabilite": "Supprimer définitivement un élément personnalisé.",
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "requis": true }
+            }
+          },
+          "type_reponse_json": {
+            "success": "boolean",
+            "message": "string",
+            "deleted_id": "string"
+          },
+          "erreurs_possibles": [
+            { "code": 400, "erreur": "BadRequest", "condition": "Paramètre {id} non renseigné" },
+            { "code": 401, "erreur": "Unauthorized", "condition": "Authentification requise" },
+            { "code": 403, "erreur": "Forbidden", "condition": "Tentative de suppression d'une variable système obligatoire ('supprimable: false')" },
+            { "code": 404, "erreur": "NotFound", "condition": "Identifiant introuvable" }
+          ],
+          "logique_metier": [
+            "1. Charger l'élément ciblé.",
+            "2. Vérifier le drapeau de protection 'supprimable'. Si faux, rejeter l'opération avec un code 403.",
+            "3. Retirer l'élément de la collection active.",
+            "4. Réécrire le stockage persistant.",
+            "5. Journaliser la suppression administrative.",
+            "6. Renvoyer une confirmation avec l'identifiant de la ressource supprimée."
+          ]
+        }
+      ]
+    },
+    "TeamsController": {
+      "nom": "TeamsController",
+      "description": "Contrôleur responsable de la gestion des pôles régionaux, des collaborateurs consultants, de la matrice des rôles RBAC, des permissions granulaires et des groupes d'expertise métier.",
+      "domaines_geres": [
+        "equipes",
+        "membres",
+        "roles",
+        "permissions",
+        "groupes_metiers"
+      ],
+      "methodes_rest": [
+        {
+          "methode": "index",
+          "action_http": "GET",
+          "route": "/api/admin/teams",
+          "responsabilite": "Fournir l'arborescence complète de l'organisation interne : pôles, collaborateurs rattachés, rôles avec niveaux hiérarchiques et groupes d'expertise.",
+          "parametres_attendus": {
+            "query": {
+              "equipe_id": { "type": "string", "requis": false, "description": "Filtre par pôle territorial" }
+            }
+          },
+          "type_reponse_json": {
+            "success": "boolean",
+            "endpoint": "string",
+            "equipes": "array<Team>",
+            "membres": "array<Member>",
+            "roles": "array<Role>",
+            "permissions": "array<Permission>",
+            "groupes_metiers": "array<BusinessGroup>"
+          },
+          "erreurs_possibles": [
+            { "code": 401, "erreur": "Unauthorized", "condition": "Session expirée ou non autorisée" },
+            { "code": 403, "erreur": "Forbidden", "condition": "Niveau d'accès insuffisant pour consulter la structure RH" }
+          ],
+          "logique_metier": [
+            "1. Vérifier l'habilitation de l'utilisateur demandeur (accès réservé aux consultants et administrateurs).",
+            "2. Extraire la liste des pôles régionaux actifs et compter les collaborateurs associés.",
+            "3. Récupérer les profils des membres avec leur rôle et statut (actif, suspendu, invité).",
+            "4. Charger la grille de permissions et la définition des rôles RBAC (Super Admin 100, Auditeur 50, Commercial 30).",
+            "5. Structurer les données et retourner la réponse unifiée pour affichage immédiat dans le viewer."
+          ]
+        },
+        {
+          "methode": "store",
+          "action_http": "POST",
+          "route": "/api/admin/teams",
+          "responsabilite": "Enregistrer un nouveau collaborateur ou déclarer une nouvelle équipe/antenne régionale.",
+          "parametres_attendus": {
+            "body": {
+              "type": { "type": "string", "enum": ["membre", "equipe"], "defaut": "membre" },
+              "nom": { "type": "string", "requis": true },
+              "email": { "type": "string", "format": "email", "requis": false },
+              "role": { "type": "string", "requis": false },
+              "equipe": { "type": "string", "requis": false },
+              "region": { "type": "string", "requis": false }
+            }
+          },
+          "type_reponse_json": {
+            "success": "boolean",
+            "message": "string",
+            "membre": "object",
+            "equipe": "object"
+          },
+          "erreurs_possibles": [
+            { "code": 400, "erreur": "BadRequest", "condition": "Nom obligatoire manquant ou format d'adresse email invalide" },
+            { "code": 401, "erreur": "Unauthorized", "condition": "Session non authentifiée" },
+            { "code": 409, "erreur": "Conflict", "condition": "Un collaborateur avec cette adresse email existe déjà" }
+          ],
+          "logique_metier": [
+            "1. Déterminer le type d'entité à créer (membre ou équipe).",
+            "2. En cas d'ajout de membre : vérifier l'unicité de l'email dans l'annuaire des utilisateurs.",
+            "3. Associer le rôle RBAC spécifié et l'équipe de rattachement (avec valeurs par défaut si non renseignées).",
+            "4. Attribuer le statut 'actif' ou 'invité' et générer un horodatage de création.",
+            "5. Synchroniser le tableau des collaborateurs et cabinets dans le fichier d'état applicatif.",
+            "6. Renvoyer l'entité créée avec le statut HTTP 201."
+          ]
+        },
+        {
+          "methode": "update",
+          "action_http": "PUT",
+          "route": "/api/admin/teams/{id}",
+          "responsabilite": "Modifier les droits d'un collaborateur (changement de rôle, transfert d'équipe ou modification des permissions dérogatoires).",
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "requis": true }
+            },
+            "body": {
+              "role": { "type": "string", "requis": false },
+              "equipe": { "type": "string", "requis": false },
+              "statut": { "type": "string", "enum": ["actif", "suspendu"], "requis": false }
+            }
+          },
+          "type_reponse_json": {
+            "success": "boolean",
+            "message": "string",
+            "updated_member": "object"
+          },
+          "erreurs_possibles": [
+            { "code": 400, "erreur": "BadRequest", "condition": "Identifiant absent ou données invalides" },
+            { "code": 401, "erreur": "Unauthorized", "condition": "Session non authentifiée" },
+            { "code": 403, "erreur": "Forbidden", "condition": "Tentative d'altération des privilèges du Super Administrateur maître" },
+            { "code": 404, "erreur": "NotFound", "condition": "Collaborateur {id} non trouvé" }
+          ],
+          "logique_metier": [
+            "1. Vérifier si l'identifiant {id} correspond au compte Super Administrateur racine. Si oui, bloquer la rétrogradation.",
+            "2. Localiser le collaborateur dans la base d'équipes.",
+            "3. Appliquer les nouveaux attributs (rôle RBAC, pôle d'affectation, statut de compte).",
+            "4. Si le statut passe à 'suspendu', révoquer immédiatement toutes les sessions actives de ce collaborateur.",
+            "5. Sauvegarder les modifications et retourner le profil mis à jour."
+          ]
+        },
+        {
+          "methode": "destroy",
+          "action_http": "DELETE",
+          "route": "/api/admin/teams/{id}",
+          "responsabilite": "Révoquer un collaborateur ou supprimer une équipe territoriale vide.",
+          "parametres_attendus": {
+            "path": {
+              "id": { "type": "string", "requis": true }
+            }
+          },
+          "type_reponse_json": {
+            "success": "boolean",
+            "message": "string",
+            "deleted_id": "string"
+          },
+          "erreurs_possibles": [
+            { "code": 400, "erreur": "BadRequest", "condition": "Identifiant manquant" },
+            { "code": 401, "erreur": "Unauthorized", "condition": "Session invalide" },
+            { "code": 403, "erreur": "Forbidden", "condition": "Action impossible sur le compte racine ou le dernier administrateur actif" },
+            { "code": 404, "erreur": "NotFound", "condition": "Entité introuvable" }
+          ],
+          "logique_metier": [
+            "1. Contrôler que la ressource ciblée n'est pas le compte administrateur maître.",
+            "2. En cas de suppression d'équipe : s'assurer qu'aucun collaborateur actif n'y est rattaché (ou les réaffecter au pôle par défaut).",
+            "3. Retirer la ressource du registre.",
+            "4. Clôturer les sessions d'authentification liées.",
+            "5. Mettre à jour le stockage et retourner le statut de révocation."
+          ]
+        }
+      ]
+    },
+    "AuthController": {
+      "nom": "AuthController",
+      "description": "Contrôleur responsable du contrôle d'accès, de l'authentification sécurisée, du hachage et de la vérification des mots de passe, de l'émission et révocation des tokens JWT et de la maintenance de la session active.",
+      "domaines_geres": [
+        "utilisateurs",
+        "emails",
+        "mots_de_passe_hashes",
+        "niveaux_acces",
+        "tokens",
+        "sessions"
+      ],
+      "methodes_rest": [
+        {
+          "methode": "login",
+          "action_http": "POST",
+          "route": "/api/admin/auth/login",
+          "responsabilite": "Vérifier les identifiants de connexion, contrer les attaques par force brute, forger un token JWT signé et créer le cookie de session sécurisé.",
+          "parametres_attendus": {
+            "body": {
+              "email_or_user": { "type": "string", "requis": true, "description": "Identifiant ou adresse email" },
+              "password": { "type": "string", "format": "password", "requis": true, "description": "Mot de passe en clair à vérifier" }
+            }
+          },
+          "type_reponse_json": {
+            "success": "boolean",
+            "token": "string",
+            "expires_in": "integer",
+            "user": {
+              "id": "string",
+              "username": "string",
+              "email": "string",
+              "nom": "string",
+              "role": "string",
+              "access_level": "integer"
+            }
+          },
+          "erreurs_possibles": [
+            { "code": 400, "erreur": "BadRequest", "condition": "Identifiant ou mot de passe non transmis" },
+            { "code": 401, "erreur": "Unauthorized", "condition": "Identifiant introuvable ou mot de passe invalide" },
+            { "code": 429, "erreur": "TooManyRequests", "condition": "Verrouillage temporaire après 5 échecs consécutifs d'authentification" }
+          ],
+          "logique_metier": [
+            "1. Vérifier si l'adresse IP cliente fait l'objet d'un verrouillage temporaire pour tentatives répétées.",
+            "2. Rechercher l'utilisateur dans l'annuaire administratif ou la base de données.",
+            "3. Vérifier le mot de passe via l'algorithme sécurisé (bcrypt/argon2).",
+            "4. En cas d'échec : incrémenter le compteur de tentatives infructueuses et renvoyer un code 401 sans divulguer si l'erreur provient du login ou du mot de passe.",
+            "5. En cas de succès : réinitialiser le compteur d'échecs, générer un jeton JWT avec signature HMAC, injecter un cookie HttpOnly sécurisé (SameSite: Lax) et initialiser la session côté serveur.",
+            "6. Renvoyer le jeton, la durée de validité (86400s) et le profil utilisateur non sensible."
+          ]
+        },
+        {
+          "methode": "logout",
+          "action_http": "DELETE",
+          "route": "/api/admin/auth/logout",
+          "responsabilite": "Révoquer le jeton de session actif, détruire la session serveur et purger le cookie d'authentification côté client.",
+          "parametres_attendus": {
+            "headers": {
+              "Authorization": { "type": "string", "requis": false, "description": "Bearer token à blacklister" }
+            }
+          },
+          "type_reponse_json": {
+            "success": "boolean",
+            "message": "string"
+          },
+          "erreurs_possibles": [
+            { "code": 400, "erreur": "BadRequest", "condition": "Aucune session active à clore" }
+          ],
+          "logique_metier": [
+            "1. Extraire le jeton de session depuis l'en-tête Authorization ou le cookie de session.",
+            "2. Détruire les variables de session actives côté serveur.",
+            "3. Placer le jeton JWT dans la liste de révocation temporaire jusqu'à son expiration nominale.",
+            "4. Envoyer un en-tête Set-Cookie avec une date d'expiration passée pour forcer l'effacement par le navigateur.",
+            "5. Renvoyer une confirmation de déconnexion réussie."
+          ]
+        },
+        {
+          "methode": "session",
+          "action_http": "GET",
+          "route": "/api/admin/auth/session",
+          "responsabilite": "Valider la session en cours, renouveler le délai d'expiration pour les sessions actives et restituer les données du badge utilisateur pour l'interface.",
+          "parametres_attendus": {
+            "headers": {
+              "Authorization": { "type": "string", "requis": false, "description": "Bearer token JWT optionnel" }
+            }
+          },
+          "type_reponse_json": {
+            "authenticated": "boolean",
+            "session_id": "string",
+            "user": {
+              "id": "string",
+              "nom": "string",
+              "email": "string",
+              "role": "string",
+              "access_level": "integer",
+              "avatar_initials": "string"
+            },
+            "permissions": "array<string>"
+          },
+          "erreurs_possibles": [
+            { "code": 401, "erreur": "Unauthorized", "condition": "Session invalide, corrompue ou expirée" }
+          ],
+          "logique_metier": [
+            "1. Inspecter le jeton d'authentification ou le cookie de session.",
+            "2. Valider l'intégrité cryptographique et la date d'expiration du jeton.",
+            "3. Si la session est expirée ou absente : en mode développement viewer AI Studio, fournir un profil de simulation cohérent pour maintenir la navigation de test ; en production, renvoyer une erreur 401.",
+            "4. Si la session est valide : prolonger la fenêtre d'inactivité autorisée et charger la liste des permissions associées au rôle du profil.",
+            "5. Renvoyer les attributs du badge de navigation (initiales, nom, rôle, identifiant de session)."
+          ]
+        }
+      ]
+    }
+  }
+}

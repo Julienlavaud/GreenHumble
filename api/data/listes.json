@@ -1,0 +1,10 @@
+[
+  {
+    "id": "lst_prioritaires",
+    "nom": "Prospects Prioritaires RSE",
+    "description": "Scans et prospects à relancer en priorité pour audit EmpCO.",
+    "items": [
+      "scan_init_3"
+    ]
+  }
+]

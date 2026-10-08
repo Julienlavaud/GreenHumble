@@ -1,0 +1,267 @@
+{
+  "design_system_ui_greenhumble": {
+    "titre": "Système de Design UI Complet GreenHumble",
+    "version": "2.5.0",
+    "identite_institutionnelle": {
+      "nom_plateforme": "GreenHumble",
+      "slogan": "Le climat, ensemble.",
+      "marque_mere": "Climat Local (climatlocal.com)",
+      "positionnement": "Cabinet d'audit d'intégrité écologique, tiers de confiance réglementaire et accélérateur de transition territoriale.",
+      "direction_artistique": "Sobriété éditoriale, typographie serif statutaire, interfaces de cockpit denses et ultra-lisibles, palette émeraude sylvestre et ardoise minérale, bannissement de tout artifice visuel trompeur (anti-greenwashing by design)."
+    },
+    "palette_de_couleurs_climatlocal": {
+      "primaires_forestieres": {
+        "emerald_darkest": {
+          "hex": "#064E3B",
+          "tailwind": "emerald-950",
+          "rgb": "rgb(6, 78, 59)",
+          "usage": "Bannières hero, logos maîtres, pieds de page solennels"
+        },
+        "emerald_deep": {
+          "hex": "#047857",
+          "tailwind": "emerald-700",
+          "rgb": "rgb(4, 120, 87)",
+          "usage": "Boutons d'action primaire, validations de conformité, liens actifs majeurs"
+        },
+        "emerald_vibrant": {
+          "hex": "#059669",
+          "tailwind": "emerald-600",
+          "rgb": "rgb(5, 150, 105)",
+          "usage": "Jauges de score >= 80, bordures d'accent, badges d'intégrité"
+        },
+        "emerald_light": {
+          "hex": "#10B981",
+          "tailwind": "emerald-500",
+          "rgb": "rgb(16, 185, 129)",
+          "usage": "Pastilles d'état actif, surbrillances graphiques"
+        }
+      },
+      "secondaires_minerales_et_ardoise": {
+        "slate_deep": {
+          "hex": "#0F172A",
+          "tailwind": "slate-900",
+          "rgb": "rgb(15, 23, 42)",
+          "usage": "Titres H1/H2, texte à fort contraste, fond de navbar sombre alternative"
+        },
+        "slate_body": {
+          "hex": "#334155",
+          "tailwind": "slate-700",
+          "rgb": "rgb(51, 65, 85)",
+          "usage": "Paragraphes, labels techniques, descriptions d'audit"
+        },
+        "slate_subtle": {
+          "hex": "#64748B",
+          "tailwind": "slate-500",
+          "rgb": "rgb(100, 116, 139)",
+          "usage": "Métadonnées, horodatages ISO, textes d'aide"
+        },
+        "teal_accent": {
+          "hex": "#0F766E",
+          "tailwind": "teal-700",
+          "rgb": "rgb(15, 118, 110)",
+          "usage": "Dégradés de cartes vedettes, filtres de catégories environnementales"
+        }
+      },
+      "accents_et_vigilance_reglementaire": {
+        "warning_amber": {
+          "hex": "#D97706",
+          "tailwind": "amber-600",
+          "fond_associe": "#FEF3C7",
+          "usage": "Alertes de vigilance, allégations floues, score entre 60 et 79"
+        },
+        "danger_crimson": {
+          "hex": "#DC2626",
+          "tailwind": "red-600",
+          "fond_associe": "#FEE2E2",
+          "usage": "Greenwashing avéré, allégations illégales selon décret 2022-748, score < 60"
+        },
+        "info_sky": {
+          "hex": "#0284C7",
+          "tailwind": "sky-600",
+          "fond_associe": "#E0F2FE",
+          "usage": "Renvois aux textes de lois, directives CSRD et Green Claims"
+        }
+      },
+      "surfaces_et_fonds": {
+        "bg_canvas": {
+          "hex": "#F8FAFC",
+          "tailwind": "slate-50",
+          "usage": "Toile de fond de l'application"
+        },
+        "bg_card_pure": {
+          "hex": "#FFFFFF",
+          "tailwind": "white",
+          "usage": "Cartes, modales, formulaires, conteneurs"
+        },
+        "bg_warm_institutionnel": {
+          "hex": "#FDFBF7",
+          "tailwind": "neutral-50/60",
+          "usage": "Rapports certifiés imprimables, sections d'autorité"
+        },
+        "border_subtle": {
+          "hex": "#E2E8F0",
+          "tailwind": "slate-200",
+          "usage": "Séparateurs de tableaux et bordures standard"
+        }
+      }
+    },
+    "typographies": {
+      "titres_editoriaux": {
+        "famille": "font-serif (Playfair Display, Georgia, serif)",
+        "poids": "font-black / font-bold",
+        "style": "Éditorial, solennel, prestige de cabinet d'audit",
+        "echelle": {
+          "h1": "text-2xl sm:text-3xl lg:text-4xl font-black font-serif text-slate-900 tracking-tight leading-tight",
+          "h2": "text-xl sm:text-2xl font-bold font-serif text-slate-800 tracking-tight",
+          "h3": "text-lg sm:text-xl font-bold font-serif text-slate-800"
+        }
+      },
+      "corps_et_interface": {
+        "famille": "font-sans (Inter, Plus Jakarta Sans, system-ui, sans-serif)",
+        "poids": "font-normal, font-medium, font-semibold, font-bold",
+        "echelle": {
+          "body_large": "text-base text-slate-700 leading-relaxed",
+          "body_regular": "text-sm text-slate-600 leading-normal",
+          "body_small": "text-xs text-slate-500",
+          "badge_label": "text-xs font-bold uppercase tracking-wider"
+        }
+      },
+      "donnees_techniques_et_code": {
+        "famille": "font-mono (JetBrains Mono, monospace)",
+        "usage": "Identifiants (audit_*, usr_*, cfg_*), télémétrie IA, horodatages ISO, requêtes SQL"
+      }
+    },
+    "marges_paddings_arrondis": {
+      "arrondis": {
+        "sm": "rounded-lg (8px) - mini boutons d'icônes, étiquettes techniques",
+        "md": "rounded-xl (12px) - boutons principaux, champs d'entrée, sélecteurs",
+        "lg": "rounded-2xl (16px) - cartes de tableau de bord, conteneurs de tableaux",
+        "xl": "rounded-3xl (24px) - bannières hero, fenêtres modales, tiroirs",
+        "full": "rounded-full - badges de statut, pastilles d'utilisateurs en ligne"
+      },
+      "espacements_et_paddings": {
+        "page_gutter": "px-4 sm:px-6 lg:px-8 py-8",
+        "card_padding": "p-6 sm:p-8",
+        "modal_padding": "p-6 sm:p-10",
+        "section_gap": "space-y-8"
+      }
+    },
+    "styles_de_boutons": {
+      "primaire": {
+        "classes": "inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+        "usage": "Lancer l'audit, valider la configuration, enregistrer les modifications"
+      },
+      "secondaire": {
+        "classes": "inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-slate-700 bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-300 shadow-2xs transition-all duration-200 cursor-pointer",
+        "usage": "Filtrer, annuler, exporter un rapport, modifier les critères"
+      },
+      "vigilance_correction": {
+        "classes": "inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 shadow-2xs transition-all duration-200 cursor-pointer",
+        "usage": "Signaler une non-conformité, ouvrir l'aide à la reformulation"
+      },
+      "danger": {
+        "classes": "inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all duration-200 cursor-pointer",
+        "usage": "Révoquer un token, supprimer un collaborateur, réinitialiser la configuration"
+      },
+      "icone_fantome": {
+        "classes": "p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer",
+        "usage": "Fermer un tiroir latéral, copier un pitch, action contextuelle"
+      }
+    },
+    "styles_de_cartes": {
+      "carte_standard": {
+        "classes": "bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow duration-200 p-6",
+        "usage": "Blocs de contenu, paramètres individuels, formulaires secondaires"
+      },
+      "carte_kpi_vedette": {
+        "classes": "bg-gradient-to-br from-white via-slate-50 to-emerald-50/40 rounded-2xl border border-emerald-200/70 shadow-2xs p-6 relative overflow-hidden",
+        "usage": "Compteurs de scores, métriques macro d'impact, taux de conformité"
+      },
+      "carte_alerte_greenwashing": {
+        "classes": "bg-gradient-to-r from-amber-50/80 to-rose-50/80 rounded-2xl border border-amber-200 p-6",
+        "usage": "Mise en avant des infractions critiques détectées sur un site"
+      },
+      "carte_opportunite_b2b": {
+        "classes": "bg-white rounded-2xl border-l-4 border-l-emerald-600 border-y border-r border-slate-200 shadow-2xs p-6 hover:border-slate-300 transition-all",
+        "usage": "Opportunité qualifiée dans l'espace prospection commerciale"
+      }
+    },
+    "styles_de_tableaux": {
+      "conteneur": "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs",
+      "thead": "bg-slate-50 border-b border-slate-200 px-6 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-600",
+      "tr": "border-b border-slate-100 hover:bg-slate-50/70 transition-colors duration-150 last:border-b-0",
+      "td": "px-6 py-4 text-sm text-slate-700 align-middle",
+      "pagination": "flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50/50"
+    },
+    "styles_de_formulaires": {
+      "input_texte": "w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors shadow-2xs",
+      "textarea": "w-full bg-white border border-slate-300 rounded-xl p-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors shadow-2xs resize-y min-h-[120px]",
+      "select": "w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-colors shadow-2xs cursor-pointer",
+      "label": "block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2",
+      "toggle_switch": "relative inline-flex h-6 w-11 items-center rounded-full bg-slate-200 transition-colors focus:outline-none data-[checked]:bg-emerald-600"
+    },
+    "styles_de_sections": {
+      "header_cockpit": "sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs px-4 sm:px-8 h-20 flex items-center justify-between",
+      "hero_banner": "bg-gradient-to-r from-slate-900 via-emerald-950 to-teal-950 text-white rounded-3xl p-8 sm:p-12 mb-8 shadow-xl relative overflow-hidden",
+      "grille_de_travail": "max-w-[1850px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8",
+      "modal_drawer": "fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-white shadow-2xl border-l border-slate-200 p-8 overflow-y-auto animate-slideInRight"
+    },
+    "styles_des_pages_specifiques": {
+      "page_admin": {
+        "titre_section": "Console d'Administration & Sécurité",
+        "composants_visuels": [
+          "Bandeau de statut des sessions actives avec pastilles en ligne",
+          "Tableau paginé des collaborateurs avec rôles RBAC (SUPER_ADMIN, CONSULTANT, AUDITEUR)",
+          "Cartes de monitoring des requêtes REST avec temps de réponse moyen",
+          "Module de journalisation immuable des actions d'audit et révocations",
+          "Section de sauvegarde instantanée et restauration d'état système"
+        ],
+        "ambiance_visuelle": "Tableau de bord dense, neutre ardoise foncé avec badges de statut vifs (émeraude / rose)."
+      },
+      "page_audit": {
+        "titre_section": "Cockpit d'Audit Réglementaire & Anti-Greenwashing",
+        "composants_visuels": [
+          "Formulaire d'ingestion à double onglet : Inspection d'URL automatique vs Saisie textuelle libre",
+          "Jauge circulaire SVG animée affichant le Score Global d'Intégrité (0-100)",
+          "Grille de cartes d'allégations unitaires avec puces de gravité (Verte / Ambre / Rouge)",
+          "Matrice visuelle croisant sévérité juridique et risque de sanction DGCCRF",
+          "Tiroir d'assistance à la reformulation certifiée avec arguments scientifiques",
+          "Bouton d'impression du Rapport Officiel scellé avec le tampon Climat Local"
+        ],
+        "ambiance_visuelle": "Rigueur juridique et clarté diagnostique, contrastes nets, bannières d'alertes contrastées."
+      },
+      "page_prospec": {
+        "titre_section": "Cockpit Prospection Commerciale B2B",
+        "composants_visuels": [
+          "Pipeline Kanban à 4 colonnes (Nouveau, Qualifié, Proposition Envoyée, Signé)",
+          "Fiches d'opportunités d'entreprises cibles avec score de priorité commerciale",
+          "Radar de signaux faibles environnementaux détectés sur les sites cibles",
+          "Générateur de pitchs de conversion sur mesure basé sur les faiblesses RSE repérées",
+          "Bouton d'export de proposition d'accompagnement territorial au format PDF"
+        ],
+        "ambiance_visuelle": "Orientée action commerciale, dominante émeraude stimulante et accents ambrés d'opportunité."
+      },
+      "page_config_ia": {
+        "titre_section": "Centre de Contrôle & Orchestrateur IA Dynamique",
+        "composants_visuels": [
+          "Sélecteur de provider dynamique (Google Gemini / Groq Cloud)",
+          "Matrice des modèles actifs (Gemini 3.8 Flash, 3.8 Pro, 3.6, résolutions *-last)",
+          "Curseurs (sliders) de température sémantique et plafonds de tokens",
+          "Éditeur de prompts systèmes avec prévisualisation des variables dynamiques",
+          "Gestionnaire de dictionnaires de règles (mots interdits, expressions surveillées)",
+          "Widget de télémétrie affichant la latence en direct et l'état du fallback automatique"
+        ],
+        "ambiance_visuelle": "Atmosphère studio technique, typographies monospace, widgets d'états réactifs."
+      }
+    },
+    "coherence_greenhumble_climat_local": {
+      "philosophie_unifiee": "GREENHUMBLE incarne l'humilité scientifique face à la complexité climatique, soutenue par l'ancrage territorial de Climat Local.",
+      "elements_signature": [
+        "Le logo associe le double emblème historique : la balance de la justice réglementaire et la feuille de l'action locale.",
+        "Le slogan 'Le climat, ensemble.' rappelle la vocation collective et transparente de chaque diagnostic.",
+        "Refus de toute interface trompeuse, faussement écologique ou surchargée d'animations superflues.",
+        "Respect total des standards d'accessibilité WCAG AAA avec contrastes calculés sur fond blanc et sable minéral."
+      ]
+    }
+  }
+}

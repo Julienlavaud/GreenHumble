@@ -1,0 +1,624 @@
+{
+  "project": "GreenHumble Admin Console",
+  "version": "2.0.0",
+  "architecture": "REST Modulaire - AI Studio Client Simulation",
+  "description": "Spécification REST complète avec schemas, mock responses réalistes, paramètres, erreurs et bindings UI pour le viewer AI Studio sans backend.",
+  "endpoints": [
+    {
+      "endpoint": "/api/admin/config",
+      "description": "Gestion modulaire de toute la configuration IA, règles métiers, prompts, scoring et conformité.",
+      "methods": ["GET", "POST", "PUT", "DELETE"],
+      "categories": [
+        "variables_ia",
+        "prompts",
+        "templates_json",
+        "dictionnaires",
+        "regles_metier",
+        "opportunites_metiers",
+        "scoring",
+        "conformite"
+      ],
+      "actions": {
+        "GET_config": {
+          "method": "GET",
+          "action_id": "GET_config",
+          "description": "Récupère l'ensemble des configurations actives du moteur IA",
+          "parameters": {
+            "query": {
+              "categorie": {
+                "type": "string",
+                "required": false,
+                "description": "Filtrer par catégorie spécifique"
+              }
+            }
+          },
+          "schema": {
+            "type": "object",
+            "properties": {
+              "success": { "type": "boolean" },
+              "total": { "type": "integer" },
+              "data": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "nom", "description", "categorie", "valeur", "modifiable", "exportable", "importable", "supprimable"],
+                  "properties": {
+                    "id": { "type": "string" },
+                    "nom": { "type": "string" },
+                    "description": { "type": "string" },
+                    "categorie": { "type": "string" },
+                    "valeur": { "type": "string" },
+                    "modifiable": { "type": "boolean" },
+                    "exportable": { "type": "boolean" },
+                    "importable": { "type": "boolean" },
+                    "supprimable": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "mock_response": {
+            "success": true,
+            "total": 8,
+            "data": [
+              {
+                "id": "cfg_ai_provider",
+                "nom": "aiProvider",
+                "description": "Moteur d'inférence actif pour les scans",
+                "categorie": "variables_ia",
+                "valeur": "groq",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": false
+              },
+              {
+                "id": "cfg_ai_model",
+                "nom": "aiModel",
+                "description": "Modèle d'extraction et de scoring recommandé",
+                "categorie": "variables_ia",
+                "valeur": "llama-3.1-70b",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": false
+              },
+              {
+                "id": "cfg_prompt_sys",
+                "nom": "system_prompt_greenhumble",
+                "description": "Directives d'audit juridique et de conformité",
+                "categorie": "prompts",
+                "valeur": "Tu es l'analyste expert GreenHumble. Évalue la conformité des allégations environnementales avec le décret Green Claims et la loi Climat.",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              },
+              {
+                "id": "cfg_tpl_audit",
+                "nom": "template_audit",
+                "description": "Structure JSON standard des résultats d'audit",
+                "categorie": "templates_json",
+                "valeur": "{\"score_global\": 0, \"allegations\": [], \"preuves\": [], \"risques\": []}",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              },
+              {
+                "id": "cfg_dict_sig",
+                "nom": "signaux_faibles",
+                "description": "Termes environnementaux surveillés",
+                "categorie": "dictionnaires",
+                "valeur": "[\"neutre en carbone\", \"100% vert\", \"éco-responsable\", \"zéro émission\"]",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              },
+              {
+                "id": "cfg_regle_gc",
+                "nom": "regles_green_claims",
+                "description": "Interdiction de neutralité sans compensation prouvée",
+                "categorie": "regles_metier",
+                "valeur": "Toute allégation de neutralité carbone doit s'appuyer sur un bilan GES scopes 1, 2 et 3 vérifié.",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              },
+              {
+                "id": "cfg_opp_csrd",
+                "nom": "opportunites_metiers",
+                "description": "Opportunités de mise en conformité et de valorisation",
+                "categorie": "opportunites_metiers",
+                "valeur": "[\"Accompagnement reporting CSRD\", \"Valorisation d'ACV normées\"]",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              },
+              {
+                "id": "cfg_score_weights",
+                "nom": "scoreAuditWeights",
+                "description": "Pondération du calcul du score d'audit",
+                "categorie": "scoring",
+                "valeur": "{\"preuves\": 0.40, \"conformite\": 0.35, \"transparence\": 0.25}",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              }
+            ]
+          },
+          "errors": [
+            { "code": 401, "message": "Non autorisé : token de session manquant ou expiré" },
+            { "code": 500, "message": "Erreur serveur interne lors du chargement des configurations" }
+          ]
+        },
+        "POST_config": {
+          "method": "POST",
+          "action_id": "POST_config",
+          "description": "Ajoute un nouvel élément de configuration ou dictionnaire",
+          "parameters": {
+            "body": {
+              "nom": { "type": "string", "required": true },
+              "description": { "type": "string", "required": true },
+              "categorie": { "type": "string", "required": true },
+              "valeur": { "type": "string", "required": true },
+              "modifiable": { "type": "boolean", "default": true },
+              "exportable": { "type": "boolean", "default": true },
+              "importable": { "type": "boolean", "default": true },
+              "supprimable": { "type": "boolean", "default": true }
+            }
+          },
+          "schema": {
+            "type": "object",
+            "properties": {
+              "success": { "type": "boolean" },
+              "message": { "type": "string" },
+              "item": { "type": "object" }
+            }
+          },
+          "mock_response": {
+            "success": true,
+            "message": "Élément de configuration ajouté avec succès",
+            "item": {
+              "id": "cfg_custom_789",
+              "nom": "nouveau_mot_cle_rse",
+              "description": "Mot-clé additionnel pour détection d'allégations",
+              "categorie": "dictionnaires",
+              "valeur": "[\"biodégradable\", \"bio-sourcé\"]",
+              "modifiable": true,
+              "exportable": true,
+              "importable": true,
+              "supprimable": true
+            }
+          },
+          "errors": [
+            { "code": 400, "message": "Données invalides : champs obligatoires manquants" },
+            { "code": 409, "message": "Conflit : une clé avec ce nom existe déjà" }
+          ]
+        },
+        "PUT_config": {
+          "method": "PUT",
+          "action_id": "PUT_config",
+          "description": "Modifie la valeur et la description d'une variable de configuration existante",
+          "parameters": {
+            "body": {
+              "id": { "type": "string", "required": true },
+              "valeur": { "type": "string", "required": true },
+              "description": { "type": "string", "required": false }
+            }
+          },
+          "schema": {
+            "type": "object",
+            "properties": {
+              "success": { "type": "boolean" },
+              "message": { "type": "string" },
+              "updated": { "type": "object" }
+            }
+          },
+          "mock_response": {
+            "success": true,
+            "message": "Configuration mise à jour avec succès",
+            "updated": {
+              "id": "cfg_ai_model",
+              "valeur": "mixtral-8x7b",
+              "description": "Modèle haute performance pour synthèse longue",
+              "updated_at": "2026-10-02T02:15:00Z"
+            }
+          },
+          "errors": [
+            { "code": 403, "message": "Action refusée : cet élément est verrouillé en modification" },
+            { "code": 404, "message": "Élément introuvable" }
+          ]
+        },
+        "DELETE_config": {
+          "method": "DELETE",
+          "action_id": "DELETE_config",
+          "description": "Supprime un élément de configuration personnalisée",
+          "parameters": {
+            "query": {
+              "id": { "type": "string", "required": true }
+            }
+          },
+          "schema": {
+            "type": "object",
+            "properties": {
+              "success": { "type": "boolean" },
+              "deleted_id": { "type": "string" },
+              "message": { "type": "string" }
+            }
+          },
+          "mock_response": {
+            "success": true,
+            "deleted_id": "cfg_custom_789",
+            "message": "Configuration supprimée du registre"
+          },
+          "errors": [
+            { "code": 400, "message": "Identifiant manquant" },
+            { "code": 403, "message": "Cet élément système est protégé contre la suppression" }
+          ]
+        }
+      },
+      "ui_bindings": {
+        "GET_config": {
+          "component": "Table de configuration IA",
+          "target_element": "#ai-config-datatable",
+          "view_type": "DataGrid",
+          "features": ["filtrage_par_categorie", "recherche_textuelle", "badge_statut", "export_csv_json"]
+        },
+        "POST_config": {
+          "component": "Formulaire d’ajout",
+          "target_element": "#ai-config-add-modal",
+          "view_type": "ModalForm",
+          "fields": ["nom", "categorie", "description", "valeur", "flags_protection"]
+        },
+        "PUT_config": {
+          "component": "Formulaire de modification",
+          "target_element": "#ai-config-edit-drawer",
+          "view_type": "InlineEdit / Drawer",
+          "fields": ["valeur", "description"]
+        },
+        "DELETE_config": {
+          "component": "Bouton de suppression",
+          "target_element": ".btn-delete-config",
+          "view_type": "ConfirmDialog",
+          "confirm_message": "Voulez-vous vraiment supprimer cet élément de configuration ?"
+        }
+      }
+    },
+    {
+      "endpoint": "/api/admin/teams",
+      "description": "Gestion modulaire des équipes, des collaborateurs, des rôles RBAC, des permissions et des groupes métiers.",
+      "methods": ["GET", "POST", "PUT", "DELETE"],
+      "categories": [
+        "equipes",
+        "membres",
+        "roles",
+        "permissions",
+        "groupes_metiers"
+      ],
+      "actions": {
+        "GET_teams": {
+          "method": "GET",
+          "action_id": "GET_teams",
+          "description": "Récupère l'arborescence des équipes, collaborateurs, rôles et groupes métiers",
+          "parameters": {
+            "query": {
+              "equipe_id": { "type": "string", "required": false }
+            }
+          },
+          "schema": {
+            "type": "object",
+            "properties": {
+              "success": { "type": "boolean" },
+              "equipes": { "type": "array" },
+              "membres": { "type": "array" },
+              "roles": { "type": "array" },
+              "permissions": { "type": "array" },
+              "groupes_metiers": { "type": "array" }
+            }
+          },
+          "mock_response": {
+            "success": true,
+            "equipes": [
+              { "id": "eq_audit", "nom": "Pôle Audit & Conformité RSE", "chef": "s.delorme@greenhumble.local", "membres_count": 5 },
+              { "id": "eq_sales", "nom": "Pôle Prospection Commerciale", "chef": "m.vasseur@greenhumble.local", "membres_count": 3 }
+            ],
+            "membres": [
+              { "id": "usr_01", "nom": "Sarah Delorme", "email": "s.delorme@greenhumble.local", "role": "Auditeur Senior", "equipe": "Pôle Audit & Conformité RSE", "statut": "actif" },
+              { "id": "usr_02", "nom": "Marc Vasseur", "email": "m.vasseur@greenhumble.local", "role": "Commercial B2B", "equipe": "Pôle Prospection Commerciale", "statut": "actif" }
+            ],
+            "roles": [
+              { "id": "role_super_admin", "nom": "Super Administrateur", "niveau": 100, "description": "Accès absolu à l'ensemble du cockpit" },
+              { "id": "role_auditeur", "nom": "Auditeur RSE", "niveau": 50, "description": "Gestion des scans, diagnostics et exports" },
+              { "id": "role_commercial", "nom": "Commercial", "niveau": 30, "description": "Gestion du pipeline de prospection" }
+            ],
+            "permissions": [
+              { "code": "config:ai:write", "label": "Modifier le moteur IA" },
+              { "code": "audit:run", "label": "Lancer un audit RSE" },
+              { "code": "teams:admin", "label": "Administrer les équipes" }
+            ],
+            "groupes_metiers": [
+              { "id": "grp_climat", "nom": "Experts Climat & ACV", "specialite": "Bilan Carbone" },
+              { "id": "grp_juridique", "nom": "Juristes Green Claims", "specialite": "Loi Climat & CSRD" }
+            ]
+          },
+          "errors": [
+            { "code": 401, "message": "Session invalide" },
+            { "code": 403, "message": "Accès restreint aux administrateurs" }
+          ]
+        },
+        "POST_teams": {
+          "method": "POST",
+          "action_id": "POST_teams",
+          "description": "Ajoute un nouveau collaborateur ou une nouvelle équipe",
+          "parameters": {
+            "body": {
+              "type": { "type": "string", "enum": ["membre", "equipe"], "required": true },
+              "nom": { "type": "string", "required": true },
+              "email": { "type": "string", "required": false },
+              "role": { "type": "string", "required": false },
+              "equipe_id": { "type": "string", "required": false }
+            }
+          },
+          "schema": {
+            "type": "object",
+            "properties": {
+              "success": { "type": "boolean" },
+              "message": { "type": "string" },
+              "membre": { "type": "object" }
+            }
+          },
+          "mock_response": {
+            "success": true,
+            "message": "Nouveau collaborateur ajouté à l'équipe avec succès",
+            "membre": {
+              "id": "usr_03",
+              "nom": "Emma Laurent",
+              "email": "e.laurent@greenhumble.local",
+              "role": "Auditeur RSE Junior",
+              "equipe": "Pôle Audit & Conformité RSE",
+              "statut": "invité",
+              "created_at": "2026-10-02T02:15:36Z"
+            }
+          },
+          "errors": [
+            { "code": 400, "message": "Adresse email invalide ou incomplète" },
+            { "code": 409, "message": "Un utilisateur avec cet email existe déjà" }
+          ]
+        },
+        "PUT_teams": {
+          "method": "PUT",
+          "action_id": "PUT_teams",
+          "description": "Modifie les rôles, permissions ou l'affectation d'un membre",
+          "parameters": {
+            "body": {
+              "membre_id": { "type": "string", "required": true },
+              "role_id": { "type": "string", "required": false },
+              "equipe_id": { "type": "string", "required": false },
+              "statut": { "type": "string", "enum": ["actif", "suspendu"], "required": false }
+            }
+          },
+          "schema": {
+            "type": "object",
+            "properties": {
+              "success": { "type": "boolean" },
+              "message": { "type": "string" },
+              "updated_member": { "type": "object" }
+            }
+          },
+          "mock_response": {
+            "success": true,
+            "message": "Rôle et affectation mis à jour",
+            "updated_member": {
+              "id": "usr_02",
+              "role": "Lead Prospection",
+              "niveau": 40,
+              "updated_at": "2026-10-02T02:15:36Z"
+            }
+          },
+          "errors": [
+            { "code": 404, "message": "Membre introuvable" },
+            { "code": 403, "message": "Impossible de modifier les privilèges du Super Administrateur racine" }
+          ]
+        },
+        "DELETE_teams": {
+          "method": "DELETE",
+          "action_id": "DELETE_teams",
+          "description": "Retire un membre d'une équipe ou désactive son accès",
+          "parameters": {
+            "query": {
+              "membre_id": { "type": "string", "required": true }
+            }
+          },
+          "schema": {
+            "type": "object",
+            "properties": {
+              "success": { "type": "boolean" },
+              "message": { "type": "string" },
+              "deleted_id": { "type": "string" }
+            }
+          },
+          "mock_response": {
+            "success": true,
+            "message": "Membre retiré de l'équipe et accès révoqué",
+            "deleted_id": "usr_03"
+          },
+          "errors": [
+            { "code": 400, "message": "Identifiant de membre requis" },
+            { "code": 403, "message": "Révocation impossible pour le dernier administrateur actif" }
+          ]
+        }
+      },
+      "ui_bindings": {
+        "GET_teams": {
+          "component": "Table équipes",
+          "target_element": "#teams-datagrid",
+          "view_type": "TeamHierarchyTable",
+          "columns": ["collaborateur", "email", "role_badge", "equipe", "statut_connexion", "actions"]
+        },
+        "POST_teams": {
+          "component": "Formulaire ajout membre",
+          "target_element": "#modal-add-member",
+          "view_type": "ModalForm",
+          "inputs": ["nom_complet", "email_professionnel", "select_role", "select_equipe", "select_groupe_metier"]
+        },
+        "PUT_teams": {
+          "component": "Formulaire modification rôle",
+          "target_element": "#drawer-edit-role",
+          "view_type": "RolePermissionMatrixForm",
+          "inputs": ["select_role", "checkbox_permissions_override", "select_equipe_rattachement"]
+        },
+        "DELETE_teams": {
+          "component": "Bouton suppression membre",
+          "target_element": ".btn-remove-member",
+          "view_type": "DestructiveConfirmationAlert",
+          "confirm_message": "Confirmez-vous la révocation définitive de ce collaborateur ?"
+        }
+      }
+    },
+    {
+      "endpoint": "/api/admin/auth",
+      "description": "Gestion de l'authentification sécurisée, des identifiants chiffrés, des jetons JWT et du cycle de vie des sessions.",
+      "methods": ["POST", "DELETE", "GET"],
+      "categories": [
+        "utilisateurs",
+        "emails",
+        "mots_de_passe_hashes",
+        "niveaux_acces",
+        "tokens",
+        "sessions"
+      ],
+      "actions": {
+        "LOGIN": {
+          "method": "POST",
+          "action_id": "LOGIN",
+          "description": "Authentifie l'administrateur avec identifiants chiffrés et délivre un jeton de session",
+          "parameters": {
+            "body": {
+              "email_or_user": { "type": "string", "required": true },
+              "password": { "type": "string", "format": "password", "required": true }
+            }
+          },
+          "schema": {
+            "type": "object",
+            "properties": {
+              "success": { "type": "boolean" },
+              "token": { "type": "string" },
+              "expires_in": { "type": "integer" },
+              "user": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "username": { "type": "string" },
+                  "email": { "type": "string" },
+                  "role": { "type": "string" },
+                  "access_level": { "type": "integer" }
+                }
+              }
+            }
+          },
+          "mock_response": {
+            "success": true,
+            "token": "gh_jwt_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.s87df6sd87fs6d.98f7ds",
+            "expires_in": 86400,
+            "user": {
+              "id": "usr_master_admin",
+              "username": "admin_master",
+              "email": "admin@greenhumble.local",
+              "role": "Super Administrateur",
+              "access_level": 100
+            }
+          },
+          "errors": [
+            { "code": 401, "message": "Identifiant ou mot de passe incorrect" },
+            { "code": 429, "message": "Trop de tentatives échouées. Compte temporairement verrouillé pour 15 minutes." }
+          ]
+        },
+        "LOGOUT": {
+          "method": "DELETE",
+          "action_id": "LOGOUT",
+          "description": "Invalide le jeton actif et détruit le cookie de session",
+          "parameters": {
+            "headers": {
+              "Authorization": { "type": "string", "required": true, "description": "Bearer <token>" }
+            }
+          },
+          "schema": {
+            "type": "object",
+            "properties": {
+              "success": { "type": "boolean" },
+              "message": { "type": "string" }
+            }
+          },
+          "mock_response": {
+            "success": true,
+            "message": "Déconnexion réussie, session révoquée"
+          },
+          "errors": [
+            { "code": 400, "message": "Aucune session active à clore" }
+          ]
+        },
+        "GET_session": {
+          "method": "GET",
+          "action_id": "GET_session",
+          "description": "Vérifie la validité de la session active et renvoie l'état du profil connecté",
+          "parameters": {
+            "headers": {
+              "Authorization": { "type": "string", "required": true }
+            }
+          },
+          "schema": {
+            "type": "object",
+            "properties": {
+              "authenticated": { "type": "boolean" },
+              "session_id": { "type": "string" },
+              "user": { "type": "object" },
+              "permissions": { "type": "array" }
+            }
+          },
+          "mock_response": {
+            "authenticated": true,
+            "session_id": "sess_89f0a2c1b4e5",
+            "user": {
+              "id": "usr_master_admin",
+              "nom": "Administrateur GreenHumble",
+              "email": "admin@greenhumble.local",
+              "role": "Super Administrateur",
+              "access_level": 100,
+              "avatar_initials": "GH",
+              "last_login": "2026-10-02T02:10:00Z"
+            },
+            "permissions": ["all", "config:write", "teams:write", "audit:write"]
+          },
+          "errors": [
+            { "code": 401, "message": "Session invalide ou expirée" }
+          ]
+        }
+      },
+      "ui_bindings": {
+        "LOGIN": {
+          "component": "Formulaire de connexion",
+          "target_element": "#auth-login-card",
+          "view_type": "AuthenticationCard",
+          "inputs": ["input_email", "input_password", "checkbox_remember_me", "submit_button"]
+        },
+        "LOGOUT": {
+          "component": "Bouton déconnexion",
+          "target_element": "#btn-user-logout",
+          "view_type": "NavigationActionItem",
+          "event_handler": "handleSessionRevoke()"
+        },
+        "GET_session": {
+          "component": "Badge utilisateur connecté",
+          "target_element": "#navbar-user-profile-badge",
+          "view_type": "UserSessionStatusPill",
+          "displays": ["avatar_or_initials", "nom_utilisateur", "role_badge", "indicator_en_ligne"]
+        }
+      }
+    }
+  ]
+}

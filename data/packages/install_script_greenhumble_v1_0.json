@@ -1,0 +1,77 @@
+{
+  "script_install_greenhumble_v1_0": {
+    "manifeste": {
+      "titre": "Script d'Installation Automatisé install.php — GreenHumble v1.0",
+      "version": "1.0.0",
+      "slogan": "Le climat, ensemble.",
+      "affiliation": "Cabinet Climat Local (climatlocal.com)",
+      "date_conception": "2026-10-02T14:19:35Z",
+      "cible_hebergement": "OVH Cloud / Web Hosting (Apache 2.4+ / PHP 8.2+)"
+    },
+    "prerequis_verifies": [
+      {
+        "test": "Version PHP",
+        "exigence": ">= 8.1.0",
+        "fonction": "version_compare(PHP_VERSION, '8.1.0', '>=')"
+      },
+      {
+        "test": "Extensions PHP chargées",
+        "exigence": "curl, json, mbstring",
+        "fonction": "extension_loaded('curl') && extension_loaded('json') && extension_loaded('mbstring')"
+      },
+      {
+        "test": "Droits d'écriture",
+        "exigence": "Dossier racine inscriptible",
+        "fonction": "is_writable(__DIR__)"
+      }
+    ],
+    "arborescence_creee": [
+      "/api",
+      "/api/config",
+      "/api/includes",
+      "/api/data",
+      "/admin",
+      "/admin/assets/css",
+      "/admin/assets/js",
+      "/admin/assets/img",
+      "/admin/components"
+    ],
+    "fichiers_generes": [
+      {
+        "fichier": "/api/config/.env",
+        "variables": [
+          "AI_PROVIDER=gemini",
+          "AI_MODEL=gemini-3.8-flash",
+          "GEMINI_API_KEY=VOTRE_CLE_GEMINI_OFFICIELLE",
+          "GROQ_API_KEY=VOTRE_CLE_GROQ_OPTIONNELLE",
+          "DB_HOST=localhost",
+          "DB_NAME=climatlocal",
+          "DB_USER=root",
+          "DB_PASS=",
+          "JWT_SECRET=greenhumble_jwt_sec_2026_climatlocal"
+        ]
+      },
+      {
+        "fichier": "/.htaccess",
+        "directives": [
+          "RewriteEngine On",
+          "Header set Cache-Control 'no-store, no-cache, must-revalidate, max-age=0'",
+          "Require all denied pour .env et config.php",
+          "RewriteRule ^api/(.*)$ api/router.php [L,QSA]"
+        ]
+      },
+      {
+        "fichier": "/install.lock",
+        "role": "Verrouillage de sécurité empêchant toute réexécution accidentelle"
+      }
+    ],
+    "purge_opcache": {
+      "fonction": "opcache_reset()",
+      "statut": "REINITIALISATION_MEMOIRE_REUSSIE"
+    },
+    "sortie_json": {
+      "statut": "SUCCESS",
+      "format": "JSON strict"
+    }
+  }
+}

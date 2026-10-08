@@ -1,0 +1,357 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "contrat_technique": {
+    "titre": "Spécification Normative d'Intégration AI Studio <-> Backend PHP REST",
+    "version": "2.1.0",
+    "statut": "OBLIGATOIRE",
+    "date_effet": "2026-10-02T03:31:30Z",
+    "description": "Contrat d'interface strict définissant les formats JSON, champs obligatoires, types, codes d'erreur, structures d'endpoints, objets de données et règles de cohérence que le backend PHP doit implémenter pour garantir le fonctionnement du viewer AI Studio sans régression.",
+    "normes_globales_http": {
+      "content_type": "application/json; charset=utf-8",
+      "headers_reponse_obligatoires": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept"
+      },
+      "gestion_options_preflight": "Sur toute requête avec méthode HTTP OPTIONS, le serveur PHP doit immédiatement renvoyer HTTP 204 No Content avec les en-têtes CORS sans exécuter de session ni de base de données.",
+      "gestion_erreurs_php": "La directive 'display_errors' doit être forcée à 0 dans l'environnement API (ini_set('display_errors', '0')). Aucune sortie HTML, avertissement, notice ou trace de pile PHP ne doit être injectée dans le flux de réponse JSON sous peine de casser le parseur d'AI Studio.",
+      "format_date": "ISO 8601 UTC étendu sous la forme YYYY-MM-DDTHH:mm:ssZ"
+    },
+    "structure_des_objets": {
+      "StandardItem": {
+        "description": "Modèle universel pour chaque ligne des tables de configuration, équipes, membres, rôles et sessions dans AI Studio.",
+        "champs_obligatoires": [
+          "id",
+          "nom",
+          "description",
+          "categorie",
+          "valeur",
+          "modifiable",
+          "exportable",
+          "importable",
+          "supprimable"
+        ],
+        "types_et_contraintes": {
+          "id": {
+            "type": "string",
+            "format": "Identifiant unique non modifiable préfixé par type (ex: cfg_ai_provider, usr_master_admin, team_pole_esg, audit_84f9a0c1, prsp_91a0c4f8)"
+          },
+          "nom": {
+            "type": "string",
+            "format": "Nom technique ou libellé fonctionnel de l'élément (longueur min 2, max 100)"
+          },
+          "description": {
+            "type": "string",
+            "format": "Texte explicatif du rôle et impact du paramètre (max 500 caractères)"
+          },
+          "categorie": {
+            "type": "string",
+            "format": "Enumération stricte selon l'endpoint (config: variables_ia, prompts, templates_json, dictionnaires, regles_metier, opportunites_metiers, scoring, conformite ; teams: equipes, membres, roles, permissions ; auth: utilisateurs, niveaux_acces, sessions)"
+          },
+          "valeur": {
+            "type": "string",
+            "format": "Valeur scalaire ou objet/tableau JSON sérialisé sous forme de chaîne de caractères (ne doit jamais être null)"
+          },
+          "modifiable": {
+            "type": "boolean",
+            "format": "Booléen strict JSON (true ou false) activant le formulaire d'édition dans l'UI"
+          },
+          "exportable": {
+            "type": "boolean",
+            "format": "Booléen strict JSON (true ou false) autorisant l'exportation"
+          },
+          "importable": {
+            "type": "boolean",
+            "format": "Booléen strict JSON (true ou false) autorisant la mise à jour via import"
+          },
+          "supprimable": {
+            "type": "boolean",
+            "format": "Booléen strict JSON (true ou false) activant le bouton de suppression (false pour éléments racines)"
+          }
+        }
+      }
+    },
+    "structure_des_reponses": {
+      "reponse_liste_get": {
+        "champs_obligatoires": ["success", "status", "data", "total", "page", "limit", "timestamp"],
+        "types": {
+          "success": "boolean (toujours true en cas de 200)",
+          "status": "integer (200)",
+          "total": "integer (nombre total d'éléments répondant aux critères)",
+          "page": "integer (index de page courant)",
+          "limit": "integer (nombre d'éléments par page)",
+          "filtres_appliques": "object (clé: valeur des filtres pris en compte)",
+          "data": "array<StandardItem> (tableau d'objets standardisés)",
+          "timestamp": "string (horodatage ISO 8601)"
+        }
+      },
+      "reponse_unitaire_post_put": {
+        "champs_obligatoires": ["success", "status", "message", "data", "timestamp"],
+        "types": {
+          "success": "boolean (toujours true en cas de 200 ou 201)",
+          "status": "integer (200 pour PUT, 201 pour POST)",
+          "message": "string (message de notification toast affiché par AI Studio)",
+          "data": "StandardItem (l'objet complet créé ou modifié)",
+          "timestamp": "string (horodatage ISO 8601)"
+        }
+      },
+      "reponse_suppression_delete": {
+        "champs_obligatoires": ["success", "status", "message", "data", "timestamp"],
+        "types": {
+          "success": "boolean (toujours true en cas de 200)",
+          "status": "integer (200)",
+          "message": "string (message de confirmation de suppression pour le toast UI)",
+          "data": "StandardItem (les métadonnées de l'élément supprimé avec modifiable: false)",
+          "timestamp": "string (horodatage ISO 8601)"
+        }
+      },
+      "reponse_authentification_login": {
+        "champs_obligatoires": ["success", "status", "message", "token", "data", "timestamp"],
+        "types": {
+          "success": "boolean (true)",
+          "status": "integer (200)",
+          "message": "string",
+          "token": "string (jeton JWT cryptographiquement signé)",
+          "data": "StandardItem (profil de l'utilisateur connecté)",
+          "timestamp": "string (horodatage ISO 8601)"
+        }
+      },
+      "reponse_session_badge": {
+        "champs_obligatoires": ["success", "status", "authenticated", "data", "timestamp"],
+        "types": {
+          "success": "boolean (true)",
+          "status": "integer (200)",
+          "authenticated": "boolean (true si session active, false sinon)",
+          "data": "StandardItem (données pour badge : nom, email, rôle, access_level, avatar_initials, en_ligne)",
+          "timestamp": "string (horodatage ISO 8601)"
+        }
+      },
+      "reponse_echec_standardisee": {
+        "champs_obligatoires": ["success", "status", "code", "message", "details", "timestamp"],
+        "types": {
+          "success": "boolean (toujours false)",
+          "status": "integer (code HTTP 400, 401, 403, 404, 422, 500)",
+          "code": "string (code d'erreur en majuscules SNAKE_CASE, ex: VALIDATION_FAILED, RESOURCE_PROTECTED, INVALID_CREDENTIALS)",
+          "message": "string (explication claire de l'erreur pour l'utilisateur)",
+          "details": "object | null (carte des erreurs spécifiques par champ)",
+          "timestamp": "string (horodatage ISO 8601)"
+        }
+      }
+    },
+    "erreurs_standardisees": {
+      "400": {
+        "code_statut": 400,
+        "nom_statut": "Bad Request",
+        "format": {
+          "success": false,
+          "status": 400,
+          "code": "BAD_REQUEST",
+          "message": "Requête invalide ou paramètre manquant",
+          "details": null,
+          "timestamp": "2026-10-02T03:31:30Z"
+        }
+      },
+      "401": {
+        "code_statut": 401,
+        "nom_statut": "Unauthorized",
+        "format": {
+          "success": false,
+          "status": 401,
+          "code": "UNAUTHORIZED",
+          "message": "Session invalide ou jeton expiré. Veuillez vous reconnecter.",
+          "details": null,
+          "timestamp": "2026-10-02T03:31:30Z"
+        }
+      },
+      "403": {
+        "code_statut": 403,
+        "nom_statut": "Forbidden",
+        "format": {
+          "success": false,
+          "status": 403,
+          "code": "FORBIDDEN",
+          "message": "Permissions insuffisantes pour exécuter cette opération.",
+          "details": null,
+          "timestamp": "2026-10-02T03:31:30Z"
+        }
+      },
+      "404": {
+        "code_statut": 404,
+        "nom_statut": "Not Found",
+        "format": {
+          "success": false,
+          "status": 404,
+          "code": "NOT_FOUND",
+          "message": "Ressource introuvable pour l'identifiant spécifié.",
+          "details": null,
+          "timestamp": "2026-10-02T03:31:30Z"
+        }
+      },
+      "422": {
+        "code_statut": 422,
+        "nom_statut": "Unprocessable Entity",
+        "format": {
+          "success": false,
+          "status": 422,
+          "code": "VALIDATION_ERROR",
+          "message": "Données non conformes aux règles de validation métier",
+          "details": { "champ": "Raison précise du rejet" },
+          "timestamp": "2026-10-02T03:31:30Z"
+        }
+      },
+      "500": {
+        "code_statut": 500,
+        "nom_statut": "Internal Server Error",
+        "format": {
+          "success": false,
+          "status": 500,
+          "code": "INTERNAL_SERVER_ERROR",
+          "message": "Erreur serveur inattendue. Veuillez contacter l'administrateur.",
+          "details": null,
+          "timestamp": "2026-10-02T03:31:30Z"
+        }
+      }
+    },
+    "structure_des_endpoints": {
+      "/api/admin/config": {
+        "GET": {
+          "action_id": "GET_config",
+          "liaison_ui": "Table de configuration IA (#ai-config-table)",
+          "parametres_query": {
+            "categorie": { "type": "string", "requis": false, "default": "all" },
+            "page": { "type": "integer", "requis": false, "default": 1 },
+            "limit": { "type": "integer", "requis": false, "default": 50 }
+          },
+          "format_reponse_succes": "reponse_liste_get",
+          "code_succes": 200
+        },
+        "POST": {
+          "action_id": "POST_config",
+          "liaison_ui": "Formulaire d'ajout (#form-config-add)",
+          "corps_requis": ["nom", "description", "categorie", "valeur"],
+          "format_reponse_succes": "reponse_unitaire_post_put",
+          "code_succes": 201
+        },
+        "PUT": {
+          "action_id": "PUT_config",
+          "url_avec_param": "/api/admin/config/{id}",
+          "liaison_ui": "Formulaire de modification (#form-config-edit)",
+          "parametre_path": { "id": "Identifiant cible (cfg_*)" },
+          "corps_requis": ["valeur"],
+          "corps_optionnel": ["description"],
+          "format_reponse_succes": "reponse_unitaire_post_put",
+          "code_succes": 200
+        },
+        "DELETE": {
+          "action_id": "DELETE_config",
+          "url_avec_param": "/api/admin/config/{id}",
+          "liaison_ui": "Bouton de suppression (#btn-config-delete)",
+          "parametre_path": { "id": "Identifiant cible (cfg_*)" },
+          "format_reponse_succes": "reponse_suppression_delete",
+          "code_succes": 200
+        }
+      },
+      "/api/admin/teams": {
+        "GET": {
+          "action_id": "GET_teams",
+          "liaison_ui": "Table équipes (#teams-table)",
+          "parametres_query": {
+            "type": { "type": "string", "requis": false, "default": "all" },
+            "page": { "type": "integer", "requis": false, "default": 1 },
+            "limit": { "type": "integer", "requis": false, "default": 50 }
+          },
+          "format_reponse_succes": "reponse_liste_get",
+          "code_succes": 200
+        },
+        "POST": {
+          "action_id": "POST_teams",
+          "liaison_ui": "Formulaire ajout membre (#form-team-member-add)",
+          "corps_requis": ["nom", "email", "role_id", "password"],
+          "corps_optionnel": ["team_id"],
+          "format_reponse_succes": "reponse_unitaire_post_put",
+          "code_succes": 201
+        },
+        "PUT": {
+          "action_id": "PUT_teams",
+          "url_avec_param": "/api/admin/teams/{id}",
+          "liaison_ui": "Formulaire modification rôle (#form-team-role-edit)",
+          "parametre_path": { "id": "Identifiant cible (usr_* ou team_*)" },
+          "corps_optionnel": ["role_id", "team_id", "access_level"],
+          "format_reponse_succes": "reponse_unitaire_post_put",
+          "code_succes": 200
+        },
+        "DELETE": {
+          "action_id": "DELETE_teams",
+          "url_avec_param": "/api/admin/teams/{id}",
+          "liaison_ui": "Bouton suppression membre (#btn-team-member-delete)",
+          "parametre_path": { "id": "Identifiant cible (usr_* ou team_*)" },
+          "format_reponse_succes": "reponse_suppression_delete",
+          "code_succes": 200
+        }
+      },
+      "/api/admin/auth": {
+        "POST": {
+          "action_id": "LOGIN",
+          "url_exacte": "/api/admin/auth/login",
+          "liaison_ui": "Formulaire de connexion (#login-form)",
+          "corps_requis": ["email", "password"],
+          "format_reponse_succes": "reponse_authentification_login",
+          "code_succes": 200
+        },
+        "DELETE": {
+          "action_id": "LOGOUT",
+          "url_exacte": "/api/admin/auth/logout",
+          "liaison_ui": "Bouton déconnexion (#btn-user-logout)",
+          "headers_attendus": { "Authorization": "Bearer <jwt_token>" },
+          "format_reponse_succes": "reponse_suppression_delete",
+          "code_succes": 200
+        },
+        "GET": {
+          "action_id": "GET_session",
+          "url_exacte": "/api/admin/auth/session",
+          "liaison_ui": "Badge utilisateur connecté (#navbar-user-profile-badge)",
+          "headers_attendus": { "Authorization": "Bearer <jwt_token>" },
+          "format_reponse_succes": "reponse_session_badge",
+          "code_succes": 200
+        }
+      },
+      "/api/audit": {
+        "POST": {
+          "action_id": "RUN_audit",
+          "url_exacte": "/api/audit",
+          "liaison_ui": "Bouton lancer audit (#btn-run-audit)",
+          "corps_requis": ["nom_marque", "secteur"],
+          "corps_optionnel": ["url", "text_content", "preferred_provider", "preferred_model"],
+          "format_reponse_succes": "reponse_unitaire_post_put",
+          "code_succes": 200
+        }
+      },
+      "/api/prospec": {
+        "POST": {
+          "action_id": "RUN_prospec",
+          "url_exacte": "/api/prospec",
+          "liaison_ui": "Bouton générer opportunité (#btn-run-prospec)",
+          "corps_requis": ["entreprise", "secteur"],
+          "corps_optionnel": ["site_web", "preferred_provider", "preferred_model"],
+          "format_reponse_succes": "reponse_unitaire_post_put",
+          "code_succes": 201
+        }
+      }
+    },
+    "regles_de_validation": {
+      "regle_v1_types_primitifs": "Toutes les propriétés 'modifiable', 'exportable', 'importable', 'supprimable', 'authenticated' et 'success' doivent être des types booléens natifs JSON (true / false), et non des chaînes (\"true\") ou entiers (1 / 0).",
+      "regle_v2_valeur_non_nulle": "Le champ 'valeur' dans StandardItem ne doit jamais être null. Si aucune valeur n'est définie, renvoyer une chaîne vide \"\" ou \"{}\".",
+      "regle_v3_format_email": "L'email transmis doit être un format RFC 5322 valide validé côté PHP via filter_var($email, FILTER_VALIDATE_EMAIL).",
+      "regle_v4_mot_de_passe": "Tout mot de passe envoyé lors de la création d'un utilisateur doit comporter au moins 8 caractères.",
+      "regle_v5_catalogue_moteurs_ia": "Les valeurs de configuration pour 'aiProvider' sont restreintes à 'groq' ou 'gemini'. Les modèles supportés doivent appartenir au registre : Gemini (3.6-flash, 3.6-pro, 3.8-flash, 3.8-pro, 1.5-flash-last, 1.5-pro-last) et Groq (llama-3.1-70b, llama-3.1-8b, mixtral-8x7b, allam-2-7b, llama-3.1-70b-last, mixtral-8x7b-last)."
+    },
+    "regles_de_coherence": {
+      "coherence_c1_prefixes_identifiants": "Tout identifiant créé par le backend doit impérativement respecter le schéma de préfixage : 'cfg_' (config), 'usr_' (utilisateur), 'team_' (équipe), 'audit_' (audit), 'prsp_' (prospect).",
+      "coherence_c2_protection_comptes_racines": "Le compte Super Administrateur 'usr_master_admin' et les configurations 'cfg_ai_provider' et 'role_super_admin' ont 'supprimable': false. Toute tentative de DELETE sur ces identifiants doit être interceptée et rejetée par le contrôleur PHP avec HTTP 400 'RESOURCE_PROTECTED'.",
+      "coherence_c3_autoprotection_session": "Un utilisateur authentifié ne peut pas supprimer son propre compte (auto-suppression interdite avec HTTP 400 'CANNOT_DELETE_SELF').",
+      "coherence_c4_securite_cookies_et_headers": "Le cookie d'authentification 'gh_admin_session' doit obligatoirement être émis avec les drapeaux HttpOnly=true, Secure=true, SameSite=Strict. L'en-tête HTTP 'Authorization: Bearer <token>' doit prévaloir sur le cookie s'il est fourni.",
+      "coherence_c5_sanitisation_sorties_ia": "Toute réponse issue de Groq ou Gemini doit être assainie (suppression des balises markdown ```json et ```) et enrichie avec le bloc 'ai_telemetry' contenant le modèle réel sollicité, la latence et le flag de fallback avant retour au client AI Studio."
+    }
+  }
+}

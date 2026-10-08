@@ -1,0 +1,11 @@
+{
+  "fontFamily": "Plus Jakarta Sans",
+  "fontSize": 15,
+  "textColor": "#E0E0E0",
+  "headingColor": "#FFFFFF",
+  "textSecondaryColor": "#AAAAAA",
+  "bgMain": "#121212",
+  "cardBg": "#1E1E1E",
+  "accentColor": "#2A7AE2",
+  "accentSecondary": "#00A67E"
+}

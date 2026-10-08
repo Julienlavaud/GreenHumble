@@ -1,0 +1,221 @@
+{
+  "title": "GreenHumble Admin UI Bindings",
+  "version": "2.0.0",
+  "description": "Liaison bidirectionnelle entre les actions REST, les composants graphiques du viewer AI Studio, les sélecteurs DOM, les événements et les états réactifs.",
+  "bindings": {
+    "GET_config": {
+      "action_id": "GET_config",
+      "endpoint": "/api/admin/config",
+      "method": "GET",
+      "composant_ui": "Table de configuration IA",
+      "selecteur_cible": "#ai-config-datatable",
+      "type_vue": "DataGrid",
+      "evenement_declencheur": "onMount / onTabChange('config') / onFilterChange",
+      "etat_charge": "isLoadingConfig",
+      "proprietes_affichees": [
+        { "champ": "nom", "titre": "Paramètre / Clé", "format": "code_badge" },
+        { "champ": "categorie", "titre": "Catégorie", "format": "colored_tag" },
+        { "champ": "description", "titre": "Description & Rôle Métier", "format": "text_truncated" },
+        { "champ": "valeur", "titre": "Valeur Active", "format": "editable_preview" },
+        { "champ": "modifiable", "titre": "Verrou", "format": "lock_icon" }
+      ],
+      "actions_contextuelles": ["ouvrir_formulaire_edition", "supprimer_element", "exporter_json"]
+    },
+    "POST_config": {
+      "action_id": "POST_config",
+      "endpoint": "/api/admin/config",
+      "method": "POST",
+      "composant_ui": "Formulaire d’ajout",
+      "selecteur_cible": "#modal-add-config-item",
+      "type_vue": "ModalForm",
+      "evenement_declencheur": "onSubmit(#form-create-config)",
+      "champs_formulaire": [
+        { "nom": "nom", "label": "Nom de la variable", "type": "text", "placeholder": "Ex: mots_cles_plastiques_agec", "requis": true },
+        { "nom": "categorie", "label": "Catégorie fonctionnelle", "type": "select", "options": ["variables_ia", "prompts", "templates_json", "dictionnaires", "regles_metier", "opportunites_metiers", "scoring", "conformite"], "requis": true },
+        { "nom": "description", "label": "Description explicative", "type": "textarea", "placeholder": "Expliquez l'impact métier de ce paramètre", "requis": true },
+        { "nom": "valeur", "label": "Valeur ou JSON", "type": "code_editor", "placeholder": "[\"terme1\", \"terme2\"]", "requis": true },
+        { "nom": "flags", "label": "Attributs de protection", "type": "checkbox_group", "options": ["modifiable", "exportable", "importable", "supprimable"], "defaut": true }
+      ],
+      "retour_succes": {
+        "fermer_modal": true,
+        "notification": "Élément de configuration créé avec succès",
+        "action_suivante": "GET_config"
+      }
+    },
+    "PUT_config": {
+      "action_id": "PUT_config",
+      "endpoint": "/api/admin/config",
+      "method": "PUT",
+      "composant_ui": "Formulaire de modification",
+      "selecteur_cible": "#drawer-edit-config-item",
+      "type_vue": "InlineEdit / Drawer",
+      "evenement_declencheur": "onSubmit(#form-edit-config) / onBlurInline",
+      "champs_formulaire": [
+        { "nom": "id", "label": "Identifiant", "type": "hidden", "requis": true },
+        { "nom": "nom", "label": "Clé technique", "type": "text", "lecture_seule": true },
+        { "nom": "description", "label": "Description", "type": "textarea", "requis": false },
+        { "nom": "valeur", "label": "Nouvelle valeur", "type": "json_or_text_editor", "requis": true }
+      ],
+      "retour_succes": {
+        "fermer_drawer": true,
+        "notification": "Configuration actualisée",
+        "action_suivante": "GET_config"
+      }
+    },
+    "DELETE_config": {
+      "action_id": "DELETE_config",
+      "endpoint": "/api/admin/config",
+      "method": "DELETE",
+      "composant_ui": "Bouton de suppression",
+      "selecteur_cible": ".btn-delete-config-entry",
+      "type_vue": "ConfirmDialog",
+      "evenement_declencheur": "onClick",
+      "boite_dialogue": {
+        "titre": "Confirmation de suppression",
+        "message": "Êtes-vous sûr de vouloir supprimer définitivement cette règle/dictionnaire ?",
+        "bouton_confirmation": "Supprimer définitivement",
+        "style_danger": true
+      },
+      "retour_succes": {
+        "notification": "Paramètre supprimé du registre",
+        "action_suivante": "GET_config"
+      }
+    },
+    "GET_teams": {
+      "action_id": "GET_teams",
+      "endpoint": "/api/admin/teams",
+      "method": "GET",
+      "composant_ui": "Table équipes",
+      "selecteur_cible": "#teams-management-grid",
+      "type_vue": "TeamHierarchyTable",
+      "evenement_declencheur": "onMount / onTabChange('teams')",
+      "etat_charge": "isLoadingTeams",
+      "onglets_secondaires": ["Tous les collaborateurs", "Pôles & Cabinets", "Rôles & Permissions", "Groupes d'experts"],
+      "colonnes_affichees": [
+        { "champ": "nom", "titre": "Membre / Équipe", "format": "user_avatar_cell" },
+        { "champ": "email", "titre": "Courriel", "format": "email_link" },
+        { "champ": "role", "titre": "Rôle RBAC", "format": "role_pill_badge" },
+        { "champ": "equipe", "titre": "Pôle de rattachement", "format": "team_tag" },
+        { "champ": "statut", "titre": "Statut", "format": "status_dot_indicator" }
+      ],
+      "actions_par_ligne": ["editer_role", "changer_equipe", "desactiver_membre"]
+    },
+    "POST_teams": {
+      "action_id": "POST_teams",
+      "endpoint": "/api/admin/teams",
+      "method": "POST",
+      "composant_ui": "Formulaire ajout membre",
+      "selecteur_cible": "#modal-create-member",
+      "type_vue": "ModalForm",
+      "evenement_declencheur": "onSubmit(#form-add-team-member)",
+      "champs_formulaire": [
+        { "nom": "nom", "label": "Nom et prénom", "type": "text", "placeholder": "Ex: Camille Dupuis", "requis": true },
+        { "nom": "email", "label": "Adresse email", "type": "email", "placeholder": "c.dupuis@greenhumble.local", "requis": true },
+        { "nom": "role", "label": "Rôle attribué", "type": "select", "options": ["Auditeur RSE", "Commercial B2B", "Consultant Climat Senior", "Super Administrateur"], "requis": true },
+        { "nom": "equipe", "label": "Pôle régional / Direction", "type": "select", "options": ["Pôle Audit & Conformité RSE", "Pôle Prospection Commerciale & Partenariats", "Antenne Île-de-France & Grands Comptes"], "requis": true },
+        { "nom": "groupe_metier", "label": "Groupe métier principal", "type": "select", "options": ["Experts Climat & ACV", "Juristes Green Claims", "Business Developers Territoires"] }
+      ],
+      "retour_succes": {
+        "fermer_modal": true,
+        "notification": "Nouveau collaborateur invité et rattaché",
+        "action_suivante": "GET_teams"
+      }
+    },
+    "PUT_teams": {
+      "action_id": "PUT_teams",
+      "endpoint": "/api/admin/teams",
+      "method": "PUT",
+      "composant_ui": "Formulaire modification rôle",
+      "selecteur_cible": "#drawer-edit-member-role",
+      "type_vue": "RolePermissionMatrixForm",
+      "evenement_declencheur": "onSubmit(#form-update-member)",
+      "champs_formulaire": [
+        { "nom": "membre_id", "label": "ID Collaborateur", "type": "hidden", "requis": true },
+        { "nom": "role", "label": "Rôle RBAC", "type": "select", "options": ["Super Administrateur (100)", "Auditeur RSE (50)", "Commercial B2B (30)"], "requis": true },
+        { "nom": "equipe", "label": "Pôle affecté", "type": "select", "requis": true },
+        { "nom": "permissions_specifiques", "label": "Permissions directes dérogatoires", "type": "checkbox_matrix", "options": ["config:ai:write", "audit:run", "teams:admin", "report:export", "billing:manage"] }
+      ],
+      "retour_succes": {
+        "fermer_drawer": true,
+        "notification": "Rôle et droits d'accès mis à jour",
+        "action_suivante": "GET_teams"
+      }
+    },
+    "DELETE_teams": {
+      "action_id": "DELETE_teams",
+      "endpoint": "/api/admin/teams",
+      "method": "DELETE",
+      "composant_ui": "Bouton suppression membre",
+      "selecteur_cible": ".btn-revoke-team-member",
+      "type_vue": "DestructiveActionAlert",
+      "evenement_declencheur": "onClick",
+      "boite_dialogue": {
+        "titre": "Révocation du collaborateur",
+        "message": "Cette action va clôturer les sessions actives et retirer ce collaborateur de son pôle.",
+        "bouton_confirmation": "Confirmer la révocation",
+        "style_danger": true
+      },
+      "retour_succes": {
+        "notification": "Collaborateur révoqué avec succès",
+        "action_suivante": "GET_teams"
+      }
+    },
+    "LOGIN": {
+      "action_id": "LOGIN",
+      "endpoint": "/api/admin/auth",
+      "method": "POST",
+      "composant_ui": "Formulaire de connexion",
+      "selecteur_cible": "#auth-login-card",
+      "type_vue": "AuthenticationCard",
+      "evenement_declencheur": "onSubmit(#login-form)",
+      "champs_formulaire": [
+        { "nom": "email_or_user", "label": "Identifiant ou Adresse Email", "type": "text", "placeholder": "admin@greenhumble.local", "requis": true },
+        { "nom": "password", "label": "Mot de passe de sécurité", "type": "password", "placeholder": "••••••••••••", "requis": true },
+        { "nom": "remember_me", "label": "Conserver la session active (24h)", "type": "checkbox", "defaut": true }
+      ],
+      "actions_boutons": [
+        { "id": "btn-submit-login", "titre": "Accéder au Cockpit Sécurisé", "type": "submit", "loading_state": "isAuthenticating" }
+      ],
+      "retour_succes": {
+        "stocker_token_local": "gh_admin_token",
+        "rediriger_vers": "/admin",
+        "action_suivante": "GET_session"
+      }
+    },
+    "LOGOUT": {
+      "action_id": "LOGOUT",
+      "endpoint": "/api/admin/auth",
+      "method": "DELETE",
+      "composant_ui": "Bouton déconnexion",
+      "selecteur_cible": "#btn-user-logout",
+      "type_vue": "NavigationActionItem",
+      "evenement_declencheur": "onClick",
+      "confirmation_requise": false,
+      "retour_succes": {
+        "vider_stockage": ["gh_admin_token", "admin_user_session"],
+        "rediriger_vers": "/login",
+        "reinitialiser_badge": true
+      }
+    },
+    "GET_session": {
+      "action_id": "GET_session",
+      "endpoint": "/api/admin/auth",
+      "method": "GET",
+      "composant_ui": "Badge utilisateur connecté",
+      "selecteur_cible": "#navbar-user-profile-badge",
+      "type_vue": "UserSessionStatusPill",
+      "evenement_declencheur": "onAppInit / onSessionRefresh / interval(300s)",
+      "elements_visuels": [
+        { "id": "user-avatar-initials", "source": "user.avatar_initials", "defaut": "GH" },
+        { "id": "user-display-name", "source": "user.nom", "defaut": "Administrateur" },
+        { "id": "user-role-badge", "source": "user.role", "defaut": "Super Administrateur" },
+        { "id": "session-active-indicator", "source": "authenticated", "couleur_actif": "emerald-500", "couleur_inactif": "slate-400" }
+      ],
+      "menu_deroulant_actions": [
+        { "titre": "Paramètres du Profil", "action": "openProfileModal()" },
+        { "titre": "Gestion des Accès", "action": "navigateTo('#tab-teams')" },
+        { "titre": "Déconnexion", "action": "LOGOUT" }
+      ]
+    }
+  }
+}

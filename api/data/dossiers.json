@@ -1,0 +1,11 @@
+[
+  {
+    "id": "dos_widget_default",
+    "nom": "Dossier Exemple Client",
+    "domaine": "exemple-marque.fr",
+    "date_creation": "2026-10-03T00:00:00.000Z",
+    "scans": [
+      "scan_init_2"
+    ]
+  }
+]

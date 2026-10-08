@@ -1,0 +1,583 @@
+{
+  "backend_system": {
+    "name": "GreenHumble Backend REST Architecture",
+    "version": "2.2.0",
+    "environment": "PHP 8.2+ / MySQL 8.0+ / PostgreSQL 15+ / Apache mod_rewrite / Nginx",
+    "encoding": "UTF-8",
+    "file_structure": {
+      "api/": {
+        ".htaccess": "Règles Apache mod_rewrite dirigeant toutes les requêtes REST vers router.php",
+        "router.php": "Point d'entrée unique, dispatch des requêtes par méthode HTTP et URI, gestion des en-têtes CORS et chaîne des middlewares (Auth, RateLimit, Validator)",
+        "config/": {
+          "database.php": "Connexion PDO (MySQL/PostgreSQL) avec pool, reconnexion automatique et gestion des transactions",
+          "env.php": "Chargeur des variables d'environnement (.env) et clés sécurisées (GROQ_API_KEY, GEMINI_API_KEY, JWT_SECRET)",
+          "security.php": "Paramètres JWT (HS256, expiration 2h), politique des cookies de session HttpOnly / Secure / SameSite=Strict"
+        },
+        "controllers/": {
+          "ConfigController.php": "Contrôleur REST pour /api/admin/config (gestion des variables IA, prompts, dictionnaires, règles, scoring)",
+          "TeamsController.php": "Contrôleur REST pour /api/admin/teams (gestion des équipes, collaborateurs, rôles et permissions)",
+          "AuthController.php": "Contrôleur REST pour /api/admin/auth (login, logout, session active)",
+          "AuditController.php": "Contrôleur REST pour /api/audit (analyse IA de conformité Green Claims et détection de greenwashing)",
+          "ProspecController.php": "Contrôleur REST pour /api/prospec (détection des signaux faibles ESG et génération de pitchs commerciaux)"
+        },
+        "services/": {
+          "AiService.php": "Orchestrateur unifié d'inférence IA : registre dynamique, sélection du provider, résolution des alias *-last, gestion du timeout et fallback automatique",
+          "GeminiProvider.php": "Client HTTP natif pour Google Gemini 3.6 Flash/Pro, Gemini 3.8 Flash/Pro et versions *-last via API v1beta",
+          "GroqProvider.php": "Client HTTP ultra-basse latence pour Groq Llama 3.1 70B/8B, Mixtral 8x7B, ALLaM et versions *-last",
+          "AiNormalizer.php": "Nettoyeur de balises markdown (```json), réparateur syntaxique, validateur de schéma et injecteur de métadonnées ai_telemetry",
+          "AuthService.php": "Génération, validation et révocation des tokens JWT et contrôle de la table cl_sessions",
+          "Validator.php": "Moteur centralisé de validation des schémas d'entrée, types, contraintes et expressions régulières"
+        },
+        "models/": {
+          "Setting.php": "Modèle pour cl_ai_settings, cl_ai_prompts, cl_ai_dictionaries, cl_ai_rules",
+          "User.php": "Modèle pour cl_users, cl_roles, cl_permissions",
+          "Team.php": "Modèle pour cl_teams",
+          "Session.php": "Modèle pour cl_sessions",
+          "Audit.php": "Modèle pour l'historique et rapports d'audits",
+          "Opportunity.php": "Modèle pour cl_ai_opportunities et fiches prospects"
+        }
+      }
+    },
+    "router_structure": {
+      "entry_point": "/api/router.php",
+      "cors_policy": {
+        "access_control_allow_origin": "*",
+        "access_control_allow_methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "access_control_allow_headers": "Content-Type, Authorization, Accept, X-Requested-With",
+        "access_control_max_age": 86400
+      },
+      "middleware_pipeline": [
+        "1. CorsMiddleware : traitement des requêtes pré-vol OPTIONS et injection des en-têtes CORS",
+        "2. JsonBodyParserMiddleware : décodage du flux php://input et vérification syntaxique du JSON",
+        "3. RateLimitMiddleware : limitation des requêtes par minute basée sur l'adresse IP et cl_sessions",
+        "4. AuthMiddleware : extraction et vérification du Bearer Token ou cookie gh_admin_session",
+        "5. RouteDispatcher : routage vers le contrôleur et la méthode correspondante",
+        "6. ErrorHandlerMiddleware : interception des exceptions PDO/IA et conversion en JSON normé"
+      ],
+      "route_map": {
+        "GET /api/admin/config": "ConfigController@index",
+        "POST /api/admin/config": "ConfigController@create",
+        "PUT /api/admin/config/{id}": "ConfigController@update",
+        "DELETE /api/admin/config/{id}": "ConfigController@delete",
+        "GET /api/admin/teams": "TeamsController@index",
+        "POST /api/admin/teams": "TeamsController@create",
+        "PUT /api/admin/teams/{id}": "TeamsController@update",
+        "DELETE /api/admin/teams/{id}": "TeamsController@delete",
+        "POST /api/admin/auth/login": "AuthController@login",
+        "DELETE /api/admin/auth/logout": "AuthController@logout",
+        "GET /api/admin/auth/session": "AuthController@session",
+        "POST /api/audit": "AuditController@analyze",
+        "GET /api/audit/{id}": "AuditController@getReport",
+        "POST /api/prospec": "ProspecController@generate",
+        "GET /api/prospec/{id}": "ProspecController@getOpportunity"
+      }
+    },
+    "sql_schema": {
+      "cl_ai_settings": {
+        "description": "Stocke les variables système IA, paramètres d'inférence, templates JSON, règles de scoring et de conformité",
+        "sql_create": "CREATE TABLE IF NOT EXISTS cl_ai_settings (id VARCHAR(64) PRIMARY KEY, nom VARCHAR(100) NOT NULL UNIQUE, description TEXT NULL, categorie ENUM('variables_ia', 'prompts', 'templates_json', 'dictionnaires', 'regles_metier', 'opportunites_metiers', 'scoring', 'conformite') NOT NULL DEFAULT 'variables_ia', valeur LONGTEXT NOT NULL, modifiable TINYINT(1) NOT NULL DEFAULT 1, exportable TINYINT(1) NOT NULL DEFAULT 1, importable TINYINT(1) NOT NULL DEFAULT 1, supprimable TINYINT(1) NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, KEY idx_settings_cat (categorie), KEY idx_settings_updated (updated_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+      },
+      "cl_ai_prompts": {
+        "description": "Bibliothèque des prompts système pour l'audit anti-greenwashing et la prospection commerciale",
+        "sql_create": "CREATE TABLE IF NOT EXISTS cl_ai_prompts (id VARCHAR(64) PRIMARY KEY, code VARCHAR(64) NOT NULL UNIQUE, nom VARCHAR(120) NOT NULL, description TEXT NULL, prompt_system LONGTEXT NOT NULL, prompt_user_template LONGTEXT NOT NULL, model_preference VARCHAR(32) NOT NULL DEFAULT 'groq', temperature DECIMAL(3,2) NOT NULL DEFAULT 0.30, is_active TINYINT(1) NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, KEY idx_prompts_active (is_active)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+      },
+      "cl_ai_dictionaries": {
+        "description": "Lexiques sémantiques, terminologies interdites, signaux faibles et opportunités métiers",
+        "sql_create": "CREATE TABLE IF NOT EXISTS cl_ai_dictionaries (id VARCHAR(64) PRIMARY KEY, terme VARCHAR(150) NOT NULL, type_signal ENUM('signal_faible', 'besoin_potentiel', 'risque', 'opportunite_metier') NOT NULL DEFAULT 'risque', secteur VARCHAR(100) NOT NULL DEFAULT 'Tous', severite_score INT NOT NULL DEFAULT 50, directive_ref VARCHAR(150) NULL, recommandation TEXT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_dict_terme_secteur (terme, secteur), KEY idx_dict_type (type_signal), KEY idx_dict_secteur (secteur)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+      },
+      "cl_ai_rules": {
+        "description": "Règles métier impératives de conformité européenne (Green Claims, CSRD)",
+        "sql_create": "CREATE TABLE IF NOT EXISTS cl_ai_rules (id VARCHAR(64) PRIMARY KEY, code_regle VARCHAR(64) NOT NULL UNIQUE, titre VARCHAR(150) NOT NULL, categorie ENUM('regles_green_claims', 'regles_rse', 'regles_prospection') NOT NULL DEFAULT 'regles_green_claims', condition_evaluation TEXT NOT NULL, penalite_score INT NOT NULL DEFAULT 20, est_bloquant TINYINT(1) NOT NULL DEFAULT 0, is_active TINYINT(1) NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, KEY idx_rules_categorie (categorie), KEY idx_rules_active (is_active)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+      },
+      "cl_ai_opportunities": {
+        "description": "Catalogue d'opportunités d'accompagnement RSE et d'offres de mission",
+        "sql_create": "CREATE TABLE IF NOT EXISTS cl_ai_opportunities (id VARCHAR(64) PRIMARY KEY, titre VARCHAR(150) NOT NULL, description TEXT NOT NULL, secteur_cible VARCHAR(100) NOT NULL DEFAULT 'Tous', valeur_estimee_eur DECIMAL(10,2) NOT NULL DEFAULT 0.00, difficulte ENUM('FACILE', 'MOYENNE', 'COMPLEXE') NOT NULL DEFAULT 'MOYENNE', arguments_pitch JSON NULL, is_active TINYINT(1) NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY idx_opp_secteur (secteur_cible), KEY idx_opp_active (is_active)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+      },
+      "cl_users": {
+        "description": "Utilisateurs habilités, auditeurs et administrateurs avec niveau d'accès",
+        "sql_create": "CREATE TABLE IF NOT EXISTS cl_users (id VARCHAR(64) PRIMARY KEY, email VARCHAR(191) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL, nom VARCHAR(100) NOT NULL, role_id VARCHAR(64) NOT NULL DEFAULT 'role_sales', team_id VARCHAR(64) NULL, access_level INT NOT NULL DEFAULT 10, avatar_initials VARCHAR(4) NOT NULL DEFAULT 'GH', is_active TINYINT(1) NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, KEY idx_users_role (role_id), KEY idx_users_team (team_id), KEY idx_users_active (is_active)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+      },
+      "cl_teams": {
+        "description": "Équipes, pôles d'expertise et départements opérationnels",
+        "sql_create": "CREATE TABLE IF NOT EXISTS cl_teams (id VARCHAR(64) PRIMARY KEY, nom VARCHAR(100) NOT NULL UNIQUE, description TEXT NULL, groupe_metier VARCHAR(100) NOT NULL DEFAULT 'Général', lead_user_id VARCHAR(64) NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, KEY idx_teams_groupe (groupe_metier)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+      },
+      "cl_roles": {
+        "description": "Rôles fonctionnels et hiérarchiques",
+        "sql_create": "CREATE TABLE IF NOT EXISTS cl_roles (id VARCHAR(64) PRIMARY KEY, code VARCHAR(50) NOT NULL UNIQUE, label VARCHAR(100) NOT NULL, description TEXT NULL, default_level INT NOT NULL DEFAULT 10, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+      },
+      "cl_permissions": {
+        "description": "Droits fins associés à chaque rôle",
+        "sql_create": "CREATE TABLE IF NOT EXISTS cl_permissions (id VARCHAR(64) PRIMARY KEY, role_id VARCHAR(64) NOT NULL, permission_code VARCHAR(100) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_role_perm (role_id, permission_code), CONSTRAINT fk_perm_role FOREIGN KEY (role_id) REFERENCES cl_roles (id) ON DELETE CASCADE ON UPDATE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+      },
+      "cl_sessions": {
+        "description": "Sessions authentifiées, tokens SHA-256 et contrôle de validité",
+        "sql_create": "CREATE TABLE IF NOT EXISTS cl_sessions (token_hash VARCHAR(64) PRIMARY KEY, user_id VARCHAR(64) NOT NULL, ip_address VARCHAR(45) NOT NULL, user_agent VARCHAR(255) NULL, expires_at DATETIME NOT NULL, is_revoked TINYINT(1) NOT NULL DEFAULT 0, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, KEY idx_sess_user (user_id), KEY idx_sess_expires (expires_at), CONSTRAINT fk_sess_user FOREIGN KEY (user_id) REFERENCES cl_users (id) ON DELETE CASCADE ON UPDATE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
+      }
+    },
+    "ai_engine_integration": {
+      "providers": {
+        "gemini": {
+          "base_url": "https://generativelanguage.googleapis.com/v1beta",
+          "auth_header": "x-goog-api-key",
+          "models": [
+            "gemini-3.8-flash",
+            "gemini-3.8-pro",
+            "gemini-3.6-flash",
+            "gemini-3.6-pro",
+            "gemini-1.5-flash-last",
+            "gemini-1.5-pro-last"
+          ]
+        },
+        "groq": {
+          "base_url": "https://api.groq.com/openai/v1",
+          "auth_header": "Authorization: Bearer <API_KEY>",
+          "models": [
+            "groq-llama-3.1-70b",
+            "groq-llama-3.1-8b",
+            "groq-mixtral-8x7b",
+            "groq-allam-2-7b",
+            "groq-llama-3.1-70b-last",
+            "groq-mixtral-8x7b-last"
+          ]
+        }
+      },
+      "dynamic_alias_resolution": {
+        "gemini-1.5-flash-last": "gemini-1.5-flash-002",
+        "gemini-1.5-pro-last": "gemini-1.5-pro-002",
+        "groq-llama-3.1-70b-last": "llama-3.1-70b-versatile",
+        "groq-mixtral-8x7b-last": "mixtral-8x7b-32768"
+      },
+      "fallback_policy": {
+        "timeout_ms": 6500,
+        "max_retries": 2,
+        "chain": {
+          "gemini-3.8-pro": ["gemini-3.8-flash", "groq-llama-3.1-70b-last"],
+          "gemini-3.8-flash": ["groq-llama-3.1-70b-last", "gemini-3.6-flash"],
+          "groq-llama-3.1-70b-last": ["gemini-3.8-flash", "groq-llama-3.1-70b"],
+          "groq-llama-3.1-70b": ["gemini-3.8-flash", "groq-llama-3.1-8b"]
+        }
+      },
+      "normalization_pipeline": {
+        "step_1": "Élimination des balises markdown ```json et ``` dans les sorties brutes",
+        "step_2": "Réparation syntaxique des virgules orphelines et quotes avant décodage JSON",
+        "step_3": "Validation stricte du schéma de données attendu et clamping numérique (scores 0-100)",
+        "step_4": "Injection de l'objet 'ai_telemetry' contenant le modèle réel, statut de fallback et durée en ms"
+      }
+    },
+    "endpoints": {
+      "/api/admin/config": {
+        "controller": "ConfigController",
+        "methods": {
+          "GET": {
+            "action": "index",
+            "validation": { "query": { "categorie": "enum(all,variables_ia,prompts,templates_json,dictionnaires,regles_metier,opportunites_metiers,scoring,conformite)", "page": "int>=1", "limit": "int 1..100" } },
+            "business_logic": "Vérifie les droits de lecture config. Filtre cl_ai_settings par catégorie si demandée. Renvoyer les éléments au format StandardItem.",
+            "success_response": {
+              "success": true,
+              "status": 200,
+              "total": 3,
+              "page": 1,
+              "limit": 50,
+              "data": [
+                {
+                  "id": "cfg_ai_provider",
+                  "nom": "aiProvider",
+                  "description": "Moteur LLM principal (groq ou gemini)",
+                  "categorie": "variables_ia",
+                  "valeur": "groq",
+                  "modifiable": true,
+                  "exportable": true,
+                  "importable": true,
+                  "supprimable": false
+                }
+              ],
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          },
+          "POST": {
+            "action": "create",
+            "validation": { "body": { "nom": "string(2..100)", "description": "string(5..500)", "categorie": "enum", "valeur": "string" } },
+            "business_logic": "Contrôle d'unicité sur le nom. Génère l'ID 'cfg_*'. Insère dans cl_ai_settings avec modifiable=1, exportable=1, importable=1, supprimable=1.",
+            "success_response": {
+              "success": true,
+              "status": 201,
+              "message": "Configuration créée avec succès.",
+              "data": {
+                "id": "cfg_seuil_alerte_esg",
+                "nom": "seuil_alerte_esg",
+                "description": "Score d'alerte légale",
+                "categorie": "conformite",
+                "valeur": "65",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          },
+          "PUT": {
+            "action": "update",
+            "validation": { "path": { "id": "cfg_*" }, "body": { "valeur": "string", "description": "string?" } },
+            "business_logic": "Vérifie l'existence et modifiable=1. Si aiProvider, contraint à 'gemini' ou 'groq'. Met à jour cl_ai_settings.",
+            "success_response": {
+              "success": true,
+              "status": 200,
+              "message": "Configuration mise à jour avec succès.",
+              "data": {
+                "id": "cfg_ai_provider",
+                "nom": "aiProvider",
+                "description": "Moteur LLM principal",
+                "categorie": "variables_ia",
+                "valeur": "gemini",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": false
+              },
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          },
+          "DELETE": {
+            "action": "delete",
+            "validation": { "path": { "id": "cfg_*" } },
+            "business_logic": "Vérifie l'existence et supprimable=1. Rejette HTTP 400 si protégé. Supprime l'enregistrement.",
+            "success_response": {
+              "success": true,
+              "status": 200,
+              "message": "Configuration supprimée avec succès.",
+              "data": {
+                "id": "cfg_custom_rule_99",
+                "nom": "regle_temporaire",
+                "description": "Règle supprimée",
+                "categorie": "regles_metier",
+                "valeur": "{}",
+                "modifiable": false,
+                "exportable": false,
+                "importable": false,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          }
+        },
+        "errors": {
+          "400": { "success": false, "status": 400, "code": "VALIDATION_FAILED", "message": "Paramètre invalide ou élément verrouillé." },
+          "401": { "success": false, "status": 401, "code": "UNAUTHORIZED", "message": "Authentification requise." },
+          "404": { "success": false, "status": 404, "code": "NOT_FOUND", "message": "Configuration introuvable." },
+          "500": { "success": false, "status": 500, "code": "DATABASE_ERROR", "message": "Erreur serveur lors de la persistance." }
+        }
+      },
+      "/api/admin/teams": {
+        "controller": "TeamsController",
+        "methods": {
+          "GET": {
+            "action": "index",
+            "validation": { "query": { "type": "enum(all,equipes,membres,roles)", "page": "int>=1", "limit": "int 1..100" } },
+            "business_logic": "Vérifie session active. Récupère équipes (cl_teams) et collaborateurs (cl_users). Mappe vers StandardItem sans mots de passe.",
+            "success_response": {
+              "success": true,
+              "status": 200,
+              "total": 2,
+              "page": 1,
+              "limit": 50,
+              "data": [
+                {
+                  "id": "team_pole_esg",
+                  "nom": "Pôle Audit & Conformité RSE",
+                  "description": "Équipe d'audit",
+                  "categorie": "equipes",
+                  "valeur": "{\"groupe\": \"Conformité\", \"membres_count\": 5}",
+                  "modifiable": true,
+                  "exportable": true,
+                  "importable": true,
+                  "supprimable": true
+                }
+              ],
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          },
+          "POST": {
+            "action": "create",
+            "validation": { "body": { "nom": "string", "email": "email", "role_id": "role_*", "team_id": "team_*?", "password": "min:8" } },
+            "business_logic": "Vérifie unicité email. Hache mot de passe via bcrypt. Associe le rôle et permissions. Insère dans cl_users.",
+            "success_response": {
+              "success": true,
+              "status": 201,
+              "message": "Nouveau membre ajouté avec succès.",
+              "data": {
+                "id": "usr_sales_consultant_02",
+                "nom": "Alexandre Mercier",
+                "description": "Consultant commercial",
+                "categorie": "membres",
+                "valeur": "{\"email\": \"a.mercier@climatlocal.com\", \"role\": \"Commercial\", \"access_level\": 30}",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          },
+          "PUT": {
+            "action": "update",
+            "validation": { "path": { "id": "usr_*|team_*" }, "body": { "role_id": "string?", "team_id": "string?", "access_level": "int 0..100?" } },
+            "business_logic": "Empêche rétrogradation de usr_master_admin. Met à jour cl_users ou cl_teams.",
+            "success_response": {
+              "success": true,
+              "status": 200,
+              "message": "Profil mis à jour avec succès.",
+              "data": {
+                "id": "usr_sales_consultant_02",
+                "nom": "Alexandre Mercier",
+                "description": "Lead Consultant",
+                "categorie": "membres",
+                "valeur": "{\"email\": \"a.mercier@climatlocal.com\", \"role\": \"Lead\", \"access_level\": 45}",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          },
+          "DELETE": {
+            "action": "delete",
+            "validation": { "path": { "id": "usr_*|team_*" } },
+            "business_logic": "Interdit suppression de usr_master_admin ou self. Révoque sessions dans cl_sessions et supprime compte.",
+            "success_response": {
+              "success": true,
+              "status": 200,
+              "message": "Membre supprimé et accès révoqués.",
+              "data": {
+                "id": "usr_temp_contractor",
+                "nom": "Compte Supprimé",
+                "description": "Clôturé",
+                "categorie": "membres",
+                "valeur": "{\"statut\": \"supprime\"}",
+                "modifiable": false,
+                "exportable": false,
+                "importable": false,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          }
+        },
+        "errors": {
+          "400": { "success": false, "status": 400, "code": "VALIDATION_FAILED", "message": "Email en double ou auto-suppression interdite." },
+          "401": { "success": false, "status": 401, "code": "UNAUTHORIZED", "message": "Session non authentifiée." },
+          "404": { "success": false, "status": 404, "code": "USER_NOT_FOUND", "message": "Membre ou équipe introuvable." },
+          "500": { "success": false, "status": 500, "code": "SERVER_ERROR", "message": "Erreur serveur de persistance." }
+        }
+      },
+      "/api/admin/auth": {
+        "controller": "AuthController",
+        "methods": {
+          "POST_login": {
+            "route": "POST /api/admin/auth/login",
+            "validation": { "body": { "email": "email", "password": "min:6" } },
+            "business_logic": "Vérifie mot de passe bcrypt. Émet JWT signé HS256. Enregistre hash dans cl_sessions. Pose cookie HttpOnly.",
+            "success_response": {
+              "success": true,
+              "status": 200,
+              "message": "Connexion réussie.",
+              "token": "gh_jwt_sample_token",
+              "data": {
+                "id": "usr_master_admin",
+                "nom": "Julien Lavaud",
+                "description": "Super Administrateur",
+                "categorie": "utilisateurs",
+                "valeur": "{\"email\": \"contact@climatlocal.com\", \"role\": \"Super Administrateur\", \"access_level\": 100}",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": false
+              },
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          },
+          "DELETE_logout": {
+            "route": "DELETE /api/admin/auth/logout",
+            "validation": { "headers": { "Authorization": "string?" } },
+            "business_logic": "Marque is_revoked=1 dans cl_sessions pour le token actif. Supprime cookie.",
+            "success_response": {
+              "success": true,
+              "status": 200,
+              "message": "Déconnexion réussie.",
+              "data": {
+                "id": "sess_revoked",
+                "nom": "Session Active Révoquée",
+                "description": "Invalidée",
+                "categorie": "sessions",
+                "valeur": "{\"statut\": \"revoquee\"}",
+                "modifiable": false,
+                "exportable": false,
+                "importable": false,
+                "supprimable": true
+              },
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          },
+          "GET_session": {
+            "route": "GET /api/admin/auth/session",
+            "validation": { "headers": { "Authorization": "string?" } },
+            "business_logic": "Vérifie validité temporelle et révocation dans cl_sessions. Renvoie profil StandardItem pour badge UI.",
+            "success_response": {
+              "success": true,
+              "status": 200,
+              "authenticated": true,
+              "data": {
+                "id": "usr_master_admin",
+                "nom": "Julien Lavaud",
+                "description": "Badge utilisateur connecté",
+                "categorie": "niveaux_acces",
+                "valeur": "{\"email\": \"contact@climatlocal.com\", \"role\": \"Super Administrateur\", \"access_level\": 100, \"avatar_initials\": \"JL\", \"en_ligne\": true, \"permissions\": [\"all\"]}",
+                "modifiable": true,
+                "exportable": true,
+                "importable": true,
+                "supprimable": false
+              },
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          }
+        },
+        "errors": {
+          "400": { "success": false, "status": 400, "code": "MALFORMED_AUTH", "message": "Email ou mot de passe manquant." },
+          "401": { "success": false, "status": 401, "code": "INVALID_CREDENTIALS", "message": "Identifiants invalides ou session expirée." },
+          "404": { "success": false, "status": 404, "code": "USER_NOT_FOUND", "message": "Compte utilisateur introuvable." },
+          "500": { "success": false, "status": 500, "code": "SESSION_STORAGE_ERROR", "message": "Erreur serveur lors de la persistance de session." }
+        }
+      },
+      "/api/audit": {
+        "controller": "AuditController",
+        "methods": {
+          "POST": {
+            "route": "POST /api/audit",
+            "action": "analyze",
+            "validation": {
+              "body": {
+                "nom_marque": "string(2..150)",
+                "secteur": "string(2..100)",
+                "url": "url?",
+                "text_content": "string(min:20)?",
+                "preferred_provider": "enum(gemini,groq)?",
+                "preferred_model": "string?"
+              }
+            },
+            "business_logic": "Valide présence URL ou text_content. Extrait contenu web si URL. Charge prompt anti-greenwashing et règles Green Claims dans cl_ai_settings. Invoque AiService avec fallback automatique. Normalise la réponse, clamp le score 0-100 et génère rapport avec télémétrie.",
+            "success_response": {
+              "success": true,
+              "status": 200,
+              "data": {
+                "id": "audit_84f9a0c1",
+                "nom_marque": "GreenFret Express",
+                "secteur": "Fret Routier & Logistique",
+                "score_conformite": 64,
+                "niveau_risque": "MODERE",
+                "synthese_globale": "Terminologies de neutralité absolue non étayées par un bilan Scope 3 certifié.",
+                "allegations_detectees": [
+                  {
+                    "phrase_relevee": "100% écologiques et neutres en carbone d'ici fin 2026",
+                    "evaluation": "NON_CONFORME",
+                    "directive_ref": "Directive UE Green Claims Art. 3",
+                    "justification_juridique": "Interdiction des allégations globales sans feuille de route scientifique SBTi validée.",
+                    "recommandation_corrective": "Expliciter les réductions directes Scopes 1-2 et supprimer l'allégation de neutralité absolue."
+                  }
+                ],
+                "opportunites_metier": [
+                  {
+                    "titre": "Certification Décarbonation CSRD",
+                    "valeur_estimee": "5500€",
+                    "difficulte": "MOYENNE"
+                  }
+                ],
+                "ai_telemetry": {
+                  "provider_sollicite": "gemini",
+                  "provider_effectif": "gemini",
+                  "modele_sollicite": "gemini-3.8-flash",
+                  "modele_effectif": "gemini-3.8-flash",
+                  "fallback_active": false,
+                  "duree_ms": 1140,
+                  "tokens_entree": 842,
+                  "tokens_sortie": 390
+                }
+              },
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          }
+        },
+        "errors": {
+          "400": { "success": false, "status": 400, "code": "CONTENT_REQUIRED", "message": "Une URL valide ou un texte d'au moins 20 caractères est requis." },
+          "401": { "success": false, "status": 401, "code": "UNAUTHORIZED", "message": "Authentification requise pour lancer un audit." },
+          "429": { "success": false, "status": 429, "code": "RATE_LIMIT_EXCEEDED", "message": "Limite de requêtes atteinte." },
+          "500": { "success": false, "status": 500, "code": "AI_INFERENCE_FAILURE", "message": "Échec d'inférence IA après tentative de fallback." }
+        }
+      },
+      "/api/prospec": {
+        "controller": "ProspecController",
+        "methods": {
+          "POST": {
+            "route": "POST /api/prospec",
+            "action": "generate",
+            "validation": {
+              "body": {
+                "entreprise": "string(2..150)",
+                "secteur": "string(2..100)",
+                "site_web": "url?",
+                "besoin_identifie": "string?",
+                "vulnerabilites_rse": "array<string>?",
+                "preferred_provider": "enum(gemini,groq)?",
+                "preferred_model": "string?"
+              }
+            },
+            "business_logic": "Charge templates de pitch et opportunités catalogue dans cl_ai_settings. Invoque AiService. Analyse signaux faibles et produit un argumentaire percutant pour commerciaux. Normalise et persiste dans cl_ai_opportunities.",
+            "success_response": {
+              "success": true,
+              "status": 201,
+              "message": "Opportunité commerciale qualifiée avec succès.",
+              "data": {
+                "id": "prsp_91a0c4f8",
+                "entreprise": "Logistique Alpine SA",
+                "secteur": "Transport Frigorifique & Fret Alimentaire",
+                "score_priorite": 89,
+                "statut": "QUALIFIE",
+                "signaux_faibles": [
+                  "Échéance européenne d'interdiction des gaz frigorigènes à fort GWP",
+                  "Donneurs d'ordre exigeant bilan Scope 1-2 certifié",
+                  "Risque de sanction sur allégation commerciale 'Transport 100% Propre'"
+                ],
+                "pitch_commercial_personnalise": "Bonjour, afficher un 'Transport Propre' sans bilan certifié expose votre flotte à des sanctions DGCCRF. GreenHumble certifie vos réductions réelles et transforme votre investissement en argument d'appel d'offres inattaquable.",
+                "angle_d_approche_recommande": "Sécurisation légale immédiate et différenciation commerciale",
+                "missions_conseillees": [
+                  {
+                    "titre": "Diagnostic Conformité Allégations Green Claims",
+                    "valeur_estimee": "3800€",
+                    "difficulte": "FACILE"
+                  }
+                ],
+                "ai_telemetry": {
+                  "provider_sollicite": "groq",
+                  "provider_effectif": "groq",
+                  "modele_sollicite": "groq-llama-3.1-70b-last",
+                  "modele_effectif": "llama-3.1-70b-versatile",
+                  "fallback_active": false,
+                  "duree_ms": 820,
+                  "tokens_entree": 680,
+                  "tokens_sortie": 460
+                }
+              },
+              "timestamp": "2026-10-02T03:43:00Z"
+            }
+          }
+        },
+        "errors": {
+          "400": { "success": false, "status": 400, "code": "TARGET_REQUIRED", "message": "Nom d'entreprise et secteur obligatoires." },
+          "401": { "success": false, "status": 401, "code": "UNAUTHORIZED", "message": "Session non authentifiée." },
+          "429": { "success": false, "status": 429, "code": "RATE_LIMIT_EXCEEDED", "message": "Limite de génération atteinte." },
+          "500": { "success": false, "status": 500, "code": "AI_GENERATION_FAILED", "message": "Échec de génération IA." }
+        }
+      }
+    }
+  }
+}

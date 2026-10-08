@@ -1,0 +1,542 @@
+{
+  "title": "GreenHumble Standardized Backend JSON Responses",
+  "version": "2.0.0",
+  "object_standard_schema": {
+    "id": "string",
+    "nom": "string",
+    "description": "string",
+    "categorie": "string",
+    "valeur": "string",
+    "modifiable": "boolean",
+    "exportable": "boolean",
+    "importable": "boolean",
+    "supprimable": "boolean"
+  },
+  "endpoints": {
+    "GET_api_admin_config": {
+      "endpoint": "/api/admin/config",
+      "method": "GET",
+      "type_operation": "liste",
+      "champs_obligatoires": ["success", "endpoint", "total", "data"],
+      "types_champs": {
+        "success": "boolean",
+        "endpoint": "string",
+        "total": "integer",
+        "data": "array<ObjectStandard>"
+      },
+      "valeurs_par_defaut": {
+        "success": true,
+        "endpoint": "/api/admin/config",
+        "total": 0,
+        "data": []
+      },
+      "format_succes": {
+        "success": true,
+        "endpoint": "/api/admin/config",
+        "total": 2,
+        "data": [
+          {
+            "id": "ai_provider",
+            "nom": "aiProvider",
+            "description": "Fournisseur d'IA actif pour l'analyse (groq ou gemini)",
+            "categorie": "variables_ia",
+            "valeur": "groq",
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": false
+          },
+          {
+            "id": "ai_model",
+            "nom": "aiModel",
+            "description": "Modèle d'IA principal recommandé GreenHumble",
+            "categorie": "variables_ia",
+            "valeur": "llama-3.1-70b",
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": false
+          }
+        ]
+      },
+      "format_echec": {
+        "success": false,
+        "code": 401,
+        "erreur": "Unauthorized",
+        "message": "Authentification requise pour charger la configuration.",
+        "horodatage": "2026-10-02T02:47:27Z"
+      },
+      "erreurs_possibles": {
+        "400": { "code": 400, "erreur": "Bad Request", "message": "Paramètre de filtre de catégorie invalide." },
+        "401": { "code": 401, "erreur": "Unauthorized", "message": "Jeton d'authentification invalide ou expiré." },
+        "404": { "code": 404, "erreur": "Not Found", "message": "Catégorie demandée introuvable." },
+        "500": { "code": 500, "erreur": "Internal Server Error", "message": "Échec de lecture du registre de configuration." }
+      }
+    },
+    "POST_api_admin_config": {
+      "endpoint": "/api/admin/config",
+      "method": "POST",
+      "type_operation": "objet_unique",
+      "champs_obligatoires": ["success", "message", "item"],
+      "types_champs": {
+        "success": "boolean",
+        "message": "string",
+        "item": "ObjectStandard"
+      },
+      "valeurs_par_defaut": {
+        "success": true,
+        "item.modifiable": true,
+        "item.exportable": true,
+        "item.importable": true,
+        "item.supprimable": true
+      },
+      "format_succes": {
+        "success": true,
+        "message": "Élément de configuration créé avec succès.",
+        "item": {
+          "id": "cfg_custom_rule_99",
+          "nom": "regle_agec_plastique",
+          "description": "Interdiction de la mention biodégradable sur plastique",
+          "categorie": "regles_metier",
+          "valeur": "Interdiction absolue de toute mention biodégradable sur les emballages plastiques selon art. L. 541-9-1.",
+          "modifiable": true,
+          "exportable": true,
+          "importable": true,
+          "supprimable": true
+        }
+      },
+      "format_echec": {
+        "success": false,
+        "code": 400,
+        "erreur": "Bad Request",
+        "message": "Les champs 'nom', 'categorie' et 'valeur' sont obligatoires.",
+        "horodatage": "2026-10-02T02:47:27Z"
+      },
+      "erreurs_possibles": {
+        "400": { "code": 400, "erreur": "Bad Request", "message": "Corps de requête malformé ou champ obligatoire manquant." },
+        "401": { "code": 401, "erreur": "Unauthorized", "message": "Session non authentifiée." },
+        "404": { "code": 404, "erreur": "Not Found", "message": "Ressource parente introuvable." },
+        "500": { "code": 500, "erreur": "Internal Server Error", "message": "Impossible d'écrire dans la base de données." }
+      }
+    },
+    "PUT_api_admin_config_id": {
+      "endpoint": "/api/admin/config/{id}",
+      "method": "PUT",
+      "type_operation": "objet_unique",
+      "champs_obligatoires": ["success", "message", "item"],
+      "types_champs": {
+        "success": "boolean",
+        "message": "string",
+        "item": "ObjectStandard"
+      },
+      "valeurs_par_defaut": {
+        "success": true
+      },
+      "format_succes": {
+        "success": true,
+        "message": "Configuration mise à jour avec succès.",
+        "item": {
+          "id": "ai_model",
+          "nom": "aiModel",
+          "description": "Modèle d'IA haute capacité pour analyse longue",
+          "categorie": "variables_ia",
+          "valeur": "mixtral-8x7b",
+          "modifiable": true,
+          "exportable": true,
+          "importable": true,
+          "supprimable": false
+        }
+      },
+      "format_echec": {
+        "success": false,
+        "code": 404,
+        "erreur": "Not Found",
+        "message": "Aucun élément de configuration ne correspond à l'identifiant fourni.",
+        "horodatage": "2026-10-02T02:47:27Z"
+      },
+      "erreurs_possibles": {
+        "400": { "code": 400, "erreur": "Bad Request", "message": "La valeur à mettre à jour est requise." },
+        "401": { "code": 401, "erreur": "Unauthorized", "message": "Session non authentifiée." },
+        "404": { "code": 404, "erreur": "Not Found", "message": "Identifiant {id} inexistant." },
+        "500": { "code": 500, "erreur": "Internal Server Error", "message": "Erreur lors de la persistance des modifications." }
+      }
+    },
+    "DELETE_api_admin_config_id": {
+      "endpoint": "/api/admin/config/{id}",
+      "method": "DELETE",
+      "type_operation": "suppression",
+      "champs_obligatoires": ["success", "message", "deleted_item"],
+      "types_champs": {
+        "success": "boolean",
+        "message": "string",
+        "deleted_item": "ObjectStandard"
+      },
+      "valeurs_par_defaut": {
+        "success": true
+      },
+      "format_succes": {
+        "success": true,
+        "message": "Configuration supprimée avec succès.",
+        "deleted_item": {
+          "id": "cfg_custom_rule_99",
+          "nom": "regle_agec_plastique",
+          "description": "Interdiction de la mention biodégradable sur plastique",
+          "categorie": "regles_metier",
+          "valeur": "Interdiction absolue de toute mention biodégradable.",
+          "modifiable": true,
+          "exportable": true,
+          "importable": true,
+          "supprimable": true
+        }
+      },
+      "format_echec": {
+        "success": false,
+        "code": 400,
+        "erreur": "Bad Request",
+        "message": "Cette variable système est verrouillée et ne peut être supprimée.",
+        "horodatage": "2026-10-02T02:47:27Z"
+      },
+      "erreurs_possibles": {
+        "400": { "code": 400, "erreur": "Bad Request", "message": "Identifiant manquant ou ressource non supprimable ('supprimable: false')." },
+        "401": { "code": 401, "erreur": "Unauthorized", "message": "Authentification requise." },
+        "404": { "code": 404, "erreur": "Not Found", "message": "Configuration {id} introuvable." },
+        "500": { "code": 500, "erreur": "Internal Server Error", "message": "Erreur système lors de la suppression." }
+      }
+    },
+    "GET_api_admin_teams": {
+      "endpoint": "/api/admin/teams",
+      "method": "GET",
+      "type_operation": "liste",
+      "champs_obligatoires": ["success", "endpoint", "total", "data"],
+      "types_champs": {
+        "success": "boolean",
+        "endpoint": "string",
+        "total": "integer",
+        "data": "array<ObjectStandard>"
+      },
+      "valeurs_par_defaut": {
+        "success": true,
+        "endpoint": "/api/admin/teams",
+        "total": 0,
+        "data": []
+      },
+      "format_succes": {
+        "success": true,
+        "endpoint": "/api/admin/teams",
+        "total": 3,
+        "data": [
+          {
+            "id": "team_rse",
+            "nom": "equipes",
+            "description": "Pôle Audit & Conformité RSE",
+            "categorie": "gestion_equipes",
+            "valeur": "{\"chef\": \"s.delorme@greenhumble.local\", \"region\": \"National\", \"actif\": true}",
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": true
+          },
+          {
+            "id": "member_aud_01",
+            "nom": "membres",
+            "description": "Sarah Delorme - Consultante Audit Senior",
+            "categorie": "gestion_equipes",
+            "valeur": "{\"email\": \"s.delorme@greenhumble.local\", \"role\": \"Auditeur Expert RSE\", \"equipe\": \"team_rse\"}",
+            "modifiable": true,
+            "exportable": true,
+            "importable": true,
+            "supprimable": true
+          },
+          {
+            "id": "role_super_admin",
+            "nom": "roles",
+            "description": "Rôle Super Administrateur",
+            "categorie": "gestion_equipes",
+            "valeur": "{\"niveau\": 100, \"droits\": [\"all\"]}",
+            "modifiable": false,
+            "exportable": true,
+            "importable": true,
+            "supprimable": false
+          }
+        ]
+      },
+      "format_echec": {
+        "success": false,
+        "code": 401,
+        "erreur": "Unauthorized",
+        "message": "Session non authentifiée.",
+        "horodatage": "2026-10-02T02:47:27Z"
+      },
+      "erreurs_possibles": {
+        "400": { "code": 400, "erreur": "Bad Request", "message": "Paramètres de requête d'équipe incorrects." },
+        "401": { "code": 401, "erreur": "Unauthorized", "message": "Accès réservé aux utilisateurs authentifiés." },
+        "404": { "code": 404, "erreur": "Not Found", "message": "Pôle d'équipe non trouvé." },
+        "500": { "code": 500, "erreur": "Internal Server Error", "message": "Erreur serveur lors de la restitution des équipes." }
+      }
+    },
+    "POST_api_admin_teams": {
+      "endpoint": "/api/admin/teams",
+      "method": "POST",
+      "type_operation": "objet_unique",
+      "champs_obligatoires": ["success", "message", "item"],
+      "types_champs": {
+        "success": "boolean",
+        "message": "string",
+        "item": "ObjectStandard"
+      },
+      "valeurs_par_defaut": {
+        "success": true,
+        "item.modifiable": true,
+        "item.exportable": true,
+        "item.importable": true,
+        "item.supprimable": true
+      },
+      "format_succes": {
+        "success": true,
+        "message": "Nouveau collaborateur créé avec succès.",
+        "item": {
+          "id": "member_usr_12",
+          "nom": "membres",
+          "description": "Camille Dupuis - Auditeur RSE",
+          "categorie": "gestion_equipes",
+          "valeur": "{\"email\": \"c.dupuis@greenhumble.local\", \"role\": \"Auditeur RSE\", \"equipe\": \"team_rse\", \"statut\": \"actif\"}",
+          "modifiable": true,
+          "exportable": true,
+          "importable": true,
+          "supprimable": true
+        }
+      },
+      "format_echec": {
+        "success": false,
+        "code": 400,
+        "erreur": "Bad Request",
+        "message": "Le nom du membre ou du pôle est requis.",
+        "horodatage": "2026-10-02T02:47:27Z"
+      },
+      "erreurs_possibles": {
+        "400": { "code": 400, "erreur": "Bad Request", "message": "Données d'équipe invalides." },
+        "401": { "code": 401, "erreur": "Unauthorized", "message": "Session non authentifiée." },
+        "404": { "code": 404, "erreur": "Not Found", "message": "Équipe de rattachement inexistante." },
+        "500": { "code": 500, "erreur": "Internal Server Error", "message": "Erreur lors de la création du membre." }
+      }
+    },
+    "PUT_api_admin_teams_id": {
+      "endpoint": "/api/admin/teams/{id}",
+      "method": "PUT",
+      "type_operation": "objet_unique",
+      "champs_obligatoires": ["success", "message", "item"],
+      "types_champs": {
+        "success": "boolean",
+        "message": "string",
+        "item": "ObjectStandard"
+      },
+      "valeurs_par_defaut": {
+        "success": true
+      },
+      "format_succes": {
+        "success": true,
+        "message": "Rôle et affectation du membre mis à jour.",
+        "item": {
+          "id": "member_usr_02",
+          "nom": "membres",
+          "description": "Marc Vasseur - Lead Prospection",
+          "categorie": "gestion_equipes",
+          "valeur": "{\"email\": \"m.vasseur@greenhumble.local\", \"role\": \"Lead Prospection & Partenariats\", \"equipe\": \"team_growth\"}",
+          "modifiable": true,
+          "exportable": true,
+          "importable": true,
+          "supprimable": true
+        }
+      },
+      "format_echec": {
+        "success": false,
+        "code": 404,
+        "erreur": "Not Found",
+        "message": "Membre ou équipe {id} introuvable.",
+        "horodatage": "2026-10-02T02:47:27Z"
+      },
+      "erreurs_possibles": {
+        "400": { "code": 400, "erreur": "Bad Request", "message": "Champs de mise à jour invalides." },
+        "401": { "code": 401, "erreur": "Unauthorized", "message": "Session non authentifiée." },
+        "404": { "code": 404, "erreur": "Not Found", "message": "Identifiant {id} non répertorié." },
+        "500": { "code": 500, "erreur": "Internal Server Error", "message": "Échec de mise à jour des droits." }
+      }
+    },
+    "DELETE_api_admin_teams_id": {
+      "endpoint": "/api/admin/teams/{id}",
+      "method": "DELETE",
+      "type_operation": "suppression",
+      "champs_obligatoires": ["success", "message", "deleted_item"],
+      "types_champs": {
+        "success": "boolean",
+        "message": "string",
+        "deleted_item": "ObjectStandard"
+      },
+      "valeurs_par_defaut": {
+        "success": true
+      },
+      "format_succes": {
+        "success": true,
+        "message": "Membre de l'équipe révoqué avec succès.",
+        "deleted_item": {
+          "id": "member_usr_12",
+          "nom": "membres",
+          "description": "Camille Dupuis - Auditeur RSE",
+          "categorie": "gestion_equipes",
+          "valeur": "{\"email\": \"c.dupuis@greenhumble.local\", \"statut\": \"revoque\"}",
+          "modifiable": true,
+          "exportable": true,
+          "importable": true,
+          "supprimable": true
+        }
+      },
+      "format_echec": {
+        "success": false,
+        "code": 400,
+        "erreur": "Bad Request",
+        "message": "Impossible de supprimer le Super Administrateur racine.",
+        "horodatage": "2026-10-02T02:47:27Z"
+      },
+      "erreurs_possibles": {
+        "400": { "code": 400, "erreur": "Bad Request", "message": "Ressource protégée ou administrateur maître." },
+        "401": { "code": 401, "erreur": "Unauthorized", "message": "Session non authentifiée." },
+        "404": { "code": 404, "erreur": "Not Found", "message": "Membre {id} introuvable." },
+        "500": { "code": 500, "erreur": "Internal Server Error", "message": "Erreur serveur lors de la suppression." }
+      }
+    },
+    "POST_api_admin_auth_login": {
+      "endpoint": "/api/admin/auth/login",
+      "method": "POST",
+      "type_operation": "objet_unique",
+      "champs_obligatoires": ["success", "message", "item"],
+      "types_champs": {
+        "success": "boolean",
+        "message": "string",
+        "item": "ObjectStandard"
+      },
+      "valeurs_par_defaut": {
+        "success": true,
+        "item.modifiable": false,
+        "item.exportable": true,
+        "item.importable": false,
+        "item.supprimable": false
+      },
+      "format_succes": {
+        "success": true,
+        "message": "Authentification réussie.",
+        "item": {
+          "id": "session_user_token",
+          "nom": "tokens",
+          "description": "Jeton JWT actif et données du profil connecté",
+          "categorie": "gestion_connexion",
+          "valeur": "{\"token\": \"gh_jwt_e8Y6bFj6vLz4v0QpZbqGDe1BOmzT8A3y.hF1p2wKlm9Y0zX8qT6yW\", \"expires_in\": 86400, \"user\": {\"id\": \"usr_master_admin\", \"email\": \"contact@climatlocal.com\", \"role\": \"Super Administrateur\", \"access_level\": 100}}",
+          "modifiable": false,
+          "exportable": true,
+          "importable": false,
+          "supprimable": false
+        }
+      },
+      "format_echec": {
+        "success": false,
+        "code": 401,
+        "erreur": "Unauthorized",
+        "message": "Identifiant ou mot de passe incorrect.",
+        "horodatage": "2026-10-02T02:47:27Z"
+      },
+      "erreurs_possibles": {
+        "400": { "code": 400, "erreur": "Bad Request", "message": "Identifiant et mot de passe requis." },
+        "401": { "code": 401, "erreur": "Unauthorized", "message": "Identifiant ou mot de passe incorrect." },
+        "404": { "code": 404, "erreur": "Not Found", "message": "Compte utilisateur introuvable." },
+        "500": { "code": 500, "erreur": "Internal Server Error", "message": "Erreur serveur lors de la vérification des identifiants." }
+      }
+    },
+    "DELETE_api_admin_auth_logout": {
+      "endpoint": "/api/admin/auth/logout",
+      "method": "DELETE",
+      "type_operation": "suppression",
+      "champs_obligatoires": ["success", "message", "deleted_item"],
+      "types_champs": {
+        "success": "boolean",
+        "message": "string",
+        "deleted_item": "ObjectStandard"
+      },
+      "valeurs_par_defaut": {
+        "success": true
+      },
+      "format_succes": {
+        "success": true,
+        "message": "Déconnexion réussie, session révoquée.",
+        "deleted_item": {
+          "id": "session_current",
+          "nom": "sessions",
+          "description": "Session administrative clôturée",
+          "categorie": "gestion_connexion",
+          "valeur": "{\"session_revoked\": true, \"terminated_at\": \"2026-10-02T02:47:27Z\"}",
+          "modifiable": false,
+          "exportable": false,
+          "importable": false,
+          "supprimable": true
+        }
+      },
+      "format_echec": {
+        "success": false,
+        "code": 400,
+        "erreur": "Bad Request",
+        "message": "Aucune session active à clore.",
+        "horodatage": "2026-10-02T02:47:27Z"
+      },
+      "erreurs_possibles": {
+        "400": { "code": 400, "erreur": "Bad Request", "message": "Aucune session active à clore." },
+        "401": { "code": 401, "erreur": "Unauthorized", "message": "Jeton déjà expiré." },
+        "404": { "code": 404, "erreur": "Not Found", "message": "Session inexistante." },
+        "500": { "code": 500, "erreur": "Internal Server Error", "message": "Erreur de destruction de la session." }
+      }
+    },
+    "GET_api_admin_auth_session": {
+      "endpoint": "/api/admin/auth/session",
+      "method": "GET",
+      "type_operation": "objet_unique",
+      "champs_obligatoires": ["success", "message", "item"],
+      "types_champs": {
+        "success": "boolean",
+        "message": "string",
+        "item": "ObjectStandard"
+      },
+      "valeurs_par_defaut": {
+        "success": true,
+        "item.modifiable": false,
+        "item.exportable": true,
+        "item.importable": false,
+        "item.supprimable": false
+      },
+      "format_succes": {
+        "success": true,
+        "message": "Session active valide.",
+        "item": {
+          "id": "session_badge_state",
+          "nom": "sessions",
+          "description": "État actif du profil utilisateur pour badge de navigation",
+          "categorie": "gestion_connexion",
+          "valeur": "{\"authenticated\": true, \"user\": {\"id\": \"usr_master_admin\", \"nom\": \"Julien Lavaud\", \"email\": \"contact@climatlocal.com\", \"role\": \"Super Administrateur\", \"access_level\": 100, \"avatar_initials\": \"JL\"}, \"permissions\": [\"all\", \"config:write\", \"teams:write\", \"audit:write\"]}",
+          "modifiable": false,
+          "exportable": true,
+          "importable": false,
+          "supprimable": false
+        }
+      },
+      "format_echec": {
+        "success": false,
+        "code": 401,
+        "erreur": "Unauthorized",
+        "message": "Session invalide ou expirée.",
+        "horodatage": "2026-10-02T02:47:27Z"
+      },
+      "erreurs_possibles": {
+        "400": { "code": 400, "erreur": "Bad Request", "message": "En-tête de session corrompu." },
+        "401": { "code": 401, "erreur": "Unauthorized", "message": "Session expirée ou non authentifiée." },
+        "404": { "code": 404, "erreur": "Not Found", "message": "Compte de session non trouvé." },
+        "500": { "code": 500, "erreur": "Internal Server Error", "message": "Erreur de vérification cryptographique." }
+      }
+    }
+  }
+}

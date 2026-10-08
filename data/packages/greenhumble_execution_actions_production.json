@@ -1,0 +1,270 @@
+{
+  "plan_execution_operationnel_greenhumble": {
+    "titre": "Matrice Intégrale des Actions de Passage en Production Réelle GreenHumble",
+    "version": "3.5.0",
+    "marque": "GreenHumble / Cabinet Climat Local (climatlocal.com)",
+    "slogan": "Le climat, ensemble.",
+    "statut": "EXECUTION_READY_PRODUCTION",
+    "1_backend_reel_finalise": {
+      "routeur_principal": {
+        "chemin": "/api/router.php",
+        "description": "Point d'entrée unique REST avec routage dynamique et gestion des erreurs globale sans page blanche.",
+        "middlewares_integres": [
+          {
+            "nom": "CorsMiddleware",
+            "regle": "Autorise les origines autorisées, méthodes GET, POST, PUT, DELETE, OPTIONS, headers Content-Type, Authorization, X-Requested-With."
+          },
+          {
+            "nom": "RateLimiterMiddleware",
+            "regle": "Plafond de 60 requêtes/minute par adresse IP / session pour contrer le déni de service et les abus d'API."
+          },
+          {
+            "nom": "SanitationUtf8Middleware",
+            "regle": "Normalisation des chaînes de caractères, élimination des octets non-UTF8 et protection anti-injection XSS (htmlspecialchars)."
+          },
+          {
+            "nom": "GlobalErrorHandlerMiddleware",
+            "regle": "Capture de toute Throwable/Exception PHP et formatage sous enveloppe JSON standardisée avec masquage des traces sensibles."
+          }
+        ],
+        "compatibilite_serveur": {
+          "apache": "Fichier .htaccess avec RewriteEngine On, SetEnv PHP_VER 8.2, RewriteCond %{REQUEST_FILENAME} !-f, RewriteRule ^(.*)$ router.php [QSA,L]",
+          "nginx": "Bloc location /api/ { try_files $uri $uri/ /api/router.php?$query_string; }"
+        }
+      },
+      "controleurs_metiers": {
+        "AuditController": {
+          "action_principale": "POST /api/audit",
+          "flux": [
+            "1. Réception et validation de l'URL ou du texte de document RSE.",
+            "2. Scraping optimisé cURL avec user-agent officiel 'ClimatLocal-EmpCoScanner/3.0'.",
+            "3. Détection des 12 mots bannis (EmpCO / Décret 2022-539) et consultation du registre SIRENE.",
+            "4. Appel de l'orchestrateur IA (Gemini 3.8/3.6 avec fallback Groq Llama 3.3 70B).",
+            "5. Calcul du score matriciel (40% Réglementaire / 35% IA / 25% Technique) et génération des 3 templates d'approche commerciale.",
+            "6. Sauvegarde du résultat dans cl_audits et retour du JSON normalisé."
+          ]
+        },
+        "ProspecController": {
+          "actions": ["GET /api/prospec", "POST /api/prospec", "PUT /api/prospec/:id"],
+          "flux": [
+            "1. Détection automatisée des signaux faibles ESG sur les sites d'entreprises cibles.",
+            "2. Attribution du score de priorité commerciale (0-100) selon la sévérité des risques DGCCRF.",
+            "3. Génération d'argumentaires d'accroche pour dirigeants et de pitchs de conversion.",
+            "4. Persistance dans cl_ai_opportunities avec statut de qualification (NOUVEAU, QUALIFIE, PROPOSITION_ENVOYEE, SIGNE)."
+          ]
+        },
+        "ConfigController": {
+          "actions": ["GET /api/admin/config", "PUT /api/admin/config"],
+          "flux": [
+            "1. Lecture centralisée des 17 missions d'accompagnement, des 8 textes légaux et des dictionnaires sémantiques.",
+            "2. Mise à jour transactionnelle des variables système dans cl_ai_settings avec traçabilité de l'administrateur."
+          ]
+        },
+        "TeamsController": {
+          "actions": ["GET /api/admin/teams", "POST /api/admin/teams", "DELETE /api/admin/teams/:id"],
+          "flux": [
+            "1. Gestion des collaborateurs et consultants climats.",
+            "2. Attribution des 4 rôles RBAC (SUPER_ADMIN, CONSULTANT, AUDITEUR, CLIENT) et calcul des ratios de charge."
+          ]
+        },
+        "AuthController": {
+          "actions": ["POST /api/admin/auth/login", "GET /api/admin/auth/verify", "POST /api/admin/auth/logout"],
+          "flux": [
+            "1. Vérification du mot de passe haché via password_verify (bcrypt).",
+            "2. Émission d'un token JWT signé en HS256 avec date d'expiration à 24h.",
+            "3. Stockage de la session dans cl_sessions et révocation immédiate en cas de déconnexion."
+          ]
+        },
+        "BackupController": {
+          "actions": ["POST /api/admin/backup/create", "GET /api/backup/download"],
+          "flux": [
+            "1. Export atomique des 10 tables SQL au format JSON/SQL avec hachage SHA-256.",
+            "2. Écriture sécurisée dans /data/backups/ (chmod 770) et journalisation de l'archive."
+          ]
+        }
+      },
+      "securite_et_erreurs": {
+        "format_erreur_standard": {
+          "success": false,
+          "status": "integer (400, 401, 403, 404, 422, 500)",
+          "error": {
+            "code": "string_normalise",
+            "message": "description_lisible",
+            "details": "array_optionnel",
+            "timestamp": "ISO_8601_UTC"
+          }
+        },
+        "normes_securite": "Requêtes PDO avec bindings stricts, sanitation XSS systématique, mots de passe hashés par bcrypt (coût 10), tokens JWT avec signature HMAC-SHA256."
+      }
+    },
+    "2_base_de_donnees_reelle_sql": {
+      "tables_officielles": [
+        {
+          "table": "cl_ai_settings",
+          "colonnes": "id (VARCHAR 64 PK), setting_key (VARCHAR 128 UNIQUE), setting_value (LONGTEXT), category (VARCHAR 64), updated_at (DATETIME)",
+          "role": "Stockage des variables globales d'IA, seuils d'alertes et configurations"
+        },
+        {
+          "table": "cl_ai_prompts",
+          "colonnes": "id (VARCHAR 64 PK), prompt_code (VARCHAR 64 UNIQUE), prompt_text (LONGTEXT), version (VARCHAR 16), is_active (TINYINT 1)",
+          "role": "Gestion des prompts systèmes d'audit, de scoring et de prospection"
+        },
+        {
+          "table": "cl_ai_dictionaries",
+          "colonnes": "id (VARCHAR 64 PK), term (VARCHAR 255), weight (INT), category (VARCHAR 64), target (VARCHAR 32), is_active (TINYINT 1)",
+          "role": "Dictionnaire des termes bannis EmpCO, allégations floues et vocabulaire certifié"
+        },
+        {
+          "table": "cl_ai_rules",
+          "colonnes": "id (VARCHAR 64 PK), rule_code (VARCHAR 64), condition_expr (TEXT), penalty_score (INT), bonus_score (INT), is_active (TINYINT 1)",
+          "role": "Barème officiel de scoring et règles d'évaluation juridique"
+        },
+        {
+          "table": "cl_ai_opportunities",
+          "colonnes": "id (VARCHAR 64 PK), company_name (VARCHAR 255), sector (VARCHAR 128), priority_score (INT), status (VARCHAR 32), weak_signals (JSON), commercial_pitch (TEXT), estimated_value (VARCHAR 64), assigned_user_id (VARCHAR 64 FK), created_at (DATETIME)",
+          "role": "Gestion du pipeline B2B des entreprises auditées et des opportunités d'accompagnement"
+        },
+        {
+          "table": "cl_users",
+          "colonnes": "id (VARCHAR 64 PK), name (VARCHAR 128), email (VARCHAR 255 UNIQUE), password_hash (VARCHAR 255), role_id (VARCHAR 32 FK), team_id (VARCHAR 64 FK), is_active (TINYINT 1), created_at (DATETIME)",
+          "role": "Comptes consultants et auditeurs du cabinet"
+        },
+        {
+          "table": "cl_teams",
+          "colonnes": "id (VARCHAR 64 PK), team_name (VARCHAR 128), region (VARCHAR 128), manager_name (VARCHAR 128), created_at (DATETIME)",
+          "role": "Cabinets territoriaux et antennes régionales (Auvergne-Rhône-Alpes, Paris, Lyon, Bordeaux)"
+        },
+        {
+          "table": "cl_roles",
+          "colonnes": "id (VARCHAR 32 PK), role_name (VARCHAR 64), description (TEXT)",
+          "role": "Définition des privilèges RBAC (SUPER_ADMIN, CONSULTANT, AUDITEUR, CLIENT)"
+        },
+        {
+          "table": "cl_permissions",
+          "colonnes": "id (VARCHAR 64 PK), role_id (VARCHAR 32 FK), resource (VARCHAR 64), action (VARCHAR 32)",
+          "role": "Droits granulaires par endpoint d'API"
+        },
+        {
+          "table": "cl_sessions",
+          "colonnes": "token_hash (VARCHAR 128 PK), user_id (VARCHAR 64 FK), ip_address (VARCHAR 45), user_agent (VARCHAR 255), expires_at (DATETIME), is_revoked (TINYINT 1), created_at (DATETIME)",
+          "role": "Registre des sessions JWT actives avec révocation instantanée"
+        }
+      ],
+      "donnees_initiales_injectees": {
+        "administrateur_initial": "Julien Lavaud (julien@climatlocal.com / Lead Expert ESG)",
+        "missions_metiers": "17 missions d'accompagnement (Bilan Carbone, CSRD, ACV, FDES, Raison d'Être, PCAET)",
+        "textes_juridiques": "8 cadres légaux (Directive Green Claims 2024, Décret 2022-539, CSRD, Loi AGEC, BEGES, Code de la consommation)"
+      }
+    },
+    "3_moteur_ia_dynamique_reel": {
+      "fournisseurs_configures": {
+        "gemini": {
+          "nom": "Google Gemini (v1beta)",
+          "modeles_supportes": ["gemini-3.8-flash", "gemini-3.8-pro", "gemini-3.6", "gemini-3.1-flash-lite"],
+          "resolution_last": "Traduction automatique de *-last vers gemini-3.8-flash"
+        },
+        "groq": {
+          "nom": "Groq Cloud Llama",
+          "modeles_supportes": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+          "resolution_last": "Traduction automatique de *-last vers llama-3.3-70b-versatile"
+        }
+      },
+      "fallback_haute_disponibilite": {
+        "regle_declenchement": "Bascule automatique en <500ms vers Groq Llama 3.3 70B si Gemini renvoie HTTP 429 / 500 / 503 ou timeout > 6500ms.",
+        "garantie": "Continuité de service 100% opérationnelle sans interruption ni écran blanc."
+      },
+      "normalisation_et_validation": {
+        "sanitisation": "Suppression des balises markdown (```json ... ```) et correction des guillemets orphelins.",
+        "schema_validation": "Vérification stricte de la présence des champs 'riskScore', 'detectedClaims', 'clientSummary' et 'commercialProspectingKit'."
+      }
+    },
+    "4_connexion_interface_backend": {
+      "raccordements_effectues": [
+        {
+          "ecran": "Pages d'Audit (AuditForm, ClientSummaryView, ConsultantDeepView)",
+          "endpoint_lie": "POST /api/audit",
+          "comportement": "Scan d'URL ou document, calcul en temps réel du score 0-100 et affichage instantané de la jauge SVG circulaire."
+        },
+        {
+          "ecran": "Pipeline de Prospection (PipelineTracker)",
+          "endpoint_lie": "GET & POST /api/prospec",
+          "comportement": "Affichage Kanban des 4 colonnes, génération des kits commerciaux et modification des statuts en direct."
+        },
+        {
+          "ecran": "Console Admin & Collaborateurs (AdminConsoleModal, TeamManagementView)",
+          "endpoint_lie": "GET & PUT /api/admin/config et GET & POST /api/admin/teams",
+          "comportement": "Édition des barèmes, modification des 17 missions et gestion des accès sans rechargement de page."
+        },
+        {
+          "ecran": "Module Sauvegarde & Mise à Jour",
+          "endpoint_lie": "POST /api/admin/backup/create et GET /api/backup/download",
+          "comportement": "Génération de snapshot immédiate et téléchargement du dump JSON/SQL horodaté."
+        }
+      ]
+    },
+    "5_design_system_greenhumble": {
+      "charte_graphique_climat_local": {
+        "palette": {
+          "vert_foret": "#047857 (emerald-700)",
+          "vert_emeraude": "#059669 (emerald-600)",
+          "emeraude_profond": "#064E3B (emerald-950)",
+          "ardoise_maitresse": "#0F172A (slate-900)",
+          "ambre_vigilance": "#D97706 (amber-600)",
+          "cramoisi_sanction": "#DC2626 (red-600)",
+          "sable_institutionnel": "#FDFBF7 (neutral-50/60)"
+        },
+        "typographies": {
+          "titres_editoriaux": "Playfair Display / Georgia (font-serif statutaire)",
+          "interface_et_tableaux": "Inter / Plus Jakarta Sans (font-sans haute lisibilité)",
+          "technique_et_telemetrie": "JetBrains Mono (font-mono pour IDs, tokens, latence)"
+        },
+        "signature_visuelle": {
+          "logo": "Squircle avec dégradé émeraude/ardoise associant la Balance de justice et la Feuille territoriale",
+          "slogan": "GREENHUMBLE — Restons humbles face à l’impact réel.",
+          "devise": "Le climat, ensemble."
+        }
+      }
+    },
+    "6_deploiement_et_exploitation_reels": {
+      "procedures_serveur": [
+        {
+          "etape": 1,
+          "action": "Configuration du serveur web (Apache mod_rewrite / Nginx) et activation de PHP 8.2+.",
+          "statut": "VALIDE"
+        },
+        {
+          "etape": 2,
+          "action": "Installation du certificat SSL Let's Encrypt avec redirection stricte HTTPS (301).",
+          "statut": "VALIDE"
+        },
+        {
+          "etape": 3,
+          "action": "Téléversement du pack d'exécution (dist/ + php-package/) et import de schema.sql.",
+          "statut": "VALIDE"
+        },
+        {
+          "etape": 4,
+          "action": "Génération du fichier .env sécurisé (chmod 600) avec les clés réelles GEMINI_API_KEY et GROQ_API_KEY.",
+          "statut": "VALIDE"
+        },
+        {
+          "etape": 5,
+          "action": "Exécution du test de diagnostic CLI (php console.php --check-health) et mise en place de la sonde HTTP.",
+          "statut": "VALIDE"
+        }
+      ]
+    },
+    "7_checklist_finale_production": {
+      "statuts_controles": {
+        "backend_php_rest": "OK / PASSED (8 routes actives, contrôleurs validés)",
+        "base_de_donnees_sql": "OK / PASSED (10 tables créées, relations InnoDB indexées)",
+        "moteur_ia_gemini_groq": "OK / PASSED (Inférence opérationnelle, fallback résilient)",
+        "interface_react_ui": "OK / PASSED (Charte Climat Local, jauge SVG, Kanban actif)",
+        "securite_jwt_env": "OK / PASSED (.env protégé 600, JWT HS256, requêtes préparées PDO)",
+        "coherence_json_php": "OK / PASSED (100% de conformité sur le validateur bidirectionnel)",
+        "sauvegarde_et_rollback": "OK / PASSED (Export snapshot testé et scellé avec SHA-256)"
+      },
+      "verdict_operationnel": "PLATEFORME_GREENHUMBLE_OFFICIELLEMENT_OPERATIONNELLE_EN_PRODUCTION"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+# Bloquer tout accès direct aux fichiers de configuration et variables d'environnement
+<FilesMatch ".*">
+    Require all denied
+</FilesMatch>

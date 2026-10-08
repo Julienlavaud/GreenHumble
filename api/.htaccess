@@ -1,0 +1,36 @@
+# ==============================================================================
+# GreenHumble v1.1 — API Subdirectory .htaccess (OVH Mutualisé)
+# ==============================================================================
+
+RewriteEngine On
+
+# 1. En-têtes Anti-Cache pour l'API REST
+<IfModule mod_headers.c>
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+</IfModule>
+
+# 2. Routage officiel REST
+RewriteRule ^state$ state.php [L,QSA]
+RewriteRule ^audits/sync$ audits_sync.php [L,QSA]
+RewriteRule ^audit$ audit.php [L,QSA]
+RewriteRule ^prospec$ prospec.php [L,QSA]
+RewriteRule ^scan/process$ audit.php [L,QSA]
+RewriteRule ^server/logs$ server_logs.php [L,QSA]
+RewriteRule ^server/diagnostic$ console.php [L,QSA]
+
+# 3. Contrôleurs d'Administration
+RewriteRule ^admin/config/([a-zA-Z0-9_.-]+)$ admin/config.php?id=$1 [L,QSA]
+RewriteRule ^admin/config$ admin/config.php [L,QSA]
+RewriteRule ^admin/teams/([a-zA-Z0-9_.-]+)$ admin/teams.php?id=$1 [L,QSA]
+RewriteRule ^admin/teams$ admin/teams.php [L,QSA]
+RewriteRule ^admin/auth/login$ admin/auth.php [L,QSA]
+RewriteRule ^admin/auth/logout$ admin/auth.php [L,QSA]
+RewriteRule ^admin/auth/session$ admin/auth.php [L,QSA]
+RewriteRule ^admin/auth$ admin/auth.php [L,QSA]
+
+# 4. Sécurité
+<FilesMatch "^\.env|config\.php$">
+    Require all denied
+</FilesMatch>

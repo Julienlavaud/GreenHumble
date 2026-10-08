@@ -1,0 +1,457 @@
+{
+  "GET_config": {
+    "success": true,
+    "endpoint": "/api/admin/config",
+    "total": 22,
+    "data": [
+      {
+        "id": "ai_provider",
+        "nom": "aiProvider",
+        "description": "Fournisseur d'IA actif pour l'analyse et la prospection (groq ou gemini)",
+        "categorie": "variables_ia",
+        "valeur": "groq",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": false
+      },
+      {
+        "id": "ai_model",
+        "nom": "aiModel",
+        "description": "Modèle d'IA principal ou combo recommandé GreenHumble",
+        "categorie": "variables_ia",
+        "valeur": "llama-3.1-70b",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": false
+      },
+      {
+        "id": "ai_temperature",
+        "nom": "aiTemperature",
+        "description": "Degré de créativité du modèle IA (0.0 pour une analyse déterministe)",
+        "categorie": "variables_ia",
+        "valeur": "0.2",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "ai_strict_json",
+        "nom": "aiStrictJson",
+        "description": "Force la réponse sous format JSON strict sans balises markdown",
+        "categorie": "variables_ia",
+        "valeur": "true",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "ai_max_tokens",
+        "nom": "aiMaxTokens",
+        "description": "Nombre maximum de tokens alloués pour la génération",
+        "categorie": "variables_ia",
+        "valeur": "4096",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "prompt_system_greenhumble",
+        "nom": "system_prompt_greenhumble",
+        "description": "Prompt système expert GreenHumble définissant la posture d'auditeur RSE",
+        "categorie": "prompts",
+        "valeur": "Tu es l'analyste expert GreenHumble. Évalue la conformité des allégations environnementales et la maturité RSE avec rigueur juridique selon la Directive Green Claims et la Loi Climat.",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "prompt_user_greenhumble",
+        "nom": "user_prompt_greenhumble",
+        "description": "Instructions d'extraction et de structuration adressées à l'IA",
+        "categorie": "prompts",
+        "valeur": "Analyse le contenu du site suivant et extrait : allégations verbatim, preuves associées, niveau de risque DGCCRF, pistes d'audit prioritaires et plan d'action.",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "tpl_audit",
+        "nom": "template_audit",
+        "description": "Structure JSON standard du rapport d'audit RSE",
+        "categorie": "templates_json",
+        "valeur": "{\"score_global\": 68, \"allegations\": [{\"texte\": \"100% neutre en carbone\", \"statut\": \"non-conforme\", \"risque\": \"critique\"}], \"preuves\": [], \"risques\": [\"Sanction DGCCRF L.229-68\"], \"recommandations\": [\"Publier le bilan GES Scopes 1-2-3\"]}",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "tpl_prospection",
+        "nom": "template_prospection",
+        "description": "Structure JSON standard du dossier de prospection et signaux d'approche",
+        "categorie": "templates_json",
+        "valeur": "{\"maturite_rse\": \"Intermédiaire\", \"signaux_faibles\": [\"Absence de page RSE dédiée\", \"Mention compensation non sourcée\"], \"points_entree\": [\"Directeur RSE\", \"Direction Générale\"], \"accroche_email\": \"Proposition d'audit flash de conformité décret 2022-539\"}",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "tpl_complet",
+        "nom": "template_complet",
+        "description": "Template unifié combinant audit juridique et matrice de prospection",
+        "categorie": "templates_json",
+        "valeur": "{\"audit\": {\"score\": 72, \"risques\": [\"Allégation trompeuse\"]}, \"prospection\": {\"interlocuteurs\": [\"Direction Juridique\"], \"pitch\": \"Sécurisation des allégations marketing\"}}",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "dict_signaux_faibles",
+        "nom": "signaux_faibles",
+        "description": "Mots-clés et allégations environnementales détectant les signaux faibles",
+        "categorie": "dictionnaires",
+        "valeur": "[\"neutre en carbone\", \"100% vert\", \"éco-responsable\", \"zéro émission\", \"naturel\", \"vert\", \"planète propre\", \"éco-conçu\", \"propre pour la planète\"]",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "dict_besoins_potentiels",
+        "nom": "besoins_potentiels",
+        "description": "Besoins d'accompagnement et d'audit identifiables chez l'entreprise",
+        "categorie": "dictionnaires",
+        "valeur": "[\"Bilan Carbone Scopes 1-2-3\", \"Audit CSRD & Double Matérialité\", \"Conformité Décret Green Claims\", \"Validation ACV ISO 14040\", \"Accompagnement OTI\"]",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "dict_risques",
+        "nom": "risques",
+        "description": "Typologies de risques réglementaires et réputationnels",
+        "categorie": "dictionnaires",
+        "valeur": "[\"Allégation trompeuse L.121-2 Code Conso\", \"Sanction DGCCRF jusqu'à 100k€\", \"Absence de bilan GES publié\", \"Greenwashing manifeste\", \"Défaut d'accessibilité numérique des preuves\"]",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "dict_opportunites_metiers",
+        "nom": "opportunites_metiers",
+        "description": "Opportunités de transformation écologique et de croissance commerciale",
+        "categorie": "opportunites_metiers",
+        "valeur": "[\"Accès prioritaire aux marchés publics éco-conditionnés\", \"Labellisation B-Corp & Engagé RSE\", \"Différenciation concurrentielle éthique\", \"Attractivité marque employeur\"]",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "regle_green_claims",
+        "nom": "regles_green_claims",
+        "description": "Règles strictes de contrôle des mentions environnementales (Loi Climat et Résilience)",
+        "categorie": "regles_metier",
+        "valeur": "Interdiction stricte de l'allégation de neutralité carbone sans bilan GES complet annuel et plan de compensation traçable accessible par QR code ou lien direct.",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "regle_rse",
+        "nom": "regles_rse",
+        "description": "Exigences méthodologiques pour l'évaluation des rapports RSE et DPEF",
+        "categorie": "regles_metier",
+        "valeur": "Toute donnée extra-financière revendiquée doit renvoyer vers une source vérifiée ou un rapport audité par un Organisme Tiers Indépendant (OTI).",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "regle_prospection",
+        "nom": "regles_prospection",
+        "description": "Critères de qualification automatique des cibles de prospection",
+        "categorie": "regles_metier",
+        "valeur": "Prioriser les entreprises présentant au moins deux allégations non étayées, un effectif supérieur à 50 salariés et une absence de déclaration DPEF.",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "score_audit_weights",
+        "nom": "scoreAuditWeights",
+        "description": "Coefficients de pondération du score d'audit (preuves, conformité, transparence)",
+        "categorie": "scoring",
+        "valeur": "{\"preuves\": 0.40, \"conformite_loi\": 0.35, \"transparence\": 0.25}",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "score_prospection_weights",
+        "nom": "scoreProspectionWeights",
+        "description": "Pondération de l'indice d'intérêt commercial et d'urgence réglementaire",
+        "categorie": "scoring",
+        "valeur": "{\"urgence_reglementaire\": 0.50, \"taille_entreprise\": 0.30, \"maturite_digitale\": 0.20}",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "risk_weights",
+        "nom": "riskWeights",
+        "description": "Facteurs multiplicateurs de gravité des risques d'amendes et d'injonctions",
+        "categorie": "scoring",
+        "valeur": "{\"critique\": 1.0, \"eleve\": 0.7, \"moyen\": 0.4, \"faible\": 0.1}",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "conf_lois",
+        "nom": "lois",
+        "description": "Corpus législatif de référence pour les audits de conformité",
+        "categorie": "conformite",
+        "valeur": "[\"Loi Climat et Résilience n° 2021-1104\", \"Directive Européenne Green Claims COM(2023) 166\", \"Règlement CSRD 2022/2464\", \"Loi AGEC 2020-105\"]",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      },
+      {
+        "id": "conf_sanctions",
+        "nom": "sanctions",
+        "description": "Barème des sanctions applicables en cas de non-conformité",
+        "categorie": "conformite",
+        "valeur": "[\"Jusqu'à 100 000 € d'amende administrative (L. 229-68)\", \"Jusqu'à 300 000 € et 2 ans d'emprisonnement pour pratique commerciale trompeuse\", \"Publication obligatoire de la décision\"]",
+        "modifiable": true,
+        "exportable": true,
+        "importable": true,
+        "supprimable": true
+      }
+    ]
+  },
+  "POST_config": {
+    "success": true,
+    "message": "Élément de configuration ajouté avec succès",
+    "item": {
+      "id": "cfg_banned_terms_plastic",
+      "nom": "termes_plastique_interdits",
+      "description": "Allégations de biodégradabilité interdites par la loi AGEC sur les emballages plastiques",
+      "categorie": "dictionnaires",
+      "valeur": "[\"biodégradable\", \"respectueux de la nature\", \"compostable à domicile sans label EN 13432\"]",
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": true
+    }
+  },
+  "PUT_config": {
+    "success": true,
+    "message": "Configuration mise à jour avec succès",
+    "updated": {
+      "id": "ai_model",
+      "nom": "aiModel",
+      "categorie": "variables_ia",
+      "valeur": "mixtral-8x7b",
+      "description": "Modèle d'IA haute capacité pour analyse longue et synthèse 7 parties GreenHumble",
+      "modifiable": true,
+      "exportable": true,
+      "importable": true,
+      "supprimable": false,
+      "updated_at": "2026-10-02T02:31:41Z"
+    }
+  },
+  "DELETE_config": {
+    "success": true,
+    "message": "Configuration supprimée",
+    "deleted_id": "cfg_banned_terms_plastic"
+  },
+  "GET_teams": {
+    "success": true,
+    "endpoint": "/api/admin/teams",
+    "equipes": [
+      {
+        "id": "team_rse",
+        "nom": "Pôle Audit & Conformité RSE",
+        "region": "Auvergne-Rhône-Alpes / Siège National",
+        "chef": "s.delorme@greenhumble.local",
+        "actif": true
+      },
+      {
+        "id": "team_growth",
+        "nom": "Pôle Prospection Commerciale & Partenariats",
+        "region": "France Entière",
+        "chef": "m.vasseur@greenhumble.local",
+        "actif": true
+      },
+      {
+        "id": "team_idf",
+        "nom": "Antenne Île-de-France & Grands Comptes",
+        "region": "Paris / Île-de-France",
+        "chef": "t.roche@greenhumble.local",
+        "actif": true
+      }
+    ],
+    "membres": [
+      {
+        "id": "usr_01",
+        "nom": "Sarah Delorme",
+        "email": "s.delorme@greenhumble.local",
+        "role": "Auditeur Expert RSE",
+        "equipe": "Pôle Audit & Conformité RSE",
+        "statut": "actif"
+      },
+      {
+        "id": "usr_02",
+        "nom": "Marc Vasseur",
+        "email": "m.vasseur@greenhumble.local",
+        "role": "Commercial B2B",
+        "equipe": "Pôle Prospection Commerciale & Partenariats",
+        "statut": "actif"
+      },
+      {
+        "id": "usr_03",
+        "nom": "Thomas Roche",
+        "email": "t.roche@greenhumble.local",
+        "role": "Consultant Carbone Senior",
+        "equipe": "Antenne Île-de-France & Grands Comptes",
+        "statut": "actif"
+      },
+      {
+        "id": "usr_04",
+        "nom": "Emma Laurent",
+        "email": "e.laurent@greenhumble.local",
+        "role": "Auditeur RSE Junior",
+        "equipe": "Pôle Audit & Conformité RSE",
+        "statut": "actif"
+      }
+    ],
+    "roles": [
+      {
+        "id": "role_super_admin",
+        "nom": "Super Administrateur",
+        "niveau": 100,
+        "description": "Accès absolu à l'ensemble du cockpit, gestion des clés API et sécurité"
+      },
+      {
+        "id": "role_auditeur",
+        "nom": "Auditeur RSE",
+        "niveau": 50,
+        "description": "Gestion des scans, diagnostics, édition des exceptions et validation d'audits"
+      },
+      {
+        "id": "role_commercial",
+        "nom": "Commercial B2B",
+        "niveau": 30,
+        "description": "Accès au module prospection, extraction de signaux et envoi de pitchs"
+      }
+    ],
+    "permissions": [
+      { "code": "config:ai:write", "label": "Modifier le moteur IA et les prompts" },
+      { "code": "audit:run", "label": "Lancer un audit et scan d'URL" },
+      { "code": "teams:admin", "label": "Administrer les équipes et collaborateurs" },
+      { "code": "report:export", "label": "Exporter les synthèses PDF, CSV et JSON" },
+      { "code": "billing:manage", "label": "Gérer les devis et subventions Bpifrance" }
+    ],
+    "groupes_metiers": [
+      {
+        "id": "grp_climat",
+        "nom": "Experts Climat & ACV",
+        "specialite": "Bilan Carbone® Scopes 1-2-3, ACV ISO 14040 & GHG Protocol"
+      },
+      {
+        "id": "grp_juridique",
+        "nom": "Juristes Green Claims",
+        "specialite": "Loi Climat et Résilience, Code de la Consommation & CSRD"
+      },
+      {
+        "id": "grp_sales",
+        "nom": "Business Developers Territoires",
+        "specialite": "Prospection ciblée PME / ETI et qualification d'opportunités RSE"
+      }
+    ]
+  },
+  "POST_teams": {
+    "success": true,
+    "message": "Nouveau collaborateur ajouté à l'équipe avec succès",
+    "membre": {
+      "id": "usr_1727835648",
+      "nom": "Camille Dupuis",
+      "email": "c.dupuis@greenhumble.local",
+      "role": "Auditeur RSE",
+      "equipe": "Pôle Audit & Conformité RSE",
+      "statut": "actif",
+      "created_at": "2026-10-02T02:31:41Z"
+    }
+  },
+  "PUT_teams": {
+    "success": true,
+    "message": "Rôle et affectation mis à jour",
+    "updated_member": {
+      "id": "usr_02",
+      "role": "Lead Prospection & Partenariats Stratégiques",
+      "equipe": "Pôle Prospection Commerciale & Partenariats",
+      "statut": "actif",
+      "updated_at": "2026-10-02T02:31:41Z"
+    }
+  },
+  "DELETE_teams": {
+    "success": true,
+    "message": "Membre ou équipe retiré avec succès",
+    "deleted_id": "usr_1727835648"
+  },
+  "LOGIN": {
+    "success": true,
+    "token": "gh_jwt_e8Y6bFj6vLz4v0QpZbqGDe1BOmzT8A3y.hF1p2wKlm9Y0zX8qT6yW",
+    "expires_in": 86400,
+    "user": {
+      "id": "usr_master_admin",
+      "username": "admin_master",
+      "email": "contact@climatlocal.com",
+      "nom": "Julien Lavaud",
+      "role": "Super Administrateur",
+      "access_level": 100
+    }
+  },
+  "LOGOUT": {
+    "success": true,
+    "message": "Déconnexion réussie, session révoquée"
+  },
+  "GET_session": {
+    "authenticated": true,
+    "session_id": "sess_gh_89f0a2c1b4e578da",
+    "user": {
+      "id": "usr_master_admin",
+      "nom": "Julien Lavaud",
+      "email": "contact@climatlocal.com",
+      "role": "Super Administrateur",
+      "access_level": 100,
+      "avatar_initials": "JL"
+    },
+    "permissions": [
+      "all",
+      "config:write",
+      "teams:write",
+      "audit:write",
+      "report:export"
+    ]
+  }
+}

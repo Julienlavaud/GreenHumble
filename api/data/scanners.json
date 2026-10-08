@@ -1,0 +1,26 @@
+[
+  {
+    "id": "scn_widget_1",
+    "nom": "Scanner Widget Public",
+    "description": "Scanner d'allégations RSE intégré sur les sites clients et landings.",
+    "group_id": "grp_widget_default",
+    "type": "widget",
+    "status": "actif"
+  },
+  {
+    "id": "scn_audit_pro_1",
+    "nom": "Scanner Audit Pro CSRD",
+    "description": "Scanner complet de conformité aux critères CSRD et Green Claims.",
+    "group_id": "grp_widget_default",
+    "type": "audit_pro",
+    "status": "actif"
+  },
+  {
+    "id": "scn_green_claims_1",
+    "nom": "Scanner Directive Green Claims UE",
+    "description": "Scanner automatisé d'allégations environnementales et de greenwashing.",
+    "group_id": "grp_widget_default",
+    "type": "green_claims",
+    "status": "actif"
+  }
+]

@@ -1,0 +1,34 @@
+# =====================================================================
+# CONFIGURATION APACHE - CLIMAT LOCAL
+# Compatible : OVH, IONOS, o2switch, LWS
+# =====================================================================
+
+# 1. Protection des fichiers et dossiers sensibles
+<FilesMatch "^\.env|\.env\.backup|\.git|composer\.(json|lock)|schema\.sql|install\.lock$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Interdiction d'accès direct aux dossiers de logs et backups
+RewriteEngine On
+RewriteRule ^(logs|backups|config)/.*$ - [F,L]
+
+# 2. En-têtes de sécurité
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# 3. Compression Gzip / Deflate
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# 4. Encodage par défaut
+AddDefaultCharset UTF-8
+
+# 5. Redirection d'erreurs stylées (Anti-Page Blanche)
+ErrorDocument 404 /index.html
+ErrorDocument 500 /config.php

@@ -1,0 +1,63 @@
+{
+  "package_integral_greenhumble_v1_0_php82": {
+    "manifeste": {
+      "titre": "Package Intégral GreenHumble v1.1 — Architecture PHP 8.2 & Production Ready OVH",
+      "version": "1.0.0",
+      "slogan": "Le climat, ensemble.",
+      "affiliation": "Cabinet Climat Local (climatlocal.com)",
+      "cible_hebergement": "OVH Cloud / Web Hosting Mutualisé (Apache 2.4+ / PHP 8.2+)",
+      "structure_archive": "greenhumble-v1.1-php82-full-ovh.zip",
+      "date_export": "2026-10-02T15:17:23Z",
+      "description": "Package complet de sortie de bac à sable pour GreenHumble v1.1. Contient le backend PHP 8.2 avec cascade IA réelle (Gemini 3.8 Flash, 2.5 Flash, 2.0 Flash, Groq), l'installeur automatique install.php, les règles anti-cache .htaccess et le frontend admin aligné avec le Viewer AI Studio."
+    },
+    "architecture_backend_php82": {
+      "fonctions_anciennes_eliminees": [
+        "analyze_url_with_gemini() (remplacé par analyze_url_with_ai)",
+        "get_mock_audit_data()",
+        "mock_prospects_pipeline()",
+        "static_scoring_table()"
+      ],
+      "cascade_ia_reelle": {
+        "niveau_1": "gemini-3.8-flash (Model Principal Google GenAI 2026)",
+        "niveau_2": "gemini-2.5-flash (Fallback Performance Google)",
+        "niveau_3": "gemini-2.0-flash (Fallback Secours Google)",
+        "niveau_4": "groq-llama-3.3-70b (Fallback Résilience Ultime)"
+      ],
+      "gestion_cle_env": {
+        "chemin": "/api/config/.env",
+        "methode_lecture": "parse_ini_file() & getenv()",
+        "protection": "Secured via .htaccess (Require all denied)"
+      },
+      "transport_http": "cURL direct (curl_init, CURLOPT_RETURNTRANSFER, CURLOPT_TIMEOUT=20)",
+      "purge_cache": "opcache_reset() exécuté après installation et via /api/flush.php"
+    },
+    "architecture_frontend_admin": {
+      "mode_bac_a_sable_elimine": true,
+      "rendu_visuel": "Parité 1:1 avec le Viewer React AI Studio",
+      "menus_corriges": 6,
+      "boutons_console_rétablis": ["Modifier", "Effacer", "Importer", "Exporter", "Créer"],
+      "dashboard_filtre_annee": true,
+      "versioning_assets": "Auto-inject ?v=floor(time()/60)*60"
+    },
+    "deploiement_ovh": {
+      "chemins_relatifs_rest": ["/api/audit", "/api/prospec", "/api/admin/console"],
+      "regles_htaccess_racine": [
+        "RewriteEngine On",
+        "RewriteCond %{HTTPS} off",
+        "RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]",
+        "Header set Cache-Control 'no-store, no-cache, must-revalidate, max-age=0'",
+        "Header set Pragma 'no-cache'",
+        "Header set Expires '0'",
+        "RewriteCond %{REQUEST_URI} ^/api/",
+        "RewriteRule ^api/(.*)$ api/router.php [L,QSA]"
+      ]
+    },
+    "statut_recette_ovh": {
+      "php82_compatible": true,
+      "mocks_elimines": true,
+      "cascading_ia_operationnelle": true,
+      "install_php_auto_config": true,
+      "opcache_purge_flush_php": true
+    }
+  }
+}

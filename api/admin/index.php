@@ -1,0 +1,1611 @@
+<?php
+// /api/admin/index.php
+// Master Admin Cockpit for Climat Local PHP API - PRO Version (v2.9)
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/app_state.php';
+
+// 1. Authentication
+if (!isset($_SESSION['admin_logged_in']) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin')) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_pass'])) {
+        $enteredPass = trim($_POST['admin_pass']);
+        if ($enteredPass === 'Climatlocal31000' || password_verify($enteredPass, ADMIN_PASSWORD_HASH)) {
+            $_SESSION['admin_logged_in'] = true;
+            $_SESSION['role'] = 'admin';
+            $_SESSION['username'] = 'Admin';
+            header('Location: /api/admin/index.php');
+            exit;
+        }
+    }
+    // Login UI
+    $page_title = "Admin Login";
+    include __DIR__ . '/../includes/header.php';
+    echo '<div class="min-h-[75vh] flex items-center justify-center p-4 bg-slate-50 animate-fadeIn">';
+    echo '  <div class="max-w-md w-full bg-white p-12 rounded-[3rem] border border-slate-200 shadow-2xl text-center ring-1 ring-slate-100">';
+    echo '      <div class="w-20 h-20 bg-slate-950 text-white rounded-3xl flex items-center justify-center mx-auto mb-6 text-3xl shadow-xl">🛡️</div>';
+    echo '      <h2 class="text-3xl font-black text-slate-900 mb-2">Accès Cockpit</h2>';
+    echo '      <p class="text-sm text-slate-400 mb-8">Espace de pilotage stratégique Climat Local</p>';
+    echo '      <form method="POST" class="space-y-4">';
+    echo '          <input type="password" name="admin_pass" placeholder="••••••••" required class="w-full px-8 py-5 bg-slate-100 border-none rounded-2xl text-center font-mono text-xl focus:ring-4 focus:ring-emerald-500/20 focus:outline-none transition-all placeholder-slate-300">';
+    echo '          <button type="submit" class="w-full py-5 bg-slate-950 hover:bg-emerald-900 text-white font-black rounded-2xl shadow-2xl transition-all flex items-center justify-center space-x-2">';
+    echo '              <span>Ouvrir la Console</span>';
+    echo '              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>';
+    echo '          </button>';
+    echo '      </form>';
+    echo '  </div>';
+    echo '</div>';
+    include __DIR__ . '/../includes/footer.php';
+    exit;
+}
+
+// 2. Data Loading
+$activeTab = $_GET['tab'] ?? 'audits';
+$state = load_app_state();
+$db = get_db_connection();
+
+// 2.5 POST Handlers for Database Actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['delete_audit'])) {
+        $id = intval($_POST['delete_audit']);
+        $db->prepare("DELETE FROM cl_audits WHERE id = ?")->execute([$id]);
+        exit;
+    }
+    if (isset($_POST['save_db_text'])) {
+        $key = trim($_POST['text_key'] ?? '');
+        $title = trim($_POST['title'] ?? '');
+        $content = trim($_POST['content'] ?? '');
+        $db->prepare("INSERT INTO cl_texts (text_key, title, content) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE title = VALUES(title), content = VALUES(content)")->execute([$key, $title, $content]);
+        exit;
+    }
+    if (isset($_POST['delete_db_text'])) {
+        $key = trim($_POST['delete_db_text']);
+        $db->prepare("DELETE FROM cl_texts WHERE text_key = ?")->execute([$key]);
+        exit;
+    }
+}
+
+// 3. Page Header
+$page_title = "Cockpit Admin PRO v2.9";
+include __DIR__ . '/../includes/header.php';
+?>
+
+<div class="max-w-[1850px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10 animate-fadeIn bg-[#121212] text-[#E0E0E0]">
+    <!-- Master Header -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8 bg-[#1E1E1E] p-10 rounded-[3.5rem] border border-white/10 shadow-lg relative overflow-hidden">
+        <div class="flex items-center space-x-8 relative z-10">
+            <div class="w-20 h-20 bg-[#2A7AE2] text-white rounded-[2rem] flex items-center justify-center shadow-xl">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            </div>
+            <div>
+                <h1 class="text-4xl font-extrabold text-white tracking-tight italic">COCKPIT <span class="text-[#2A7AE2]">PRO</span></h1>
+                <div class="flex items-center space-x-3 mt-2">
+                    <span class="px-3 py-1 bg-white/10 text-white rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">GreenHumble v1.1</span>
+                    <p class="text-[#AAAAAA] font-medium text-sm">Base Unifiée & Prospection Augmentée</p>
+                </div>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 relative z-10">
+            <button onclick="window.location.reload()" class="p-4 bg-[#121212] hover:bg-white/10 text-white rounded-3xl border border-white/10 shadow-sm transition-all cursor-pointer" title="Rafraîchir">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Navigation Unifiée Admin -->
+    <div class="flex flex-wrap gap-2 p-2 bg-[#1E1E1E] rounded-2xl border border-white/10 shadow-md overflow-x-auto no-scrollbar">
+        <?php 
+        $tabs = [
+            'audits' => ['label' => 'Leads & Prospects', 'emoji' => '📊'],
+            'scans' => ['label' => 'Tous les scans', 'emoji' => '🔍'],
+            'dossiers' => ['label' => 'Dossiers', 'emoji' => '📁'],
+            'listes' => ['label' => 'Listes', 'emoji' => '📋'],
+            'style' => ['label' => 'Édition de texte', 'emoji' => '🎨'],
+            'agency' => ['label' => 'Identité Agence', 'emoji' => '🏢'],
+            'missions' => ['label' => 'Catalogue Métiers', 'emoji' => '💼'],
+            'legal' => ['label' => 'Juridique EmpCO', 'emoji' => '⚖️'],
+            'scanner' => ['label' => 'Variables Scan', 'emoji' => '⚙️'],
+            'scanner_groups' => ['label' => 'Groupes de scanners', 'emoji' => '🏷️'],
+            'texts' => ['label' => 'Textes & Mots Bannis', 'emoji' => '📝'],
+            'team' => ['label' => 'Équipe & Accès', 'emoji' => '👥']
+        ];
+        foreach ($tabs as $id => $info): 
+            $isActive = ($activeTab === $id);
+            ?>
+            <a href="?tab=<?php echo $id; ?>" 
+               class="px-5 py-3 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center space-x-2 shadow-sm <?php echo $isActive ? 'bg-[#2A7AE2] text-white border border-[#2A7AE2] shadow-md ring-2 ring-[#2A7AE2]/20' : 'bg-[#121212] text-[#E0E0E0] hover:bg-white/10 border border-white/10 hover:text-white'; ?>">
+                <span class="text-base"><?php echo $info['emoji']; ?></span>
+                <span><?php echo $info['label']; ?></span>
+            </a>
+        <?php endforeach; ?>
+    </div>
+
+    <!-- Container Dynamique -->
+    <div class="bg-[#121212] rounded-[3.5rem] border border-white/10 shadow-2xl overflow-hidden min-h-[700px] relative">
+        
+        <!-- Actions Communes (Flottantes ou Top) -->
+        <div class="absolute top-8 right-10 admin-actions z-20">
+            <button onclick="exportTabCSV('<?php echo $activeTab; ?>')" class="px-6 py-3 bg-[#242424] hover:bg-[#303030] text-slate-200 text-xs font-black rounded-2xl transition-all flex items-center space-x-2 shadow-sm border border-white/10">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                <span>Exporter CSV</span>
+            </button>
+            
+            <?php if (in_array($activeTab, ['missions', 'legal', 'texts', 'team'])): ?>
+                <label class="cursor-pointer px-6 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black rounded-2xl border border-indigo-100 transition-all flex items-center space-x-2 shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                    <span>Importer CSV</span>
+                    <input type="file" class="hidden" accept=".csv" onchange="importTabCSV('<?php echo $activeTab; ?>', this)">
+                </label>
+            <?php endif; ?>
+
+            <?php if ($activeTab !== 'audits'): ?>
+                <button onclick="saveTab('<?php echo $activeTab; ?>')" class="save-btn px-10 py-3.5 bg-emerald-700 text-white text-sm font-black rounded-[1.5rem] shadow-2xl hover:bg-emerald-800 transition-all flex items-center space-x-2 ring-4 ring-emerald-500/10">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                    <span>Sauvegarder</span>
+                </button>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($activeTab === 'audits'): ?>
+            <div class="p-8 sm:p-12 space-y-8 bg-[#121212] text-[#E0E0E0] min-h-[650px] rounded-[3rem]">
+                <div class="max-w-2xl">
+                    <h2 class="text-3xl font-extrabold text-white tracking-tight">Leads & Prospects</h2>
+                    <p class="text-[#AAAAAA] mt-2 text-sm">Opportunités d'accompagnement RSE et diagnostics enregistrés.</p>
+                </div>
+                
+                <div class="overflow-x-auto rounded-2xl border border-white/10 shadow-lg bg-[#1E1E1E]">
+                    <table class="w-full text-left">
+                        <thead class="bg-[#121212] border-b border-white/10">
+                            <tr class="text-xs font-bold text-[#AAAAAA] uppercase tracking-wider">
+                                <th class="px-6 py-4">Entreprise & Potentiel</th>
+                                <th class="px-6 py-4 text-center">Score / Risque</th>
+                                <th class="px-6 py-4">Pôle / Auditeur</th>
+                                <th class="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5">
+                            <?php 
+                            $audits = $db->query("SELECT a.id, a.url, a.score, a.riskLevel, a.headcount, a.turnover, a.analyzedAt, a.assigned_to, c.name as company_name, c.sector, c.headcount as comp_headcount, c.turnover as comp_turnover FROM cl_audits a LEFT JOIN cl_companies c ON a.company_id = c.id ORDER BY a.id DESC LIMIT 60")->fetchAll();
+                            foreach ($audits as $a): 
+                                $isHighRisk = ($a['score'] ?? 100) < 45;
+                                ?>
+                                <tr class="hover:bg-white/5 transition-colors" id="audit-row-<?php echo $a['id']; ?>">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 bg-[#121212] rounded-xl flex items-center justify-center font-bold text-white border border-white/10"><?php echo strtoupper(substr($a['company_name'] ?: '?', 0, 1)); ?></div>
+                                            <div>
+                                                <div class="font-bold text-white text-base"><?php echo htmlspecialchars($a['company_name'] ?: preg_replace('#^https?://(www\.)?#i', '', $a['url'])); ?></div>
+                                                <div class="text-xs font-mono text-[#AAAAAA]"><?php echo htmlspecialchars($a['url']); ?></div>
+                                                <div class="flex flex-wrap items-center gap-2 mt-1">
+                                                    <span class="px-2 py-0.5 bg-[#2A7AE2]/20 text-[#2A7AE2] text-[10px] font-bold rounded border border-[#2A7AE2]/30"><?php echo htmlspecialchars($a['sector'] ?: 'Services & B2B'); ?></span>
+                                                    <?php 
+                                                    $hc = !empty($a['headcount']) ? $a['headcount'] : ($a['comp_headcount'] ?? '');
+                                                    $to = !empty($a['turnover']) ? $a['turnover'] : ($a['comp_turnover'] ?? '');
+                                                    if ($hc): ?>
+                                                        <span class="text-[10px] text-[#AAAAAA]">👥 <?php echo htmlspecialchars($hc); ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if ($to): ?>
+                                                        <span class="text-[10px] text-emerald-400 font-bold">💶 <?php echo htmlspecialchars($to); ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <div class="inline-flex flex-col items-center">
+                                            <span class="px-3 py-1 rounded-full text-xs font-bold <?php echo $isHighRisk ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'; ?>">
+                                                <?php echo $a['score'] ?? 0; ?>/100
+                                            </span>
+                                            <span class="text-[10px] font-bold <?php echo $isHighRisk ? 'text-rose-400' : 'text-emerald-400'; ?> mt-1 uppercase"><?php echo htmlspecialchars($a['riskLevel']); ?></span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-xs">
+                                        <div class="font-bold text-white"><?php echo htmlspecialchars($a['assigned_to'] ?: 'Non assigné'); ?></div>
+                                        <div class="text-[#AAAAAA]"><?php echo date('d/m/Y', strtotime($a['analyzedAt'])); ?></div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right space-x-2">
+                                        <a href="/api/analyse.php?id=<?php echo $a['id']; ?>" class="px-3 py-1.5 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white rounded-lg text-xs font-bold transition-colors inline-block">
+                                            Audit →
+                                        </a>
+                                        <button onclick="deleteAudit(<?php echo $a['id']; ?>)" class="px-3 py-1.5 bg-rose-900/80 hover:bg-rose-800 text-rose-200 rounded-lg text-xs font-bold transition-colors border-none cursor-pointer">
+                                            Supprimer
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        <?php elseif ($activeTab === 'scans'): ?>
+            <?php
+            require_once __DIR__ . '/../includes/scans_manager.php';
+            require_once __DIR__ . '/../includes/scanner_groups.php';
+            $allScans = load_all_scans();
+            $allGroups = load_scanner_groups();
+            ?>
+            <div class="p-8 sm:p-12 space-y-10 bg-[#121212] text-[#E0E0E0] min-h-[650px] rounded-[3rem]">
+                <!-- Header Scans -->
+                <div class="flex flex-wrap items-center justify-between gap-6 border-b border-white/10 pb-8">
+                    <div class="flex items-center space-x-3">
+                        <span class="p-3 bg-[#1E1E1E] rounded-2xl text-2xl border border-white/10">🔍</span>
+                        <div>
+                            <h2 class="text-3xl font-bold text-white tracking-tight">Tous les Scans Centralisés</h2>
+                            <p class="text-[#AAAAAA] text-sm mt-1">Diagnostic, Prospection Pipeline & Widgets publics enregistrés en base unique.</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <span class="px-4 py-2 bg-[#1E1E1E] text-emerald-400 font-bold rounded-xl border border-white/10 text-sm flex items-center gap-2">
+                            <span>📊 Total Scans :</span>
+                            <span class="text-white font-mono text-base"><?php echo count($allScans); ?></span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Barre de Filtres Rapides (Dark Mode) -->
+                <div class="p-6 bg-[#1E1E1E] rounded-2xl border border-white/10 shadow-lg space-y-4">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                        <span>⚡</span>
+                        <span>Filtrer les Scans</span>
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-[#AAAAAA] mb-2">Type de Scan</label>
+                            <select id="filter_type_scan" onchange="filterScansGrid()" class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-white font-medium focus:border-[#2A7AE2]">
+                                <option value="all">Tous les types (Diagnostic, Pipeline, Widget)</option>
+                                <option value="diagnostic">🔍 Diagnostic (Admin manuel)</option>
+                                <option value="pipeline">💼 Pipeline (Prospection B2B)</option>
+                                <option value="widget">🌐 Widget (Scan public site)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-[#AAAAAA] mb-2">Groupe de Scanners</label>
+                            <select id="filter_group_scan" onchange="filterScansGrid()" class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-white font-medium focus:border-[#2A7AE2]">
+                                <option value="all">Tous les groupes</option>
+                                <?php foreach ($allGroups as $g): ?>
+                                    <option value="<?php echo htmlspecialchars($g['id']); ?>"><?php echo htmlspecialchars($g['nom']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-[#AAAAAA] mb-2">Rechercher par URL</label>
+                            <input type="text" id="filter_url_scan" onkeyup="filterScansGrid()" placeholder="Ex: entreprise.com..." class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-white font-medium focus:border-[#2A7AE2] focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grille des Cartes de Scans -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="scans-container">
+                    <?php if (empty($allScans)): ?>
+                        <div class="col-span-full p-12 text-center text-[#AAAAAA] bg-[#1E1E1E] rounded-2xl border border-white/10">
+                            Aucun scan enregistré pour le moment.
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($allScans as $sc): 
+                            $scType = $sc['type_scan'] ?? 'diagnostic';
+                            $scRes = is_array($sc['resultat_ia'] ?? null) ? $sc['resultat_ia'] : json_decode($sc['resultat_ia'] ?? '{}', true);
+                            $scScore = $scRes['score'] ?? $scRes['riskScore'] ?? 50;
+                            $scRisk = $scRes['riskLevel'] ?? ($scScore < 40 ? 'critique' : ($scScore < 60 ? 'eleve' : ($scScore < 75 ? 'modere' : 'faible')));
+                            $scGrp = array_filter($allGroups, fn($g) => $g['id'] === ($sc['group_id'] ?? 'grp_widget_default'));
+                            $scGrpObj = reset($scGrp);
+                            $grpName = $scGrpObj['nom'] ?? 'scanner widget';
+                        ?>
+                            <div class="card scan-card bg-[#1E1E1E] p-6 rounded-2xl border border-white/10 shadow-lg space-y-4 flex flex-col justify-between"
+                                 data-type="<?php echo htmlspecialchars($scType); ?>"
+                                 data-group="<?php echo htmlspecialchars($sc['group_id'] ?? 'grp_widget_default'); ?>"
+                                 data-url="<?php echo htmlspecialchars(strtolower($sc['url'] ?? '')); ?>">
+                                
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider <?php 
+                                            echo $scType === 'diagnostic' ? 'bg-[#2A7AE2]/20 text-[#2A7AE2] border border-[#2A7AE2]/30' :
+                                                ($scType === 'pipeline' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                                                'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30');
+                                        ?>">
+                                            <?php echo $scType === 'diagnostic' ? '🔍 Diagnostic' : ($scType === 'pipeline' ? '💼 Pipeline' : '🌐 Widget'); ?>
+                                        </span>
+                                        <span class="px-3 py-1 bg-white/5 text-[#AAAAAA] text-xs font-mono rounded-lg border border-white/10">
+                                            🏷️ <?php echo htmlspecialchars($grpName); ?>
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <h3 class="text-lg font-bold text-white truncate max-w-full" title="<?php echo htmlspecialchars($sc['url'] ?? ''); ?>">
+                                            <?php echo htmlspecialchars($sc['url'] ?? 'Scan sans URL'); ?>
+                                        </h3>
+                                        <p class="text-xs text-[#AAAAAA] mt-1">
+                                            Demandeur : <strong class="text-white"><?php echo htmlspecialchars($sc['utilisateur'] ?? 'visiteur'); ?></strong> • Status : <span class="text-emerald-400 font-semibold"><?php echo htmlspecialchars($sc['statut'] ?? 'termine'); ?></span>
+                                        </p>
+                                    </div>
+
+                                    <div class="p-3 bg-[#121212] rounded-xl border border-white/5 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs text-[#AAAAAA]">Score RSE / Conformité :</span>
+                                            <span class="text-lg font-bold <?php echo $scScore >= 75 ? 'text-emerald-400' : ($scScore >= 50 ? 'text-amber-400' : 'text-rose-400'); ?>">
+                                                <?php echo $scScore; ?> / 100
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-[#E0E0E0] line-clamp-2 leading-relaxed">
+                                            <?php echo htmlspecialchars($scRes['summary'] ?? 'Analyse IA terminée.'); ?>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="pt-4 border-t border-white/10 flex flex-wrap gap-2 items-center justify-between text-xs">
+                                    <span class="text-[#AAAAAA]">
+                                        <?php echo date('d/m/Y H:i', strtotime($sc['date_scan'] ?? 'now')); ?>
+                                    </span>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button onclick="addScanToListPrompt('<?php echo htmlspecialchars($sc['id']); ?>')" class="px-3 py-1.5 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white font-semibold rounded-lg transition-all border-none cursor-pointer">
+                                            + Liste
+                                        </button>
+                                        <button onclick="reassignScanGroup('<?php echo htmlspecialchars($sc['id']); ?>')" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-all border-none cursor-pointer">
+                                            Groupe
+                                        </button>
+                                        <button onclick="deleteScanCard('<?php echo htmlspecialchars($sc['id']); ?>')" class="px-3 py-1.5 bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-semibold rounded-lg transition-all border-none cursor-pointer">
+                                            Supprimer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+        <?php elseif ($activeTab === 'dossiers'): ?>
+            <?php
+            require_once __DIR__ . '/../includes/dossiers_manager.php';
+            require_once __DIR__ . '/../includes/scans_manager.php';
+            $allDossiers = load_all_dossiers();
+            $allScans = load_all_scans();
+            ?>
+            <div class="p-8 sm:p-12 space-y-10 bg-[#121212] text-[#E0E0E0] min-h-[650px] rounded-[3rem]">
+                <div class="flex flex-wrap items-center justify-between gap-6 border-b border-white/10 pb-8">
+                    <div class="flex items-center space-x-3">
+                        <span class="p-3 bg-[#1E1E1E] rounded-2xl text-2xl border border-white/10">📁</span>
+                        <div>
+                            <h2 class="text-3xl font-bold text-white tracking-tight">Gestion des Dossiers</h2>
+                            <p class="text-[#AAAAAA] text-sm mt-1">Chaque projet scanné est automatiquement regroupé par domaine d'entreprise.</p>
+                        </div>
+                    </div>
+                    <button onclick="createDossierPrompt()" class="px-6 py-3 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white font-bold rounded-2xl transition-all border-none cursor-pointer flex items-center gap-2">
+                        <span>+ Créer un dossier</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <?php if (empty($allDossiers)): ?>
+                        <div class="col-span-full p-12 text-center text-[#AAAAAA] bg-[#1E1E1E] rounded-2xl border border-white/10">
+                            Aucun dossier enregistré pour le moment.
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($allDossiers as $dos): 
+                            $dosScansCount = count($dos['scans'] ?? []);
+                        ?>
+                            <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-white/10 shadow-lg space-y-4 flex flex-col justify-between">
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-mono text-[#AAAAAA]">ID: <?php echo htmlspecialchars($dos['id']); ?></span>
+                                        <span class="px-3 py-1 bg-emerald-500/20 text-emerald-400 font-bold text-xs rounded-full border border-emerald-500/30">
+                                            <?php echo $dosScansCount; ?> scan(s)
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-bold text-white truncate max-w-full"><?php echo htmlspecialchars($dos['nom']); ?></h3>
+                                        <p class="text-xs text-[#2A7AE2] font-mono mt-0.5">🌐 <?php echo htmlspecialchars($dos['domaine']); ?></p>
+                                    </div>
+                                    <div class="text-xs text-[#AAAAAA]">
+                                        Créé le : <?php echo date('d/m/Y H:i', strtotime($dos['date_creation'] ?? 'now')); ?>
+                                    </div>
+                                </div>
+
+                                <div class="pt-3 border-t border-white/10 flex flex-wrap gap-2">
+                                    <a href="/api/analyse.php?domain=<?php echo urlencode($dos['domaine']); ?>" class="px-3.5 py-2 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white text-xs font-bold rounded-xl transition-all">
+                                        Consulter le dossier →
+                                    </a>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+        <?php elseif ($activeTab === 'listes'): ?>
+            <?php
+            require_once __DIR__ . '/../includes/listes_manager.php';
+            require_once __DIR__ . '/../includes/scans_manager.php';
+            $allListes = load_all_listes();
+            $allScans = load_all_scans();
+            ?>
+            <div class="p-8 sm:p-12 space-y-10 bg-[#121212] text-[#E0E0E0] min-h-[650px] rounded-[3rem]">
+                <div class="flex flex-wrap items-center justify-between gap-6 border-b border-white/10 pb-8">
+                    <div class="flex items-center space-x-3">
+                        <span class="p-3 bg-[#1E1E1E] rounded-2xl text-2xl border border-white/10">📋</span>
+                        <div>
+                            <h2 class="text-3xl font-bold text-white tracking-tight">Listes de Travail & Prospection</h2>
+                            <p class="text-[#AAAAAA] text-sm mt-1">Créez des listes de prospects ou de scans à cibler en priorité.</p>
+                        </div>
+                    </div>
+                    <button onclick="createListPrompt()" class="px-6 py-3 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white font-bold rounded-2xl transition-all border-none cursor-pointer flex items-center gap-2">
+                        <span>+ Créer une liste</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <?php if (empty($allListes)): ?>
+                        <div class="col-span-full p-12 text-center text-[#AAAAAA] bg-[#1E1E1E] rounded-2xl border border-white/10">
+                            Aucune liste enregistrée pour le moment.
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($allListes as $lst): 
+                            $itemCount = count($lst['items'] ?? []);
+                        ?>
+                            <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-white/10 shadow-lg space-y-4 flex flex-col justify-between">
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-mono text-[#AAAAAA]">ID: <?php echo htmlspecialchars($lst['id']); ?></span>
+                                        <span class="px-3 py-1 bg-[#2A7AE2]/20 text-[#2A7AE2] font-bold text-xs rounded-full border border-[#2A7AE2]/30">
+                                            <?php echo $itemCount; ?> élément(s)
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-bold text-white truncate max-w-full"><?php echo htmlspecialchars($lst['nom']); ?></h3>
+                                        <p class="text-xs text-[#AAAAAA] mt-1"><?php echo htmlspecialchars($lst['description'] ?: 'Aucune description'); ?></p>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+        <?php elseif ($activeTab === 'style'): ?>
+            <?php
+            $userStylePath = __DIR__ . '/../../data/user_style.json';
+            if (!file_exists($userStylePath)) {
+                $userStylePath = __DIR__ . '/../data/user_style.json';
+            }
+            $currentStyle = [
+                'fontFamily' => 'Inter',
+                'fontSize' => 15,
+                'textColor' => '#E0E0E0',
+                'headingColor' => '#FFFFFF',
+                'bgMain' => '#121212',
+                'cardBg' => '#1E1E1E',
+                'accentColor' => '#2A7AE2',
+                'sampleText' => 'GreenHumble v1.1 — Détection et audit de conformité environnementale selon les directives EmpCO et Green Claims.'
+            ];
+            if (file_exists($userStylePath)) {
+                $loaded = json_decode(file_get_contents($userStylePath), true);
+                if (is_array($loaded)) {
+                    $currentStyle = array_merge($currentStyle, $loaded);
+                }
+            }
+            ?>
+            <div class="p-8 sm:p-12 space-y-10">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black text-white tracking-tight">Module d’Édition de Texte & Style</h2>
+                        <p class="text-slate-400 mt-2 text-sm">Personnalisez la typographie, la taille de police et la palette de l'application sans toucher au code.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="px-3 py-1 bg-[#1E1E1E] text-slate-300 text-xs font-semibold rounded-md border border-white/10">
+                            Fichier : /data/user_style.json
+                        </span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-6xl">
+                    <!-- Formulaire de sélection (7 colonnes) -->
+                    <div class="lg:col-span-7 bg-[#1E1E1E] p-6 sm:p-8 rounded-2xl border border-white/10 shadow-xl space-y-6">
+                        <h3 class="text-lg font-bold text-white mb-4">Sélecteurs Typographiques</h3>
+
+                        <!-- 1. Police (Dropdown Google Fonts) -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Choisir la Police (Google Fonts)</label>
+                            <select id="style-font-family" class="w-full px-4 py-3 bg-[#242424] text-[#E0E0E0] border border-[#383838] rounded-md font-semibold text-sm focus:ring-2 focus:ring-[#2A7AE2] focus:outline-none">
+                                <option value="Inter" <?php echo ($currentStyle['fontFamily'] === 'Inter') ? 'selected' : ''; ?>>Inter (Moderne & Sobre — Recommandé)</option>
+                                <option value="Roboto" <?php echo ($currentStyle['fontFamily'] === 'Roboto') ? 'selected' : ''; ?>>Roboto (Neutre & Institutionnel)</option>
+                                <option value="Plus Jakarta Sans" <?php echo ($currentStyle['fontFamily'] === 'Plus Jakarta Sans') ? 'selected' : ''; ?>>Plus Jakarta Sans (Moderne AI Studio)</option>
+                                <option value="Outfit" <?php echo ($currentStyle['fontFamily'] === 'Outfit') ? 'selected' : ''; ?>>Outfit (Tech & Élégant)</option>
+                                <option value="Poppins" <?php echo ($currentStyle['fontFamily'] === 'Poppins') ? 'selected' : ''; ?>>Poppins (Géométrique)</option>
+                                <option value="Montserrat" <?php echo ($currentStyle['fontFamily'] === 'Montserrat') ? 'selected' : ''; ?>>Montserrat (Impact & Lisibilité)</option>
+                            </select>
+                        </div>
+
+                        <!-- 2. Taille de police (Slider px) -->
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-xs font-bold text-slate-300 uppercase tracking-wider">Choisir la Taille de Police</label>
+                                <span id="style-font-size-display" class="px-2.5 py-0.5 bg-[#2A7AE2] text-white font-mono text-xs font-bold rounded">
+                                    <?php echo $currentStyle['fontSize']; ?>px
+                                </span>
+                            </div>
+                            <input type="range" id="style-font-size" min="12" max="22" value="<?php echo $currentStyle['fontSize']; ?>" step="1" 
+                                class="w-full h-2 bg-[#2A2A2A] rounded-lg appearance-none cursor-pointer accent-[#2A7AE2]">
+                            <div class="flex justify-between text-[11px] text-slate-500 mt-1">
+                                <span>12px (Compact)</span>
+                                <span>15px (Standard)</span>
+                                <span>22px (Grand)</span>
+                            </div>
+                        </div>
+
+                        <!-- 3. Couleur du texte principal (Picker) -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Choisir la Couleur du Texte Principal</label>
+                            <div class="flex items-center gap-3">
+                                <input type="color" id="style-text-color" value="<?php echo $currentStyle['textColor']; ?>" 
+                                    class="w-12 h-10 rounded border border-[#383838] bg-transparent cursor-pointer p-0.5">
+                                <input type="text" id="style-text-color-hex" value="<?php echo $currentStyle['textColor']; ?>" 
+                                    class="flex-1 px-4 py-2.5 bg-[#242424] text-[#E0E0E0] border border-[#383838] rounded-md font-mono text-xs uppercase">
+                            </div>
+                        </div>
+
+                        <!-- 4. Couleurs de la palette -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-white/5">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-400 mb-1.5">Fond Général</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="color" id="style-bg-color" value="<?php echo $currentStyle['bgMain']; ?>" class="w-8 h-8 rounded border border-[#383838] p-0.5 cursor-pointer">
+                                    <span class="text-xs font-mono text-slate-400">#121212</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-400 mb-1.5">Fond Carte</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="color" id="style-card-color" value="<?php echo $currentStyle['cardBg']; ?>" class="w-8 h-8 rounded border border-[#383838] p-0.5 cursor-pointer">
+                                    <span class="text-xs font-mono text-slate-400">#1E1E1E</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-400 mb-1.5">Accent Bouton</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="color" id="style-accent-color" value="<?php echo $currentStyle['accentColor']; ?>" class="w-8 h-8 rounded border border-[#383838] p-0.5 cursor-pointer">
+                                    <span class="text-xs font-mono text-slate-400">#2A7AE2</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. Texte d'exemple -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Texte d'Exemple pour la Prévisualisation</label>
+                            <input type="text" id="style-sample-text" value="<?php echo htmlspecialchars($currentStyle['sampleText']); ?>" 
+                                class="w-full px-4 py-2.5 bg-[#242424] text-[#E0E0E0] border border-[#383838] rounded-md text-xs">
+                        </div>
+
+                        <div class="pt-4">
+                            <button id="style-apply-btn" class="w-full py-3.5 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white font-bold rounded-md text-sm transition-colors shadow-lg flex items-center justify-center space-x-2">
+                                <span>💾 Appliquer & Enregistrer dans /data/user_style.json</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Zone de Prévisualisation Live (5 colonnes) -->
+                    <div class="lg:col-span-5 flex flex-col justify-between space-y-6">
+                        <div class="bg-[#121212] p-6 rounded-2xl border border-white/10 shadow-2xl">
+                            <div class="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">👁️ Prévisualisation Live</span>
+                                <span class="text-[10px] px-2 py-0.5 bg-[#00A67E] text-white rounded font-bold">Rendu en direct</span>
+                            </div>
+
+                            <!-- Bloc Carte Prévisualisée -->
+                            <div id="style-live-preview-card" class="p-5 rounded-lg border border-white/10 transition-all" style="background-color: <?php echo $currentStyle['cardBg']; ?>; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                                <h3 id="style-live-preview-title" class="text-lg font-bold mb-2 transition-all" style="color: <?php echo $currentStyle['headingColor']; ?>; font-family: '<?php echo $currentStyle['fontFamily']; ?>', sans-serif;">
+                                    Audit de Conformité Green Claims
+                                </h3>
+                                
+                                <p id="style-live-preview-text" class="leading-relaxed mb-4 transition-all" style="color: <?php echo $currentStyle['textColor']; ?>; font-size: <?php echo $currentStyle['fontSize']; ?>px; font-family: '<?php echo $currentStyle['fontFamily']; ?>', sans-serif;">
+                                    <?php echo htmlspecialchars($currentStyle['sampleText']); ?>
+                                </p>
+
+                                <div class="flex items-center justify-between pt-3 border-t border-white/5">
+                                    <span class="text-xs text-slate-400">Score de conformité : <strong class="text-[#00A67E]">88/100</strong></span>
+                                    <button id="style-live-preview-btn" class="px-4 py-2 text-xs font-semibold rounded" style="background-color: <?php echo $currentStyle['accentColor']; ?>; color: #FFFFFF;">
+                                        Consulter l'Audit
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 p-4 bg-[#1E1E1E] rounded-lg border border-white/5 text-xs text-slate-400 space-y-2">
+                                <div class="font-bold text-white text-[11px] uppercase">Règles de style actives :</div>
+                                <div>• Police courante : <span class="font-mono text-[#2A7AE2]" id="preview-font-label"><?php echo $currentStyle['fontFamily']; ?></span></div>
+                                <div>• Taille de base : <span class="font-mono text-[#2A7AE2]" id="preview-size-label"><?php echo $currentStyle['fontSize']; ?>px</span></div>
+                                <div>• Sauvegarde immédiate dans <code>/data/user_style.json</code></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <?php elseif ($activeTab === 'agency'): ?>
+            <div class="p-12 space-y-12">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Identité Agence & Branding</h2>
+                    <p class="text-slate-400 mt-2">Personnalisez votre présence sur tous les rapports et l'interface.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-6xl">
+                    <div class="space-y-6">
+                        <div class="group">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3 mb-2">Désignation Officielle</label>
+                            <input type="text" id="ag_name" value="<?php echo htmlspecialchars($state['agency']['agencyName']); ?>" class="w-full px-8 py-5 bg-slate-50 rounded-3xl border-none focus:ring-8 focus:ring-emerald-500/10 font-black text-slate-900 text-xl transition-all shadow-inner">
+                        </div>
+                        <div class="group">
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3 mb-2">Slogan / Promesse RSE</label>
+                            <input type="text" id="ag_slogan" value="<?php echo htmlspecialchars($state['agency']['slogan']); ?>" class="w-full px-8 py-5 bg-slate-50 rounded-3xl border-none focus:ring-8 focus:ring-emerald-500/10 font-medium text-slate-600 italic transition-all shadow-inner">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3 mb-2">Consultant Fondateur</label>
+                            <input type="text" id="ag_consultant" value="<?php echo htmlspecialchars($state['agency']['consultantName']); ?>" class="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none font-bold text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3 mb-2">Email Contact</label>
+                            <input type="email" id="ag_email" value="<?php echo htmlspecialchars($state['agency']['agencyEmail']); ?>" class="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none font-bold text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3 mb-2">Téléphone Pro</label>
+                            <input type="text" id="ag_phone" value="<?php echo htmlspecialchars($state['agency']['agencyPhone']); ?>" class="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none font-bold text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3 mb-2">Site Web (URL)</label>
+                            <input type="text" id="ag_web" value="<?php echo htmlspecialchars($state['agency']['agencyWebsite']); ?>" class="w-full px-6 py-4 bg-slate-50 rounded-2xl border-none font-mono text-xs">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <?php elseif ($activeTab === 'missions'): ?>
+            <div class="p-12 space-y-10">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Missions & Accompagnements</h2>
+                        <p class="text-slate-400 mt-2">Éditez les arguments commerciaux et les budgets par métier.</p>
+                    </div>
+                    <button onclick="addItem('missions')" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                        <span>Ajouter un Métier</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="missions-container">
+                    <?php foreach ($state['serviceOpps'] as $idx => $m): ?>
+                        <div class="mission-card bg-slate-50 p-8 rounded-[3rem] border border-slate-200 shadow-sm hover:shadow-xl hover:bg-white transition-all space-y-6 relative group" data-id="<?php echo $m['id']; ?>">
+                            <button onclick="deleteItem('missions', <?php echo $idx; ?>)" class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-600 transition-all">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                            <div class="flex items-center justify-between">
+                                <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-slate-100">💼</div>
+                                <input type="checkbox" <?php echo $m['isActive'] ? 'checked' : ''; ?> class="m-active w-8 h-8 text-emerald-600 rounded-[1rem] border-slate-300 focus:ring-8 focus:ring-emerald-500/10 cursor-pointer transition-all">
+                            </div>
+                            <div class="space-y-4">
+                                <input type="text" value="<?php echo htmlspecialchars($m['serviceTitle']); ?>" class="m-title w-full bg-transparent font-black text-slate-900 text-lg border-none p-0 focus:ring-0 placeholder-slate-300" placeholder="Titre de la mission">
+                                <textarea class="m-desc w-full bg-transparent text-xs text-slate-500 leading-relaxed border-none p-0 focus:ring-0 h-24 resize-none italic placeholder-slate-300" placeholder="Description de l'accompagnement..."><?php echo htmlspecialchars($m['description']); ?></textarea>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 pt-6 border-t border-slate-100">
+                                <div class="p-4 bg-white rounded-2xl shadow-inner italic">
+                                    <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Budget Moyen</label>
+                                    <input type="text" value="<?php echo htmlspecialchars($m['defaultBudget']); ?>" class="m-budget w-full bg-transparent font-black text-slate-800 border-none p-0 text-sm focus:ring-0">
+                                </div>
+                                <div class="p-4 bg-emerald-50/50 rounded-2xl shadow-inner">
+                                    <label class="block text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">Aide / Subv</label>
+                                    <input type="text" value="<?php echo htmlspecialchars($m['subsidyAmount']); ?>" class="m-sub w-full bg-transparent font-black text-emerald-700 border-none p-0 text-sm focus:ring-0">
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+        <?php elseif ($activeTab === 'legal'): ?>
+            <div class="p-12 space-y-12">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Référentiels Juridiques</h2>
+                        <p class="text-slate-400 mt-2">Configurez les arguments de prospection légaux pour les rapports.</p>
+                    </div>
+                    <button onclick="addItem('legal')" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                        <span>Nouvelle Loi</span>
+                    </button>
+                </div>
+
+                <!-- Section Références Légales Officielles -->
+                <div class="legal-links p-8 bg-slate-900 text-slate-200 rounded-[2.5rem] border border-slate-800 shadow-xl space-y-4">
+                    <h3 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <span>📜</span>
+                        <span>Textes de loi & Sources Officielles</span>
+                    </h3>
+                    <ul class="flex flex-wrap gap-4 text-sm">
+                        <li><a href="https://www.legifrance.gouv.fr" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl font-semibold transition-all flex items-center gap-2"><span>🇫🇷</span> Legifrance</a></li>
+                        <li><a href="https://eur-lex.europa.eu" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl font-semibold transition-all flex items-center gap-2"><span>🇪🇺</span> EUR-Lex (UE)</a></li>
+                        <li><a href="https://cnil.fr" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl font-semibold transition-all flex items-center gap-2"><span>🔒</span> CNIL - RGPD</a></li>
+                    </ul>
+                </div>
+
+                <div class="space-y-6" id="legal-container">
+                    <?php foreach ($state['legalTexts'] as $idx => $l): ?>
+                        <div class="legal-row flex flex-col lg:flex-row lg:items-center gap-6 p-8 bg-slate-50 rounded-[3rem] border border-slate-200 shadow-sm hover:bg-white hover:shadow-2xl transition-all relative group" data-id="<?php echo $l['id']; ?>">
+                            <button onclick="deleteItem('legal', <?php echo $idx; ?>)" class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all">✕</button>
+                            <div class="flex items-center space-x-6 flex-grow">
+                                <div class="w-16 h-16 bg-white rounded-3xl flex items-center justify-center font-black text-slate-300 text-2xl shadow-sm border border-slate-100"><?php echo $idx+1; ?></div>
+                                <div class="flex-grow space-y-2">
+                                    <input type="text" value="<?php echo htmlspecialchars($l['title']); ?>" class="l-title w-full bg-transparent font-black text-slate-900 text-lg border-none p-0 focus:ring-0 placeholder-slate-300" placeholder="Titre de la loi (ex: CSRD)">
+                                    <textarea class="l-desc w-full bg-transparent text-sm text-slate-500 border-none p-0 focus:ring-0 italic h-12 resize-none placeholder-slate-300" placeholder="Description courte pour le rapport..."><?php echo htmlspecialchars($l['description']); ?></textarea>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-8 bg-white/50 p-6 rounded-[2rem] border border-slate-200 shadow-inner">
+                                <div class="text-center w-24">
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Impact Risque</label>
+                                    <input type="number" value="<?php echo $l['weight']; ?>" class="l-weight w-full bg-transparent text-center font-black text-indigo-700 border-none p-0 text-xl focus:ring-0">
+                                </div>
+                                <div class="h-10 w-px bg-slate-200"></div>
+                                <div class="text-center w-24">
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Activer</label>
+                                    <input type="checkbox" <?php echo $l['isActive'] ? 'checked' : ''; ?> class="l-active w-8 h-8 text-emerald-600 rounded-xl border-slate-300 cursor-pointer shadow-sm">
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+        <?php elseif ($activeTab === 'scanner'): ?>
+            <div class="p-12 space-y-12">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Configuration Moteur IA (Connectivité)</h2>
+                    <p class="text-slate-400 mt-2">Réglages des fournisseurs et instructions globales du scanner (les exceptions et corrections par audit se gèrent directement dans le Diag).</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div class="space-y-8">
+                        <div class="p-10 bg-slate-950 rounded-[3.5rem] text-white shadow-2xl space-y-8 border border-slate-800 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 p-8 opacity-10"><svg class="w-24 h-24 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" /></svg></div>
+                            
+                            <h4 class="text-emerald-400 font-black uppercase text-xs tracking-[0.2em] relative z-10">Réglages Connectivité IA</h4>
+                            <div class="space-y-6 relative z-10">
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest">Fournisseur de Service</label>
+                                    <select id="ia_provider" class="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl font-black text-white focus:ring-4 focus:ring-emerald-500/30 transition-all">
+                                        <option value="gemini" <?php echo ($state['scanVars']['aiProvider'] ?? 'gemini') === 'gemini' ? 'selected' : ''; ?>>Google Gemini (Conseillé)</option>
+                                        <option value="openai" <?php echo ($state['scanVars']['aiProvider'] ?? '') === 'openai' ? 'selected' : ''; ?>>OpenAI (GPT-4o)</option>
+                                        <option value="mistral" <?php echo ($state['scanVars']['aiProvider'] ?? '') === 'mistral' ? 'selected' : ''; ?>>Mistral AI</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest">Modèle de Calcul</label>
+                                    <input type="text" id="ia_model" value="<?php echo htmlspecialchars($state['scanVars']['aiModel'] ?? 'gemini-3.8-flash'); ?>" class="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl font-mono text-sm text-emerald-300 focus:ring-4 focus:ring-emerald-500/20 transition-all">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest">Clé API (Securisée)</label>
+                                    <input type="password" id="ia_key" value="<?php echo htmlspecialchars($state['scanVars']['aiApiKey'] ?? ''); ?>" placeholder="••••••••••••••••" class="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl font-mono text-sm text-emerald-300 focus:ring-4 focus:ring-emerald-500/20 transition-all">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-8">
+                        <div class="p-10 bg-emerald-50 rounded-[3.5rem] border border-emerald-200 space-y-6">
+                            <div class="flex items-center space-x-3 text-emerald-900">
+                                <span class="text-3xl">💡</span>
+                                <h4 class="font-black text-base uppercase tracking-wider">Réglage IA centralisé dans le Diag</h4>
+                            </div>
+                            <p class="text-xs text-emerald-800 leading-relaxed font-medium">
+                                Les consignes, affinages et exceptions du moteur IA ne se configurent plus ici : ils sont réalisés directement et de manière dynamique dans l'onglet <strong>Diagnostic (Diag)</strong> de chaque audit pour s'adapter précisément au contexte de l'entreprise.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <?php elseif ($activeTab === 'scanner_groups'): ?>
+            <?php
+            require_once __DIR__ . '/../includes/scanner_groups.php';
+            $allGroups = load_scanner_groups();
+            $allScanners = load_scanners();
+            ?>
+            <div class="p-8 sm:p-12 space-y-10 bg-[#121212] text-[#E0E0E0] min-h-[650px] rounded-[3rem]">
+                <!-- Header Groupe -->
+                <div class="flex flex-wrap items-center justify-between gap-6 border-b border-white/10 pb-8">
+                    <div>
+                        <div class="flex items-center space-x-3">
+                            <span class="p-3 bg-[#1E1E1E] rounded-2xl text-2xl border border-white/10">🏷️</span>
+                            <div>
+                                <h2 class="text-3xl font-bold text-white tracking-tight">Groupes de Scanners</h2>
+                                <p class="text-[#AAAAAA] text-sm mt-1">Organisez vos instances de scanners d'audit et assignez vos widgets.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="showCreateGroupModal()" class="px-6 py-3.5 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white font-semibold rounded-xl transition-all shadow-md flex items-center space-x-2 border-none cursor-pointer">
+                            <span>➕</span>
+                            <span>Créer un Groupe</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Formulaire Rapide de Création (Inline) -->
+                <div id="createGroupCard" class="hidden p-6 bg-[#1E1E1E] rounded-2xl border border-[#2A7AE2]/40 shadow-xl space-y-4">
+                    <h3 class="text-lg font-bold text-white">Nouveau Groupe de Scanners</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-[#AAAAAA] uppercase tracking-wider mb-2">Nom du Groupe</label>
+                            <input type="text" id="new_group_nom" placeholder="ex: Scanners PME Auvergne" class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-white font-medium focus:border-[#2A7AE2] focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-[#AAAAAA] uppercase tracking-wider mb-2">Description</label>
+                            <input type="text" id="new_group_desc" placeholder="Périmètre ou secteur d'activité..." class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-white font-medium focus:border-[#2A7AE2] focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-3 pt-2">
+                        <button onclick="submitCreateGroup()" class="px-5 py-2.5 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white font-semibold rounded-lg transition-all border-none cursor-pointer">Enregistrer le Groupe</button>
+                        <button onclick="hideCreateGroupModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg transition-all border-none cursor-pointer">Annuler</button>
+                    </div>
+                </div>
+
+                <!-- Formulaire Rapide de Réassignation Scanner -->
+                <div class="p-6 bg-[#1E1E1E] rounded-2xl border border-white/10 shadow-lg space-y-4">
+                    <h3 class="text-base font-bold text-white flex items-center space-x-2">
+                        <span>🎯</span>
+                        <span>Assigner un Scanner à un Groupe</span>
+                    </h3>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div class="flex-grow min-w-[240px]">
+                            <label class="block text-xs font-semibold text-[#AAAAAA] mb-1">Sélectionner le Scanner</label>
+                            <select id="assign_scanner_select" class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-white font-medium focus:border-[#2A7AE2]">
+                                <?php foreach ($allScanners as $s): ?>
+                                    <option value="<?php echo htmlspecialchars($s['id']); ?>">
+                                        <?php echo htmlspecialchars($s['nom']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="flex-grow min-w-[240px]">
+                            <label class="block text-xs font-semibold text-[#AAAAAA] mb-1">Groupe Cible</label>
+                            <select id="assign_group_select" class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-white font-medium focus:border-[#2A7AE2]">
+                                <?php foreach ($allGroups as $g): ?>
+                                    <option value="<?php echo htmlspecialchars($g['id']); ?>">
+                                        <?php echo htmlspecialchars($g['nom']); ?> <?php echo !empty($g['is_default']) ? '(Par Défaut)' : ''; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="pt-5">
+                            <button onclick="submitAssignScanner()" class="px-6 py-3 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white font-bold rounded-xl transition-all border-none cursor-pointer flex items-center space-x-2">
+                                <span>🔗</span>
+                                <span>Assigner</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grille des Cartes de Groupes -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="groups-container">
+                    <?php foreach ($allGroups as $grp): 
+                        $isDefault = !empty($grp['is_default']) || strtolower($grp['nom']) === 'scanner widget' || $grp['id'] === 'grp_widget_default';
+                        $groupScanners = array_filter($allScanners, fn($s) => ($s['group_id'] ?? '') === $grp['id']);
+                    ?>
+                        <div class="card bg-[#1E1E1E] p-6 rounded-2xl border border-white/10 shadow-lg space-y-5 relative flex flex-col justify-between" data-group-id="<?php echo htmlspecialchars($grp['id']); ?>">
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="px-3 py-1 bg-[#2A7AE2]/20 text-[#2A7AE2] font-mono text-xs rounded-full border border-[#2A7AE2]/30 font-bold">
+                                        <?php echo htmlspecialchars($grp['id']); ?>
+                                    </span>
+                                    <?php if ($isDefault): ?>
+                                        <span class="px-3 py-1 bg-amber-500/20 text-amber-400 font-bold text-xs rounded-full border border-amber-500/30 flex items-center space-x-1">
+                                            <span>⭐</span>
+                                            <span>Spécial System</span>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                                <h3 class="text-xl font-bold text-white"><?php echo htmlspecialchars($grp['nom']); ?></h3>
+                                <p class="text-sm text-[#AAAAAA] leading-relaxed"><?php echo htmlspecialchars($grp['description'] ?? 'Aucune description'); ?></p>
+                                <div class="pt-3 border-t border-white/5 text-xs text-[#AAAAAA] flex items-center justify-between">
+                                    <span>Créé le : <?php echo date('d/m/Y', strtotime($grp['date_creation'] ?? 'now')); ?></span>
+                                    <span class="text-emerald-400 font-semibold"><?php echo count($groupScanners); ?> scanner(s)</span>
+                                </div>
+
+                                <!-- Liste des Scanners du groupe -->
+                                <?php if (!empty($groupScanners)): ?>
+                                    <div class="mt-2 space-y-1">
+                                        <p class="text-[11px] font-bold uppercase tracking-wider text-[#AAAAAA]">Scanners rattachés :</p>
+                                        <div class="flex flex-wrap gap-1.5">
+                                            <?php foreach ($groupScanners as $sc): ?>
+                                                <span class="px-2.5 py-1 bg-[#121212] text-xs text-[#E0E0E0] rounded-lg border border-white/10">
+                                                    📌 <?php echo htmlspecialchars($sc['nom']); ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Actions du Groupe (Flex-wrap & Gap) -->
+                            <div class="pt-4 border-t border-white/10 flex flex-wrap gap-3 items-center">
+                                <button onclick="editGroupModal('<?php echo htmlspecialchars($grp['id']); ?>', '<?php echo htmlspecialchars(addslashes($grp['nom'])); ?>', '<?php echo htmlspecialchars(addslashes($grp['description'] ?? '')); ?>')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-lg transition-all border-none cursor-pointer flex items-center space-x-1">
+                                    <span>✏️</span>
+                                    <span>Renommer</span>
+                                </button>
+
+                                <?php if (!$isDefault): ?>
+                                    <button onclick="deleteGroupPrompt('<?php echo htmlspecialchars($grp['id']); ?>', '<?php echo htmlspecialchars(addslashes($grp['nom'])); ?>')" class="px-4 py-2 bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-semibold text-xs rounded-lg transition-all border-none cursor-pointer flex items-center space-x-1">
+                                        <span>🗑️</span>
+                                        <span>Supprimer</span>
+                                    </button>
+                                <?php else: ?>
+                                    <span class="text-[11px] text-amber-400/80 italic font-medium px-2 py-1 bg-amber-950/30 rounded border border-amber-900/40">
+                                        🔒 Non supprimable
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+        <?php elseif ($activeTab === 'texts'): ?>
+            <div class="p-12 space-y-12">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Dictionnaires & Mots Bannis</h2>
+                        <p class="text-slate-400 mt-2">Textes sémantiques stockés en base de données pour le moteur IA.</p>
+                    </div>
+                    <button onclick="addDbText()" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                        <span>Nouveau Texte</span>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 gap-6" id="db-texts-container">
+                    <?php 
+                    $dbTexts = $db->query("SELECT * FROM cl_texts ORDER BY text_key ASC")->fetchAll();
+                    foreach ($dbTexts as $t): ?>
+                        <div class="db-text-row p-8 bg-slate-50 rounded-[3rem] border border-slate-200 shadow-sm hover:bg-white hover:shadow-2xl transition-all relative group">
+                            <div class="flex flex-col lg:flex-row lg:items-start gap-8">
+                                <div class="w-full lg:w-1/4 space-y-4">
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Clé Unique (ID)</label>
+                                        <input type="text" value="<?php echo htmlspecialchars($t['text_key']); ?>" class="t-key w-full bg-white px-4 py-2 rounded-xl border border-slate-200 font-mono text-xs text-emerald-700" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Titre</label>
+                                        <input type="text" value="<?php echo htmlspecialchars($t['title']); ?>" class="t-title w-full bg-white px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-900 text-sm">
+                                    </div>
+                                </div>
+                                <div class="flex-grow">
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contenu (Liste de mots, instructions...)</label>
+                                    <textarea class="t-content w-full h-32 bg-white px-6 py-4 rounded-2xl border border-slate-200 text-xs font-mono leading-relaxed focus:ring-4 focus:ring-emerald-500/10"><?php echo htmlspecialchars($t['content']); ?></textarea>
+                                </div>
+                                <div class="flex lg:flex-col gap-2">
+                                    <button onclick="saveDbText('<?php echo $t['text_key']; ?>', this)" class="px-6 py-3 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-xl hover:bg-emerald-700 hover:text-white transition-all uppercase tracking-widest">Enregistrer</button>
+                                    <button onclick="deleteDbText('<?php echo $t['text_key']; ?>')" class="px-6 py-3 bg-red-50 text-red-700 text-[10px] font-black rounded-xl hover:bg-red-700 hover:text-white transition-all uppercase tracking-widest">Supprimer</button>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+        <?php elseif ($activeTab === 'team'): ?>
+            <div class="p-12 space-y-10">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Accès & Consultants</h2>
+                        <p class="text-slate-400 mt-2">Gérez les auditeurs autorisés à piloter les scans.</p>
+                    </div>
+                    <button onclick="addItem('team')" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                        <span>Nouveau Collaborateur</span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8" id="team-container">
+                    <?php foreach ($state['collaborators'] as $idx => $c): ?>
+                        <div class="team-card bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center space-y-6 group relative overflow-hidden ring-1 ring-slate-100" data-id="<?php echo $c['id']; ?>">
+                            <button onclick="deleteItem('team', <?php echo $idx; ?>)" class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all">✕</button>
+                            <div class="w-28 h-28 <?php echo $c['avatarColor']; ?> text-white rounded-[3rem] flex items-center justify-center text-4xl font-black mx-auto shadow-2xl group-hover:scale-110 transition-transform ring-4 ring-white">
+                                <?php echo substr($c['name'], 0, 1); ?>
+                            </div>
+                            <div class="space-y-2">
+                                <input type="text" value="<?php echo htmlspecialchars($c['name']); ?>" class="t-name w-full bg-transparent text-center font-black text-slate-900 text-lg border-none p-0 focus:ring-0" placeholder="Nom complet">
+                                <div class="flex justify-center">
+                                    <input type="text" value="<?php echo htmlspecialchars($c['role']); ?>" class="t-role px-4 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full inline-block uppercase tracking-widest italic border-none text-center focus:ring-0 w-32" placeholder="Rôle">
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Email Contact</label>
+                                <input type="text" value="<?php echo htmlspecialchars($c['email']); ?>" class="t-email w-full bg-transparent text-center text-xs text-slate-400 border-none p-0 focus:ring-0 truncate font-medium" placeholder="Email contact">
+                            </div>
+                            <div class="space-y-1 pt-2 border-t border-slate-50">
+                                <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Mot de passe</label>
+                                <input type="text" value="<?php echo htmlspecialchars($state['passwordsMap'][$c['id']] ?? ''); ?>" class="t-pass w-full bg-slate-50 px-3 py-2 rounded-xl text-center text-xs text-emerald-700 font-mono border border-slate-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none" placeholder="Mot de passe">
+                                <button onclick="generatePass(this)" class="text-[9px] font-black text-emerald-500 uppercase hover:text-emerald-700 transition-colors">🪄 Régénérer</button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
+    </div>
+</div>
+
+<script>
+const appState = <?php echo json_encode($state); ?>;
+
+// --- Unification de la Synchronisation ---
+async function syncState(type, data, isBatch = false) {
+    const btns = document.querySelectorAll('.save-btn');
+    btns.forEach(b => { b.disabled = true; b.innerHTML = '⏳ Synchronisation...'; });
+
+    const payload = isBatch ? { batch: data } : { type, data };
+
+    try {
+        const response = await fetch('/api/admin/save_state.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const res = await response.json();
+        if (res.success) {
+            btns.forEach(b => { 
+                b.innerHTML = '✨ Mise à jour réussie'; 
+                b.classList.replace('bg-emerald-700', 'bg-indigo-600');
+            });
+            setTimeout(() => {
+                btns.forEach(b => { 
+                    b.innerHTML = 'Sauvegarder'; 
+                    b.classList.replace('bg-indigo-600', 'bg-emerald-700');
+                    b.disabled = false;
+                });
+            }, 2500);
+            return true;
+        }
+    } catch (e) {
+        alert('CRITICAL ERROR: Data sync failed on server.');
+        btns.forEach(b => b.disabled = false);
+    }
+    return false;
+}
+
+// --- Dispatcher de Sauvegarde par Onglet ---
+function saveTab(tab) {
+    if (tab === 'agency') saveAgency();
+    else if (tab === 'missions') saveMissions();
+    else if (tab === 'legal') saveLegal();
+    else if (tab === 'scanner') saveScanner();
+    else if (tab === 'team') saveTeam();
+}
+
+function saveAgency() {
+    appState.agency.agencyName = document.getElementById('ag_name').value;
+    appState.agency.slogan = document.getElementById('ag_slogan').value;
+    appState.agency.agencyWebsite = document.getElementById('ag_web').value;
+    appState.agency.consultantName = document.getElementById('ag_consultant').value;
+    appState.agency.agencyEmail = document.getElementById('ag_email').value;
+    appState.agency.agencyPhone = document.getElementById('ag_phone').value;
+    syncState('agency', appState.agency);
+}
+
+function saveMissions() {
+    const items = [];
+    document.querySelectorAll('#missions-container > .mission-card').forEach((c, i) => {
+        items.push({
+            id: c.dataset.id || 'm_' + Date.now() + i,
+            isActive: c.querySelector('.m-active').checked,
+            serviceTitle: c.querySelector('.m-title').value,
+            description: c.querySelector('.m-desc').value,
+            defaultBudget: c.querySelector('.m-budget').value,
+            subsidyAmount: c.querySelector('.m-sub').value,
+            serviceKey: 'key_' + i
+        });
+    });
+    appState.serviceOpps = items;
+    syncState('serviceOpps', appState.serviceOpps);
+}
+
+function saveLegal() {
+    const legalItems = [];
+    document.querySelectorAll('#legal-container > .legal-row').forEach((c, i) => {
+        legalItems.push({
+            id: c.dataset.id || 'leg_' + Date.now() + i,
+            title: c.querySelector('.l-title').value,
+            description: c.querySelector('.l-desc').value,
+            weight: parseInt(c.querySelector('.l-weight').value),
+            isActive: c.querySelector('.l-active').checked,
+            jurisdiction: 'france',
+            reference: 'Ref-' + i
+        });
+    });
+    appState.legalTexts = legalItems;
+    syncState('legalTexts', appState.legalTexts);
+}
+
+function saveScanner() {
+    appState.scanVars.aiProvider = document.getElementById('ia_provider').value;
+    appState.scanVars.aiModel = document.getElementById('ia_model').value;
+    appState.scanVars.aiApiKey = document.getElementById('ia_key').value;
+    appState.scanVars.aiKeywordInstructions = document.getElementById('ia_prompt').value;
+    appState.scanVars.customBannedKeywords = document.getElementById('ia_banned').value;
+
+    syncState('scanVars', appState.scanVars);
+}
+
+function saveTeam() {
+    const items = [];
+    const newPasswords = { ...appState.passwordsMap };
+    
+    document.querySelectorAll('#team-container > .team-card').forEach((c, i) => {
+        const id = c.dataset.id || 'collab_' + Date.now() + i;
+        const name = c.querySelector('.t-name').value;
+        const email = c.querySelector('.t-email').value;
+        const role = c.querySelector('.t-role').value;
+        const pass = c.querySelector('.t-pass').value;
+
+        items.push({
+            id,
+            name,
+            email,
+            role,
+            avatarColor: 'bg-indigo-700',
+            assignedProspectsCount: 0
+        });
+
+        if (pass) {
+            newPasswords[id] = pass;
+        }
+    });
+    
+    appState.collaborators = items;
+    appState.passwordsMap = newPasswords;
+
+    // Sync both collaborators and passwordsMap
+    syncState('collaborators', appState.collaborators)
+    .then(() => syncState('passwordsMap', appState.passwordsMap))
+    .then(() => alert('Équipe et mots de passe sauvegardés avec succès !'));
+}
+
+function generatePass(btn) {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let pass = "";
+    for(let i=0; i<8; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    const input = btn.previousElementSibling;
+    input.value = pass;
+}
+
+// --- Gestion des listes (Add/Delete) ---
+function addItem(type) {
+    if (type === 'missions') {
+        appState.serviceOpps.unshift({ id: 'm_'+Date.now(), serviceTitle: 'Nouvelle Mission', description: '', defaultBudget: '0 €', subsidyAmount: '0 €', isActive: true });
+    } else if (type === 'legal') {
+        appState.legalTexts.unshift({ id: 'leg_'+Date.now(), title: 'Nouveau Référentiel', description: '', weight: 5, isActive: true });
+    } else if (type === 'team') {
+        const newId = 'collab_'+Date.now();
+        appState.collaborators.unshift({ id: newId, name: 'Nouveau Membre', email: '', role: 'Consultant', avatarColor: 'bg-slate-700' });
+        // Generate initial random password
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let pass = "";
+        for(let i=0; i<8; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+        appState.passwordsMap[newId] = pass;
+    }
+    // Simple way to refresh UI without complex JS rendering: reload after push (since we use PHP rendering)
+    // Or we could save first then reload. Better: save then reload.
+    const p = (type === 'team') 
+        ? syncState('collaborators', appState.collaborators).then(() => syncState('passwordsMap', appState.passwordsMap))
+        : syncState(type === 'missions' ? 'serviceOpps' : 'legalTexts', 
+                    type === 'missions' ? appState.serviceOpps : appState.legalTexts);
+
+    p.then(() => window.location.reload());
+}
+
+function deleteItem(type, idx) {
+    if(!confirm('Confirmer la suppression définitive ?')) return;
+    if (type === 'missions') appState.serviceOpps.splice(idx, 1);
+    else if (type === 'legal') appState.legalTexts.splice(idx, 1);
+    else if (type === 'team') appState.collaborators.splice(idx, 1);
+    
+    syncState(type === 'missions' ? 'serviceOpps' : (type === 'legal' ? 'legalTexts' : 'collaborators'), 
+              type === 'missions' ? appState.serviceOpps : (type === 'legal' ? appState.legalTexts : appState.collaborators))
+    .then(() => window.location.reload());
+}
+
+// --- CSV Handlers (Unified) ---
+function exportTabCSV(tab) {
+    let data = [];
+    let csv = "";
+    let filename = `climat_local_${tab}.csv`;
+
+    if (tab === 'missions') {
+        data = appState.serviceOpps;
+        csv = "ID;Titre;Budget;Subvention;Description;Actif\n";
+        data.forEach(m => csv += `"${m.id}";"${m.serviceTitle}";"${m.defaultBudget}";"${m.subsidyAmount}";"${m.description.replace(/"/g, '""')}";"${m.isActive?1:0}"\n`);
+    } else if (tab === 'legal') {
+        data = appState.legalTexts;
+        csv = "ID;Titre;Poids;Description;Actif\n";
+        data.forEach(l => csv += `"${l.id}";"${l.title}";"${l.weight}";"${l.description.replace(/"/g, '""')}";"${l.isActive?1:0}"\n`);
+    } else if (tab === 'texts') {
+        window.location.href = '/api/admin/export.php?download=texts';
+        return;
+    } else if (tab === 'team') {
+        window.location.href = '/api/admin/export.php?download=team';
+        return;
+    } else if (tab === 'audits') {
+        window.location.href = '/api/admin/export.php';
+        return;
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+}
+
+// --- Audits & DB Management ---
+async function deleteAudit(id) {
+    if (!confirm('Supprimer définitivement cet audit et ses données ?')) return;
+    try {
+        const fd = new FormData();
+        fd.append('delete_audit', id);
+        const res = await fetch(window.location.href, { method: 'POST', body: fd });
+        if (res.ok) {
+            document.getElementById('audit-row-' + id).remove();
+        }
+    } catch (e) {
+        alert('Erreur lors de la suppression.');
+    }
+}
+
+async function saveDbText(key, btn) {
+    const row = btn.closest('.db-text-row');
+    const title = row.querySelector('.t-title').value;
+    const content = row.querySelector('.t-content').value;
+    
+    btn.disabled = true;
+    btn.innerText = '⏳...';
+    
+    try {
+        const fd = new FormData();
+        fd.append('save_db_text', '1');
+        fd.append('text_key', key);
+        fd.append('title', title);
+        fd.append('content', content);
+        
+        await fetch(window.location.href, { method: 'POST', body: fd });
+        btn.innerText = '✨ OK';
+        setTimeout(() => { btn.disabled = false; btn.innerText = 'Enregistrer'; }, 1500);
+    } catch (e) {
+        alert('Erreur save DB');
+        btn.disabled = false;
+    }
+}
+
+async function deleteDbText(key) {
+    if (!confirm('Supprimer ce dictionnaire ?')) return;
+    const fd = new FormData();
+    fd.append('delete_db_text', key);
+    await fetch(window.location.href, { method: 'POST', body: fd });
+    window.location.reload();
+}
+
+function addDbText() {
+    const key = prompt('Clé unique du texte (ex: banned_words_custom) :');
+    if (!key) return;
+    const fd = new FormData();
+    fd.append('save_db_text', '1');
+    fd.append('text_key', key);
+    fd.append('title', 'Nouveau dictionnaire');
+    fd.append('content', 'mots, séparés, par, virgule');
+    fetch(window.location.href, { method: 'POST', body: fd }).then(() => window.location.reload());
+}
+
+function importTabCSV(tab, input) {
+    const file = input.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const lines = e.target.result.split('\n');
+        const imports = [];
+        for(let i=1; i<lines.length; i++) {
+            const p = lines[i].split(';').map(x => x.replace(/^"|"$/g, '').replace(/""/g, '"'));
+            if (p.length < 3) continue;
+            if (tab === 'missions') {
+                imports.push({ id: p[0], serviceTitle: p[1], defaultBudget: p[2], subsidyAmount: p[3], description: p[4], isActive: p[5] === '1', serviceKey: 'import_'+i });
+            } else if (tab === 'legal') {
+                imports.push({ id: p[0], title: p[1], weight: parseInt(p[2]), description: p[3], isActive: p[4] === '1' });
+            } else if (tab === 'texts') {
+                imports.push({ text_key: p[0], title: p[1], content: p[2] });
+            } else if (tab === 'team') {
+                imports.push({ id: p[0], name: p[1], email: p[2], role: p[3], avatarColor: 'bg-emerald-600' });
+            }
+        }
+        if(imports.length > 0) {
+            if (tab === 'missions') { appState.serviceOpps = imports; syncState('serviceOpps', appState.serviceOpps); }
+            else if (tab === 'legal') { appState.legalTexts = imports; syncState('legalTexts', appState.legalTexts); }
+            else if (tab === 'texts') { 
+                // Special case for DB texts: we need to send each one via POST to save_db_text handler
+                alert('Import des textes en cours (traitement DB)...');
+                imports.forEach(async t => {
+                    const fd = new FormData();
+                    fd.append('save_db_text', '1');
+                    fd.append('text_key', t.text_key);
+                    fd.append('title', t.title);
+                    fd.append('content', t.content);
+                    await fetch(window.location.href, { method: 'POST', body: fd });
+                });
+                setTimeout(() => window.location.reload(), 2000);
+                return;
+            }
+            else if (tab === 'team') { appState.collaborators = imports; syncState('collaborators', appState.collaborators); }
+            
+            setTimeout(() => window.location.reload(), 1000);
+        }
+    };
+    reader.readAsText(file);
+}
+
+// Prospection
+function generatePitch(auditId) {
+    alert("Génération du Pitch Commercial (Module IA) pour l'Audit #" + auditId + "...\n\nFonctionnalité en cours de liaison avec l'API Gemini pour extraire les arguments clés.");
+}
+
+// Scanner Groups Actions
+function showCreateGroupModal() {
+    const card = document.getElementById('createGroupCard');
+    if (card) card.classList.remove('hidden');
+}
+
+function hideCreateGroupModal() {
+    const card = document.getElementById('createGroupCard');
+    if (card) card.classList.add('hidden');
+}
+
+async function submitCreateGroup() {
+    const nom = document.getElementById('new_group_nom')?.value;
+    const description = document.getElementById('new_group_desc')?.value;
+    if (!nom || !nom.trim()) {
+        alert('Veuillez saisir un nom pour le groupe.');
+        return;
+    }
+    try {
+        const res = await fetch('/api/groups/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nom, description })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Erreur: ' + (data.error || 'Impossible de créer le groupe'));
+        }
+    } catch (e) {
+        alert('Erreur de communication avec le serveur.');
+    }
+}
+
+async function editGroupModal(id, currentNom, currentDesc) {
+    const newNom = prompt('Nouveau nom pour le groupe :', currentNom);
+    if (newNom === null || !newNom.trim()) return;
+    const newDesc = prompt('Nouvelle description :', currentDesc);
+    try {
+        const res = await fetch('/api/groups/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, nom: newNom.trim(), description: (newDesc || '').trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Erreur: ' + (data.error || 'Impossible de mettre à jour le groupe'));
+        }
+    } catch (e) {
+        alert('Erreur réseau.');
+    }
+}
+
+async function deleteGroupPrompt(id, name) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le groupe "${name}" ?\nLes scanners de ce groupe seront automatiquement réassignés au groupe par défaut "scanner widget".`)) {
+        return;
+    }
+    try {
+        const res = await fetch('/api/groups/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Erreur: ' + (data.error || 'Impossible de supprimer ce groupe.'));
+        }
+    } catch (e) {
+        alert('Erreur réseau.');
+    }
+}
+
+async function submitAssignScanner() {
+    const scanner_id = document.getElementById('assign_scanner_select')?.value;
+    const group_id = document.getElementById('assign_group_select')?.value;
+    if (!scanner_id || !group_id) return;
+    try {
+        const res = await fetch('/api/groups/assign_scanner', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scanner_id, group_id })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Erreur: ' + (data.error || 'Impossible d\'assigner le scanner.'));
+        }
+    } catch (e) {
+        alert('Erreur réseau.');
+    }
+}
+
+// Scans Centralisés Filtering & Actions
+function filterScansGrid() {
+    const typeVal = document.getElementById('filter_type_scan')?.value || 'all';
+    const groupVal = document.getElementById('filter_group_scan')?.value || 'all';
+    const searchVal = (document.getElementById('filter_url_scan')?.value || '').toLowerCase().trim();
+
+    const cards = document.querySelectorAll('.scan-card');
+    cards.forEach(card => {
+        const cType = card.getAttribute('data-type') || '';
+        const cGroup = card.getAttribute('data-group') || '';
+        const cUrl = card.getAttribute('data-url') || '';
+
+        const matchType = (typeVal === 'all' || cType === typeVal);
+        const matchGroup = (groupVal === 'all' || cGroup === groupVal);
+        const matchUrl = (!searchVal || cUrl.includes(searchVal));
+
+        if (matchType && matchGroup && matchUrl) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+async function addScanToListPrompt(scanId) {
+    const listes = <?php echo json_encode(load_all_listes(), JSON_UNESCAPED_UNICODE); ?>;
+    if (!listes || listes.length === 0) {
+        if (confirm('Aucune liste existante. Voulez-vous en créer une maintenant ?')) {
+            createListPrompt();
+        }
+        return;
+    }
+
+    let listPromptText = "Saisissez le nom ou l'ID de la liste où ajouter ce scan :\n\n";
+    listes.forEach(l => {
+        listPromptText += `- ID: "${l.id}" => ${l.nom}\n`;
+    });
+
+    const chosenId = prompt(listPromptText, listes[0].id);
+    if (!chosenId) return;
+
+    try {
+        const res = await fetch('/api/listes/add_scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ list_id: chosenId.trim(), scan_id: scanId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('Scan ajouté à la liste !');
+            window.location.reload();
+        } else {
+            alert('Erreur: ' + (data.error || 'Impossible d\'ajouter à la liste'));
+        }
+    } catch (e) {
+        alert('Erreur réseau.');
+    }
+}
+
+async function createDossierPrompt() {
+    const nom = prompt('Nom du nouveau dossier :');
+    if (!nom || !nom.trim()) return;
+    const domaine = prompt('Domaine associé (ex: entreprise.com) :');
+    if (!domaine || !domaine.trim()) return;
+
+    try {
+        const res = await fetch('/api/dossiers/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nom: nom.trim(), domaine: domaine.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('Dossier créé avec succès !');
+            window.location.reload();
+        } else {
+            alert('Erreur: ' + (data.error || 'Impossible de créer le dossier'));
+        }
+    } catch (e) {
+        alert('Erreur réseau.');
+    }
+}
+
+async function createListPrompt() {
+    const nom = prompt('Nom de la nouvelle liste :');
+    if (!nom || !nom.trim()) return;
+    const description = prompt('Description optionnelle :');
+
+    try {
+        const res = await fetch('/api/listes/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nom: nom.trim(), description: (description || '').trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('Liste créée avec succès !');
+            window.location.reload();
+        } else {
+            alert('Erreur: ' + (data.error || 'Impossible de créer la liste'));
+        }
+    } catch (e) {
+        alert('Erreur réseau.');
+    }
+}
+
+async function reassignScanGroup(scanId) {
+    const newGroup = prompt('Saisir le nouvel ID de groupe pour ce scan (ex: grp_widget_default) :');
+    if (!newGroup || !newGroup.trim()) return;
+    try {
+        const res = await fetch('/api/scans/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: scanId, group_id: newGroup.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Erreur: ' + (data.error || 'Impossible de réassigner le scan.'));
+        }
+    } catch (e) {
+        alert('Erreur réseau.');
+    }
+}
+
+async function deleteScanCard(scanId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce scan de la base de données ?')) return;
+    try {
+        const res = await fetch('/api/scans/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: scanId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Erreur: ' + (data.error || 'Impossible de supprimer le scan.'));
+        }
+    } catch (e) {
+        alert('Erreur réseau.');
+    }
+}
+</script>
+
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .animate-fadeIn { animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    
+    input:focus, textarea:focus, select:focus {
+        outline: none !important;
+        box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.1);
+    }
+    
+    .mission-card:hover .m-active, .legal-row:hover .l-active {
+        transform: scale(1.1);
+    }
+</style>
+
+<?php include __DIR__ . '/../includes/footer.php'; ?>

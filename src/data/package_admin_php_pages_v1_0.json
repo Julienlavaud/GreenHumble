@@ -1,0 +1,76 @@
+{
+  "package_admin_php_pages_greenhumble_v1_0": {
+    "manifeste": {
+      "titre": "Package Complet Pages PHP Modernisées — Frontend Admin GreenHumble v1.1",
+      "version": "1.0.0",
+      "slogan": "Le climat, ensemble.",
+      "affiliation": "Cabinet Climat Local (climatlocal.com)",
+      "date_export": "2026-10-02T14:13:16Z",
+      "cible_hebergement": "OVH Cloud / Web Hosting Mutualisé (Apache 2.4+ / PHP 8.2+)",
+      "versioning_cache_ovh": "?v=floor(time()/60)*60"
+    },
+    "pages_php_admin": {
+      "chemin_racine": "/admin",
+      "fichiers": [
+        {
+          "nom": "index.php",
+          "description": "Portail d'entrée principal de l'administration, intégration du bridge React-like et chargement des styles.css et admin.js v1.1.",
+          "dependances_css": ["/admin/assets/css/styles.css"],
+          "dependances_js": ["/admin/assets/js/admin.js"],
+          "code_source": "<?php\nsession_start();\nrequire_once __DIR__ . '/../api/config/config.php';\nrequire_once __DIR__ . '/../api/includes/react_static_bridge.php';\n$v = floor(time() / 60) * 60;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>GreenHumble Admin v1.1 — Cockpit</title>\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/styles.css?v=<?php echo $v; ?>\">\n</head>\n<body class=\"bg-slate-950 text-slate-100 antialiased\">\n    <div id=\"root\">\n        <?php echo render_greenhumble_react_app('root'); ?>\n    </div>\n    <script src=\"/admin/assets/js/admin.js?v=<?php echo $v; ?>\"></script>\n</body>\n</html>"
+        },
+        {
+          "nom": "audit.php",
+          "description": "Interface d'audit d'URL et de documents RSE, formulaire interactif et restitution dynamique sous forme de cartes d'allégations.",
+          "dependances_css": ["/admin/assets/css/styles.css", "/admin/assets/css/audit.css"],
+          "dependances_js": ["/admin/assets/js/audit.js"],
+          "code_source": "<?php\nsession_start();\nrequire_once __DIR__ . '/../api/config/config.php';\n$v = floor(time() / 60) * 60;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>GreenHumble — Audit Allégations & Directive Green Claims</title>\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/styles.css?v=<?php echo $v; ?>\">\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/audit.css?v=<?php echo $v; ?>\">\n</head>\n<body class=\"bg-slate-950 text-slate-100 p-6\">\n    <div class=\"max-w-7xl mx-auto\">\n        <h1 class=\"text-2xl font-bold text-emerald-400 mb-6\">Scanner d'Audit Réglementaire Directive (UE) 2024/825</h1>\n        <form id=\"audit-form\" onsubmit=\"submitAuditForm(event)\" class=\"bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-xl mb-8\">\n            <div class=\"flex gap-4\">\n                <input type=\"url\" id=\"audit-url\" placeholder=\"https://exemple-entreprise.fr\" required class=\"flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500\">\n                <button type=\"submit\" class=\"bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-6 py-3 rounded-lg transition-all flex items-center gap-2\">\n                    🚀 Lancer l'Audit REST\n                </button>\n            </div>\n        </form>\n        <div id=\"audit-results-container\" class=\"audit-cards-grid\">\n            <!-- Restitution sous forme de cartes modulaires -->\n        </div>\n    </div>\n    <script src=\"/admin/assets/js/audit.js?v=<?php echo $v; ?>\"></script>\n</body>\n</html>"
+        },
+        {
+          "nom": "dashboard.php",
+          "description": "Cockpit décisionnel interactif, cartes d'indicateurs clés, sélecteur d'année (2024, 2025, 2026) et jauges SVG.",
+          "dependances_css": ["/admin/assets/css/styles.css", "/admin/assets/css/dashboard.css"],
+          "dependances_js": ["/admin/assets/js/dashboard.js"],
+          "code_source": "<?php\nsession_start();\nrequire_once __DIR__ . '/../api/config/config.php';\n$v = floor(time() / 60) * 60;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>GreenHumble — Cockpit Décisionnel</title>\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/styles.css?v=<?php echo $v; ?>\">\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/dashboard.css?v=<?php echo $v; ?>\">\n</head>\n<body class=\"bg-slate-950 text-slate-100 p-6\">\n    <div class=\"max-w-7xl mx-auto\">\n        <div class=\"dashboard-filter-bar\">\n            <h1 class=\"text-xl font-bold text-white\">Tableau de Bord & Indicateurs RSE</h1>\n            <select class=\"year-selector\" onchange=\"filterDashboardByYear(this.value)\">\n                <option value=\"2026\" selected>Année 2026</option>\n                <option value=\"2025\">Année 2025</option>\n                <option value=\"2024\">Année 2024</option>\n            </select>\n        </div>\n        <div class=\"kpi-grid\">\n            <div class=\"kpi-card\">\n                <p class=\"text-slate-400 text-sm\">Total Audits Réalisés</p>\n                <p id=\"total-audits-count\" class=\"text-3xl font-extrabold text-emerald-400 mt-2\">142</p>\n            </div>\n            <div class=\"kpi-card\">\n                <p class=\"text-slate-400 text-sm\">Niveau de Risque Moyen</p>\n                <p class=\"text-3xl font-extrabold text-amber-400 mt-2\">Modéré (38/100)</p>\n            </div>\n        </div>\n    </div>\n    <script src=\"/admin/assets/js/dashboard.js?v=<?php echo $v; ?>\"></script>\n</body>\n</html>"
+        },
+        {
+          "nom": "config.php",
+          "description": "Console de configuration IA et dictionnaire de mots bannis avec les 5 boutons d'action rétablis (Modifier, Effacer, Importer, Exporter, Créer).",
+          "dependances_css": ["/admin/assets/css/styles.css", "/admin/assets/css/admin.css", "/admin/assets/css/config.css"],
+          "dependances_js": ["/admin/assets/js/config.js"],
+          "code_source": "<?php\nsession_start();\nrequire_once __DIR__ . '/../api/config/config.php';\n$v = floor(time() / 60) * 60;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>GreenHumble — Console IA & Dictionnaire Mots Interdits</title>\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/styles.css?v=<?php echo $v; ?>\">\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/admin.css?v=<?php echo $v; ?>\">\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/config.css?v=<?php echo $v; ?>\">\n</head>\n<body class=\"bg-slate-950 text-slate-100 p-6\">\n    <div class=\"max-w-7xl mx-auto\">\n        <div class=\"admin-toolbar mb-6 rounded-xl\">\n            <h1 class=\"text-xl font-bold text-emerald-400\">Console IA & Règles Dictionnaire</h1>\n            <div class=\"btn-group\">\n                <button onclick=\"handleRuleAction('create')\" class=\"btn-action btn-create\">➕ Créer une règle</button>\n                <button onclick=\"handleRuleAction('edit')\" class=\"btn-action btn-edit\">✏️ Modifier</button>\n                <button onclick=\"handleRuleAction('delete')\" class=\"btn-action btn-delete\">🗑️ Effacer</button>\n                <button onclick=\"handleRuleAction('import')\" class=\"btn-action btn-import\">📥 Importer</button>\n                <button onclick=\"handleRuleAction('export')\" class=\"btn-action btn-export\">📤 Exporter</button>\n            </div>\n        </div>\n    </div>\n    <script src=\"/admin/assets/js/config.js?v=<?php echo $v; ?>\"></script>\n</body>\n</html>"
+        },
+        {
+          "nom": "prospec.php",
+          "description": "Pipeline commercial B2B Kanban, opportunités d'audits et attribution des leads consultants.",
+          "dependances_css": ["/admin/assets/css/styles.css", "/admin/assets/css/prospec.css"],
+          "dependances_js": ["/admin/assets/js/prospec.js"],
+          "code_source": "<?php\nsession_start();\nrequire_once __DIR__ . '/../api/config/config.php';\n$v = floor(time() / 60) * 60;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>GreenHumble — Pipeline Commercial B2B</title>\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/styles.css?v=<?php echo $v; ?>\">\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/prospec.css?v=<?php echo $v; ?>\">\n</head>\n<body class=\"bg-slate-950 text-slate-100 p-6\">\n    <div class=\"max-w-7xl mx-auto\">\n        <h1 class=\"text-xl font-bold text-emerald-400 mb-6\">Pipeline Kanban des Opportunités RSE</h1>\n        <div class=\"kanban-board\">\n            <div class=\"kanban-col\">\n                <h3 class=\"text-sm font-bold text-slate-400 uppercase mb-4\">Nouveaux Leads (3)</h3>\n                <div class=\"kanban-card\" draggable=\"true\">\n                    <h4 class=\"font-bold text-emerald-400\">EcoTransport SAS</h4>\n                    <p class=\"text-xs text-slate-400 mt-1\">Allégations : 100% neutre en carbone</p>\n                </div>\n            </div>\n        </div>\n    </div>\n    <script src=\"/admin/assets/js/prospec.js?v=<?php echo $v; ?>\"></script>\n</body>\n</html>"
+        },
+        {
+          "nom": "teams.php",
+          "description": "Console de gestion des équipes de consultants Climat Local et attribution des accès RBAC.",
+          "dependances_css": ["/admin/assets/css/styles.css", "/admin/assets/css/teams.css"],
+          "dependances_js": ["/admin/assets/js/teams.js"],
+          "code_source": "<?php\nsession_start();\nrequire_once __DIR__ . '/../api/config/config.php';\n$v = floor(time() / 60) * 60;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>GreenHumble — Équipes & Rôles RBAC</title>\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/styles.css?v=<?php echo $v; ?>\">\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/teams.css?v=<?php echo $v; ?>\">\n</head>\n<body class=\"bg-slate-950 text-slate-100 p-6\">\n    <div class=\"max-w-7xl mx-auto\">\n        <h1 class=\"text-xl font-bold text-emerald-400 mb-6\">Équipe de Consultants Climat Local</h1>\n        <div class=\"team-grid\">\n            <div class=\"member-card\">\n                <div class=\"w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg\">JL</div>\n                <div>\n                    <h3 class=\"font-bold text-white\">Julien Lavaud</h3>\n                    <p class=\"text-xs text-slate-400\">Lead Consultant Climat & RSE</p>\n                    <span class=\"role-badge mt-2 inline-block\">Super Admin</span>\n                </div>\n            </div>\n        </div>\n    </div>\n    <script src=\"/admin/assets/js/teams.js?v=<?php echo $v; ?>\"></script>\n</body>\n</html>"
+        },
+        {
+          "nom": "backup.php",
+          "description": "Module de gestion des sauvegardes manuelles et export des snapshots de données.",
+          "dependances_css": ["/admin/assets/css/styles.css", "/admin/assets/css/admin.css"],
+          "dependances_js": ["/admin/assets/js/backup.js"],
+          "code_source": "<?php\nsession_start();\nrequire_once __DIR__ . '/../api/config/config.php';\n$v = floor(time() / 60) * 60;\n?>\n<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>GreenHumble — Sauvegardes & Archives</title>\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/styles.css?v=<?php echo $v; ?>\">\n    <link rel=\"stylesheet\" href=\"/admin/assets/css/admin.css?v=<?php echo $v; ?>\">\n</head>\n<body class=\"bg-slate-950 text-slate-100 p-6\">\n    <div class=\"max-w-7xl mx-auto\">\n        <h1 class=\"text-xl font-bold text-emerald-400 mb-6\">Sauvegardes & Snapshots de la Plateforme</h1>\n        <button onclick=\"triggerManualBackup()\" class=\"btn-action btn-create\">\n            💾 Déclencher une Sauvegarde Complète\n        </button>\n    </div>\n    <script src=\"/admin/assets/js/backup.js?v=<?php echo $v; ?>\"></script>\n</body>\n</html>"
+        }
+      ]
+    },
+    "statut_recette": {
+      "inclusions_anciennes_eliminees": true,
+      "nouveaux_css_js_presents": true,
+      "menus_corriges": 6,
+      "boutons_console_rétablis": ["Modifier", "Effacer", "Importer", "Exporter", "Créer"],
+      "dashboard_filtre_annee_actif": true,
+      "versioning_cache_60s_ovh": true,
+      "format_json_strict": true
+    }
+  }
+}
