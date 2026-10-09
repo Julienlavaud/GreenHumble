@@ -34,7 +34,8 @@ function ai_engine_scrape_website_content($url) {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36',
-        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
         CURLOPT_TIMEOUT        => 20,
     ]);
     $html = curl_exec($ch);
@@ -106,57 +107,49 @@ function ai_engine_run(
             . "CONSIGNE : Si une mention sur le site est justifiée dans ce document, marque-la comme 'justifie_par_preuve'.";
     }
 
-    // 5. Analyse Heuristique Dynamique Réelle (Fallback si pas de clé API)
+    // 5. Mode dégradé sans clé API : ne pas produire de score ni de conclusion juridique.
+    // Les expressions détectées sont des signaux à vérifier, pas des preuves de greenwashing.
     if (empty($apiKey)) {
-        // Extraction dynamique basée sur le contenu réel scrapé
         $detectedClaims = [];
         $domain = parse_url($url, PHP_URL_HOST) ?: $url;
-        $rules = [
-            ['pattern' => '/(neutre\s+en\s+carbone|neutralit[ée]\s+carbone|z[ée]ro\s+carbone)/i', 'term' => 'Neutralité carbone', 'severity' => 'interdit_strict', 'law' => 'Loi Climat Art. L229-68', 'sanction' => '100 000 € d’amende', 'risk' => 'Interdiction stricte sans bilan GES Scopes 1-2-3 et trajectoire de réduction validée.'],
-            ['pattern' => '/([ée]co-?responsable|[ée]co-?con[çc]u|[ée]cologique|ami\s+de\s+la\s+nature)/i', 'term' => 'Allégation environnementale générique', 'severity' => 'flou_interdit', 'law' => 'Directive EmpCO (UE) 2024/825', 'sanction' => 'Amende jusqu’à 4% du CA annuel', 'risk' => 'Interdiction des allégations génériques sans certification officielle tierce (Ecolabel UE).'],
-            ['pattern' => '/(100\s*%\s*vert|100\s*%\s*naturel|100\s*%\s*durable|100\s*%\s*propre)/i', 'term' => 'Allégation absolue non étayée', 'severity' => 'interdit_strict', 'law' => 'Directive Green Claims & Code Conso L121-2', 'sanction' => '300 000 € d’amende et 2 ans de prison', 'risk' => 'Pratique commerciale trompeuse sur allégation environnementale absolue.'],
-            ['pattern' => '/(compens[ée]\s+carbone|compensation\s+carbone|contribution\s+climat)/i', 'term' => 'Compensation carbone non certifiée', 'severity' => 'non_justifie', 'law' => 'Décret 2022-539 & L229-68', 'sanction' => 'Obligation de retrait et sanctions DGCCRF', 'risk' => 'La compensation ne peut justifier la neutralité d’un produit ou d’une entreprise.'],
-            ['pattern' => '/(biod[ée]gradable|compostable)/i', 'term' => 'Mention interdite sur produit/emballage', 'severity' => 'interdit_strict', 'law' => 'Loi AGEC Article 13', 'sanction' => '15 000 € par infraction', 'risk' => 'Interdiction formelle de la mention biodégradable sur tout produit ou emballage.'],
-            ['pattern' => '/(bon\s+pour\s+la\s+plan[èe]te|pr[ée]serve\s+la\s+plan[èe]te|sauve\s+le\s+climat)/i', 'term' => 'Marketing écologique flou', 'severity' => 'flou_interdit', 'law' => 'Directive Green Claims', 'sanction' => 'Sanctions administratives et réputationnelles', 'risk' => 'Exigence de preuves scientifiques mesurables et vérifiées.']
+        $patterns = [
+            '/neutre\\s+en\\s+carbone|neutralit[ée]\\s+carbone|z[ée]ro\\s+carbone/i',
+            '/[ée]co-?responsable|[ée]co-?con[çc]u|[ée]cologique|ami\\s+de\\s+la\\s+nature/i',
+            '/100\\s*%\\s*vert|100\\s*%\\s*naturel|100\\s*%\\s*durable|100\\s*%\\s*propre/i',
+            '/compens[ée]\\s+carbone|compensation\\s+carbone|contribution\\s+climat/i',
+            '/biod[ée]gradable|compostable/i',
+            '/bon\\s+pour\\s+la\\s+plan[èe]te|pr[ée]serve\\s+la\\s+plan[èe]te|sauve\\s+le\\s+climat/i'
         ];
-
-        $totalPenalties = 0;
-        foreach ($rules as $r) {
-            if ($webContent && preg_match($r['pattern'], $webContent, $matches, PREG_OFFSET_CAPTURE)) {
+        foreach ($patterns as $pattern) {
+            if ($webContent && preg_match($pattern, $webContent, $matches, PREG_OFFSET_CAPTURE)) {
+                $matchedText = $matches[0][0];
                 $pos = $matches[0][1];
-                $start = max(0, $pos - 60);
-                $quote = mb_substr($webContent, $start, 150);
+                $startQuote = max(0, $pos - 80);
+                $quote = trim(mb_substr($webContent, $startQuote, 220));
                 $detectedClaims[] = [
-                    'term' => $matches[0][0],
-                    'quoteInText' => '« ... ' . trim($quote) . ' ... »',
-                    'severity' => $r['severity'],
-                    'legalRisk' => $r['risk'],
-                    'lawArticle' => $r['law'],
-                    'sanction' => $r['sanction'],
-                    'requiredProof' => 'Certification indépendante ou ACV conforme ISO 14040/44',
-                    'correctionNote' => 'Remplacer l’affirmation absolue par des données chiffrées vérifiables et auditées.'
+                    'term' => $matchedText,
+                    'quoteInText' => $quote,
+                    'severity' => 'a_verifier',
+                    'legalRisk' => 'Non évalué : une vérification du contexte et des justificatifs est nécessaire.',
+                    'lawArticle' => null,
+                    'sanction' => null,
+                    'requiredProof' => 'Vérifier le périmètre, la méthode et les justificatifs accessibles au public.',
+                    'correctionNote' => null,
+                    'evidenceStatus' => 'to_review'
                 ];
-                $totalPenalties += 12;
             }
         }
 
-        $baseScore = !empty($csrDocumentText) ? 82 : 78;
-        $score = max(25, min(95, $baseScore - $totalPenalties));
-        $riskLevel = ($score < 40) ? 'critique' : (($score < 60) ? 'eleve' : (($score < 75) ? 'modere' : 'faible'));
-
         return json_encode([
-            'score'          => $score,
-            'riskLevel'      => $riskLevel,
-            'summary'        => "Analyse du site $domain : " . (count($detectedClaims) > 0 ? count($detectedClaims) . " allégations environnementales détectées et confrontées aux Directives EmpCO, Green Claims et Loi Climat." : "Site analysé. Aucune allégation critique immédiate détectée sur la page d'accueil."),
-            'claims'         => $detectedClaims,
-            'prospection'    => [
-                'scoreProspect'    => count($detectedClaims) > 1 ? 4 : 2,
-                'signauxFaibles'   => count($detectedClaims) > 0 ? ['Présence d’allégations RSE sans label certifié', 'Exposition potentielle DGCCRF'] : ['Absence de communication bas-carbone structurée'],
-                'besoinsPotentiels'=> ['Accompagnement Bilan Carbone Scopes 1-2-3', 'Sécurisation juridique des allégations Green Claims', 'Contribution Carbone Locale certifiée'],
-                'recommandation'   => count($detectedClaims) > 0 ? 'Proposer un atelier de cadrage réglementaire et audit de conformité complet.' : 'Proposer un premier diagnostic d’empreinte carbone.',
-                'messageApproche'  => "Bonjour, dans le cadre du renforcement des exigences Green Claims et CSRD, nous avons analysé $domain et identifié des opportunités concrètes pour valoriser vos engagements en toute conformité."
-            ],
-            'financialImpact' => count($detectedClaims) > 0 ? "Risque d’amende administrative et mise en demeure estimé de 15 000 € à 100 000 € selon le Code de la Consommation." : "Risque juridique direct faible."
+            'status' => 'analysis_incomplete',
+            'analysisComplete' => false,
+            'score' => null,
+            'riskLevel' => 'a_evaluer',
+            'summary' => "Analyse incomplète du site $domain : aucune clé API IA n’est configurée. Les expressions relevées sont uniquement des signaux à vérifier et ne constituent pas une conclusion de non-conformité.",
+            'claims' => $detectedClaims,
+            'prospection' => null,
+            'financialImpact' => null,
+            'limitations' => ['Analyse IA indisponible', 'Aucune conclusion juridique ni estimation de sanction produite']
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
