@@ -15,24 +15,40 @@ if (session_status() === PHP_SESSION_NONE) {
  * Comptes prédéfinis sécurisés
  */
 function get_system_accounts() {
-    return [
+    // No credentials are stored in source control. Configure usernames and password hashes
+    // in the hosting environment before enabling these system accounts.
+    $accounts = [];
+    $definitions = [
         'admin' => [
-            'id' => 'usr_admin',
-            'username' => 'admin',
-            'password' => 'Climatlocal31000',
+            'username_env' => 'GREENHUMBLE_ADMIN_USERNAME',
+            'hash_env' => 'GREENHUMBLE_ADMIN_PASSWORD_HASH',
             'role' => 'admin',
+            'id' => 'usr_admin',
             'name' => 'Administrateur GreenHumble'
         ],
         'pipeline' => [
-            'id' => 'usr_pipeline',
-            'username' => 'pipeline',
-            'password' => 'PipelinePass2026!',
+            'username_env' => 'GREENHUMBLE_PIPELINE_USERNAME',
+            'hash_env' => 'GREENHUMBLE_PIPELINE_PASSWORD_HASH',
             'role' => 'pipeline',
+            'id' => 'usr_pipeline',
             'name' => 'Service Pipeline Automatique'
         ]
     ];
-}
 
+    foreach ($definitions as $key => $definition) {
+        $username = getenv($definition['username_env']);
+        $passwordHash = getenv($definition['hash_env']);
+        if (!is_string($username) || trim($username) === '' ||
+            !is_string($passwordHash) || $passwordHash === '') {
+            continue;
+        }
+        $definition['username'] = trim($username);
+        $definition['password_hash'] = $passwordHash;
+        $accounts[$key] = $definition;
+    }
+
+    return $accounts;
+}
 /**
  * Tente d'authentifier un utilisateur
  */
@@ -41,7 +57,10 @@ function authenticate_user($username, $password) {
     $cleanUser = strtolower(trim($username));
     
     foreach ($accounts as $acc) {
-        if (strtolower($acc['username']) === $cleanUser && $acc['password'] === $password) {
+        $matchesUsername = strtolower($acc['username']) === $cleanUser;
+        $matchesPassword = isset($acc['password_hash']) && is_string($acc['password_hash'])
+            && password_verify($password, $acc['password_hash']);
+        if ($matchesUsername && $matchesPassword) {
             // Prevent session fixation by rotating the session identifier after authentication.
             if (session_status() === PHP_SESSION_ACTIVE) {
                 session_regenerate_id(true);
