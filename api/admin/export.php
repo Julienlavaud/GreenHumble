@@ -170,6 +170,7 @@ if (isset($_GET['download']) && $_GET['download'] === 'team') {
 }
 
 $page_title = "Exportation des Données & Rapports";
+$activeTab = "exports";
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -232,6 +233,25 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
     </div>
+
+    <section class="mt-8 bg-white rounded-3xl p-8 border border-emerald-200 shadow-sm space-y-5">
+        <div>
+            <h2 class="text-xl font-black text-slate-900">Exporter les prospects par liste</h2>
+            <p class="text-sm text-slate-600 mt-2">Le fichier contient les coordonnées uniquement lorsque la personne a accepté les communications commerciales. Les résultats d’audit sont regroupés par liste et classés par priorité.</p>
+        </div>
+        <form method="GET" action="/api/admin/export.php" class="flex flex-col sm:flex-row gap-3">
+            <input type="hidden" name="download" value="prospects">
+            <label class="sr-only" for="prospect-export-list">Filtrer par liste</label>
+            <select id="prospect-export-list" name="list_id" class="min-w-64 flex-1 px-4 py-3 border border-slate-200 rounded-xl text-sm">
+                <option value="">Toutes les listes</option>
+                <?php foreach ($exportLists as $exportList): ?>
+                    <?php if (!is_array($exportList) || empty($exportList['id'])) continue; ?>
+                    <option value="<?php echo htmlspecialchars((string)$exportList['id'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string)($exportList['nom'] ?? 'Liste'), ENT_QUOTES, 'UTF-8'); ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="submit" class="px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-sm">Télécharger le CSV des prospects</button>
+        </form>
+    </section>
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
