@@ -4,6 +4,7 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/app_state.php';
+require_once __DIR__ . '/../includes/auth.php';
 
 // 1. Authentication
 // Centralize login: this page must not accept a separate hard-coded password.
