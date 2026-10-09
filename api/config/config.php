@@ -63,9 +63,10 @@ require_once __DIR__ . '/../includes/app_state.php';
 $appState = load_app_state();
 
 // Fallback constantes par défaut ou depuis app_state.json
-if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
-if (!defined('DB_NAME')) define('DB_NAME', 'climatlocal');
-if (!defined('DB_USER')) define('DB_USER', 'root');
+// Fail closed: never fall back to a local/root database account on production hosting.
+if (!defined('DB_HOST')) define('DB_HOST', '');
+if (!defined('DB_NAME')) define('DB_NAME', '');
+if (!defined('DB_USER')) define('DB_USER', '');
 if (!defined('DB_PASS')) define('DB_PASS', '');
 
 // Réglages IA (Priorité State > Constantes > Defaults)
