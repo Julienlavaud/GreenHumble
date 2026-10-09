@@ -28,7 +28,8 @@
         "emballages recyclés"
       ],
       "expectedMisses": 0,
-      "expectedFalsePositives": 0
+      "expectedFalsePositives": 0,
+      "expectedRiskLevel": "eleve"
     },
     {
       "name": "allégation ambiguë à citation absente",
@@ -46,7 +47,8 @@
         "biodégradable"
       ],
       "expectedMisses": 0,
-      "expectedFalsePositives": 0
+      "expectedFalsePositives": 0,
+      "expectedRiskLevel": "modere"
     },
     {
       "name": "citation trompeuse/non retrouvée",
@@ -62,7 +64,8 @@
       "expectedEvidenceStatus": "evidence_missing",
       "expectedTerms": [],
       "expectedMisses": 0,
-      "expectedFalsePositives": 1
+      "expectedFalsePositives": 1,
+      "expectedRiskLevel": "modere"
     },
     {
       "name": "allégation omise par le fournisseur",
@@ -74,7 +77,8 @@
         "compensation carbone"
       ],
       "expectedMisses": 1,
-      "expectedFalsePositives": 0
+      "expectedFalsePositives": 0,
+      "expectedRiskLevel": "modere"
     }
   ]
 }
