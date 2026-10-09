@@ -67,7 +67,7 @@
       }
       const rawScore = data.riskScore ?? data.score;
       const score = Number(rawScore);
-      if (!Number.isFinite(score) || score < 0 || score > 100) {
+      if (rawScore === null || rawScore === undefined || rawScore === '' || !Number.isFinite(score) || score < 0 || score > 100) {
         throw new Error('Le serveur n’a pas fourni de score exploitable. Aucun résultat incomplet ne sera affiché comme un audit réussi.');
       }
       document.getElementById('gh-result-domain').textContent = data.companyName || data.suggested_domain || new URL(activeUrl).hostname;
