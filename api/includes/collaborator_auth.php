@@ -6,7 +6,8 @@
 require_once __DIR__ . '/app_state.php';
 
 function gh_is_password_hash($stored) {
-    return is_string($stored) && (strpos($stored, '$2') === 0 || strpos($stored, '$argon2') === 0);
+    if (!is_string($stored) || $stored === '') return false;
+    return preg_match('/^\\$(?:2[ayb]|argon2(?:id|i))\\$/', $stored) === 1;
 }
 
 function gh_verify_stored_password($provided, $stored) {
