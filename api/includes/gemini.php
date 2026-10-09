@@ -29,7 +29,8 @@ function call_gemini($model = 'gemini-3.8-flash', $payload = [], $apiKey = '') {
             CURLOPT_POST           => true,
             CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Accept: application/json'],
             CURLOPT_POSTFIELDS     => json_encode($payload),
-            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_TIMEOUT        => 45,
             CURLOPT_USERAGENT      => 'GreenHumble-AI-Client/1.0'
         ]);
