@@ -199,22 +199,21 @@ function ai_engine_run(
             '/bon\s+pour\s+la\s+plan[èe]te|pr[ée]serve\s+la\s+plan[èe]te|sauve\s+le\s+climat/i'
         ];
         foreach ($patterns as $pattern) {
-            if ($webContent && preg_match($pattern, $webContent, $matches, PREG_OFFSET_CAPTURE)) {
-                $matchedText = $matches[0][0];
-                $pos = $matches[0][1];
-                $startQuote = max(0, $pos - 80);
-                $quote = trim(mb_substr($webContent, $startQuote, 220));
-                $detectedClaims[] = [
-                    'term' => $matchedText,
-                    'quoteInText' => $quote,
-                    'severity' => 'a_verifier',
-                    'legalRisk' => 'Non évalué : une vérification du contexte et des justificatifs est nécessaire.',
-                    'lawArticle' => null,
-                    'sanction' => null,
-                    'requiredProof' => 'Vérifier le périmètre, la méthode et les justificatifs accessibles au public.',
-                    'correctionNote' => null,
-                    'evidenceStatus' => 'to_review'
-                ];
+            if ($webContent && preg_match_all($pattern, $webContent, $matches, PREG_OFFSET_CAPTURE)) {
+                foreach ($matches[0] as $match) {
+                    $matchedText = $match[0];
+                    $pos = $match[1];
+                    $startQuote = max(0, $pos - 80);
+                    $quote = trim(mb_substr($webContent, $startQuote, 220));
+                    $detectedClaims[] = [
+                        'term' => $matchedText, 'quoteInText' => $quote,
+                        'severity' => 'a_verifier',
+                        'legalRisk' => 'Non évalué : une vérification du contexte et des justificatifs est nécessaire.',
+                        'lawArticle' => null, 'sanction' => null,
+                        'requiredProof' => 'Vérifier le périmètre, la méthode et les justificatifs accessibles au public.',
+                        'correctionNote' => null, 'evidenceStatus' => 'to_review'
+                    ];
+                }
             }
         }
 
@@ -290,41 +289,40 @@ function ai_engine_run(
     if (
         is_array($decodedResponse) &&
         json_last_error() === JSON_ERROR_NONE &&
-        (array_key_exists('score', $decodedResponse) ||
-         array_key_exists('riskScore', $decodedResponse) ||
-         array_key_exists('claims', $decodedResponse) ||
-         array_key_exists('detectedClaims', $decodedResponse) ||
-         array_key_exists('status', $decodedResponse))
+        (array_key_exists('score', $decodedResponse) || array_key_exists('riskScore', $decodedResponse)) && is_numeric($decodedResponse['score'] ?? $decodedResponse['riskScore'] ?? null)
     ) {
         return json_encode($decodedResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
     // Fallbacks optionnels : seuls les fournisseurs dont la clé est configurée sont appelés.
     $fallbackProviders = [];
-    $groqKey = defined('GROQ_API_KEY') && !empty(GROQ_API_KEY) ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: ($_ENV['GROQ_API_KEY'] ?? ''));
-    $mistralKey = defined('MISTRAL_API_KEY') && !empty(MISTRAL_API_KEY) ? MISTRAL_API_KEY : (getenv('MISTRAL_API_KEY') ?: ($_ENV['MISTRAL_API_KEY'] ?? ''));
+    $groqKey = !empty($scanVars['groqApiKey']) ? $scanVars['groqApiKey'] : (defined('GROQ_API_KEY') && !empty(GROQ_API_KEY) ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: ($_ENV['GROQ_API_KEY'] ?? '')));
+    $mistralKey = !empty($scanVars['mistralApiKey']) ? $scanVars['mistralApiKey'] : (defined('MISTRAL_API_KEY') && !empty(MISTRAL_API_KEY) ? MISTRAL_API_KEY : (getenv('MISTRAL_API_KEY') ?: ($_ENV['MISTRAL_API_KEY'] ?? '')));
     if ($provider !== 'groq' && !empty($groqKey)) {
         $fallbackProviders[] = ['provider' => 'groq', 'key' => $groqKey, 'model' => 'llama-3.3-70b-versatile'];
     }
+    $geminiKey = !empty($scanVars['geminiApiKey']) ? $scanVars['geminiApiKey'] : (defined('GEMINI_API_KEY') && !empty(GEMINI_API_KEY) ? GEMINI_API_KEY : (getenv('GEMINI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? '')));
     if ($provider !== 'mistral' && !empty($mistralKey)) {
         $fallbackProviders[] = ['provider' => 'mistral', 'key' => $mistralKey, 'model' => 'mistral-small-latest'];
+    }
+
+    if ($provider !== 'gemini' && !empty($geminiKey)) {
+        $fallbackProviders[] = ['provider' => 'gemini', 'key' => $geminiKey, 'model' => 'gemini-2.5-flash'];
     }
 
     foreach ($fallbackProviders as $fallback) {
         if ($fallback['provider'] === 'groq') {
             $fallbackRes = groq_call($prompt, $systemInstruction, $fallback['model'], $fallback['key']);
-        } else {
+        } elseif ($fallback['provider'] === 'mistral') {
             $fallbackRes = mistral_call($prompt, $systemInstruction, $fallback['model'], $fallback['key']);
+        } else {
+            $fallbackRes = gemini_call($prompt, $systemInstruction, $fallback['model'], $fallback['key']);
         }
         $decodedFallback = $decodeAiObject($fallbackRes);
         if (
             is_array($decodedFallback) &&
             json_last_error() === JSON_ERROR_NONE &&
-            (array_key_exists('score', $decodedFallback) ||
-             array_key_exists('riskScore', $decodedFallback) ||
-             array_key_exists('claims', $decodedFallback) ||
-             array_key_exists('detectedClaims', $decodedFallback) ||
-             array_key_exists('status', $decodedFallback))
+            (array_key_exists('score', $decodedFallback) || array_key_exists('riskScore', $decodedFallback)) && is_numeric($decodedFallback['score'] ?? $decodedFallback['riskScore'] ?? null)
         ) {
             return json_encode($decodedFallback, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         }
