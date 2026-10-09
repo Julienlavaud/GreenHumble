@@ -39,14 +39,19 @@ function gh_normalize_claims($claims, string $sourceText = '', string $sourceUrl
             }
         }
         if ($quoteFound) {
-            $claim['evidenceStatus'] = in_array(($claim['evidenceStatus'] ?? ''), ['substantiated', 'signal', 'to_review'], true)
+            // La citation vérifie la présence de l'allégation, pas son bien-fondé.
+            $claim['evidenceStatus'] = in_array(($claim['evidenceStatus'] ?? ''), ['signal', 'to_review'], true)
                 ? $claim['evidenceStatus'] : 'signal';
             $claim['evidenceVerified'] = true;
-            $claim['evidenceMissing'] = [];
-            if (trim((string)($claim['riskRationale'] ?? $claim['legalRisk'] ?? '')) === '') {
+            $claim['evidenceMissing'] = ['Justificatif de l’allégation non vérifié par la seule page citée.'];
+            $severity = strtolower((string)($claim['severity'] ?? ''));
+            $allowedSeverity = ['faible', 'modere', 'modéré', 'eleve', 'élevé', 'critique', 'a_verifier', 'à vérifier', 'signal'];
+            if (!in_array($severity, $allowedSeverity, true) || trim((string)($claim['riskRationale'] ?? '')) === '') {
                 $claim['severity'] = 'a_verifier';
                 $claim['evidenceStatus'] = 'to_review';
-                $claim['evidenceMissing'][] = 'Justification du niveau de risque absente.';
+                if (trim((string)($claim['riskRationale'] ?? '')) === '') {
+                    $claim['evidenceMissing'][] = 'Justification du niveau de risque absente.';
+                }
             }
         } else {
             $claim['evidenceStatus'] = 'evidence_missing';
@@ -58,8 +63,9 @@ function gh_normalize_claims($claims, string $sourceText = '', string $sourceUrl
             $claim['requiredProof'] = trim((string)($claim['requiredProof'] ?? '')) ?: 'Fournir une citation vérifiable et le justificatif correspondant.';
             $claim['severity'] = 'a_verifier';
         }
-        // Une réponse IA ne suffit pas à établir une infraction.
-        if (!isset($claim['legalConclusion'])) $claim['legalConclusion'] = 'À vérifier';
+        // Le scan documente un signal ; il ne peut pas établir à lui seul une infraction.
+        $claim['legalConclusion'] = 'À vérifier — aucune infraction n’est établie par le seul scan.';
+        $claim['nonComplianceEstablished'] = false;
         $result[] = $claim;
     }
     return $result;
