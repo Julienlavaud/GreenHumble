@@ -18,6 +18,6 @@ gh_audit_db_assert(strpos($database, 'prepare(') !== false, 'les requêtes de pe
 gh_audit_db_assert(strpos($database, 'error_log(') !== false, 'les erreurs SQL sont journalisées sans exposer les secrets');
 gh_audit_db_assert(!preg_match('/\\b(DROP|TRUNCATE|DELETE)\\s+(TABLE|DATABASE|FROM)\\b/i', $database), 'aucune suppression de données dans le chemin de persistance');
 gh_audit_db_assert(strpos($audit, 'gh_persist_commercial_audit($validatedAudit, $enterpriseData)') !== false, 'le scan appelle la persistance après validation');
-gh_audit_db_assert(strpos($audit, "'databaseSaved' => $databaseSaved") !== false, 'la réponse indique si le scan a été persisté dans MySQL');
+gh_audit_db_assert(strpos($audit, "'databaseSaved' => \$databaseSaved") !== false, 'la réponse indique si le scan a été persisté dans MySQL');
 
 echo "Tous les tests de persistance commerciale sont passés.\n";
