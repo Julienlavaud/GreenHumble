@@ -27,6 +27,7 @@ $userName = $_SESSION['username'] ?? ($_SESSION['admin_logged_in'] ? 'Admin' : '
     <link rel="stylesheet" href="/admin/assets/css/styles.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="/api/assets/css/styles.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="/assets/css/styles.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="/api/assets/css/greenhumble-refresh.css?v=1">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232A7AE2'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
     <style>
         :root {
