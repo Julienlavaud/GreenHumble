@@ -37,7 +37,7 @@ $values = ['db_host'=>'localhost','db_name'=>'','db_user'=>'','admin_username'=>
 $errors = [];
 function gh_install_escape(string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 function gh_install_protect_directory(string $directory): void {
-    $rule = "Require all denied";
+    $rule = "AuthMerging Off\nRequire all denied";
     $htaccess = rtrim($directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '.htaccess';
     $current = is_file($htaccess) ? (string) file_get_contents($htaccess) : '';
     if (stripos($current, $rule) === false) {
