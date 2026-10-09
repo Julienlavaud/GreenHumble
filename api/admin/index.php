@@ -995,6 +995,7 @@ include __DIR__ . '/../includes/header.php';
                             <div class="space-y-1 pt-2 border-t border-slate-50">
                                 <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Mot de passe</label>
                                 <p class="text-xs text-slate-500">Mot de passe non affiché pour des raisons de sécurité.</p>
+                                <button type="button" onclick="setCollaboratorPassword('<?php echo htmlspecialchars((string)$c['id'], ENT_QUOTES, 'UTF-8'); ?>')" class="mt-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-600">Créer / réinitialiser l’accès</button>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -1105,6 +1106,28 @@ function saveScanner() {
     appState.scanVars.customBannedKeywords = document.getElementById('ia_banned').value;
 
     syncState('scanVars', appState.scanVars);
+}
+
+async function setCollaboratorPassword(id) {
+    const password = prompt('Nouveau mot de passe du collaborateur (12 caractères minimum). Il ne sera pas affiché ensuite :');
+    if (password === null) return;
+    if (password.length < 12) {
+        alert('Le mot de passe doit contenir au moins 12 caractères.');
+        return;
+    }
+    try {
+        const response = await fetch('/api/admin/set_collaborator_password.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ id, password })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'Impossible de modifier l’accès.');
+        alert('Accès créé/réinitialisé. Communique le mot de passe au collaborateur par un canal sûr.');
+    } catch (error) {
+        alert(error.message || 'Erreur réseau.');
+    }
 }
 
 function saveTeam() {
