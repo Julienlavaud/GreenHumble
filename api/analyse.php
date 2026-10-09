@@ -5,6 +5,7 @@ require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/cms.php';
+require_once __DIR__ . '/includes/app_state.php';
 require_login();
 
 if (isset($_GET['id']) && preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', (string)$_GET['id'])) {
@@ -13,6 +14,7 @@ if (isset($_GET['id']) && preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', (string)$_GE
 }
 
 $db = get_db_connection();
+$st = load_app_state();
 $msg = null;
 $err = null;
 
@@ -139,19 +141,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($audData) {
                 require_once __DIR__ . '/includes/gemini.php';
                 
-                $issuesSummary = "";
-                $stmtCl = $db->prepare("SELECT term FROM cl_claims WHERE audit_id = ? LIMIT 5");
+                $stmtCl = $db->prepare("SELECT term, quoteInText, requiredProof, consultantValidationStatus FROM cl_claims WHERE audit_id = ? AND consultantValidationStatus NOT IN ('non_fonde', 'justifie_par_preuve') LIMIT 10");
                 $stmtCl->execute([$audId]);
-                $terms = $stmtCl->fetchAll(PDO::FETCH_COLUMN);
-                $issuesSummary = implode(', ', $terms);
-
-                $customPrompt = "MISSION : Génère un kit de prospection commerciale (Pitch téléphone + 3 Emails) pour l'entreprise " . ($audData['company_name'] ?: $audData['url']) . ".\n";
-                $customPrompt .= "PROBLÈMES DÉTECTÉS : " . $issuesSummary . "\n";
-                if (!empty($userContext)) {
-                    $customPrompt .= "CONTEXTE AJOUTÉ PAR LE CONSULTANT : " . $userContext . "\n";
+                $claimsForKit = $stmtCl->fetchAll();
+                $issuesSummary = json_encode($claimsForKit, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $serviceCatalog = [];
+                foreach (($st['serviceOpps'] ?? []) as $service) {
+                    if (!is_array($service) || !($service['isActive'] ?? true)) continue;
+                    $serviceCatalog[] = [
+                        'serviceKey' => (string)($service['serviceKey'] ?? $service['id'] ?? ''),
+                        'serviceTitle' => (string)($service['serviceTitle'] ?? ''),
+                        'description' => (string)($service['description'] ?? ''),
+                        'defaultBudget' => (string)($service['defaultBudget'] ?? '')
+                    ];
                 }
-                $customPrompt .= "CONSIGNE : Sois percutant, professionnel et bienveillant. Pour les emails, propose 3 angles : Juridique (Risque), Business (ROI/Confiance), et E-Réputation.\n";
-                $customPrompt .= "RETOUR : JSON uniquement avec les clés {phone_pitch: {hook, fact, warning, cta}, emails: {legal: {subject, body}, business: {subject, body}, reputation: {subject, body}}}";
+
+                $customPrompt = "MISSION : Prépare une recommandation commerciale exploitable pour " . ($audData['company_name'] ?: $audData['url']) . ".\\n";
+                $customPrompt .= "CONSTATS DU DOSSIER (les statuts justifiés ou non fondés ont été exclus) : " . ($issuesSummary ?: 'Aucun constat documenté : rester général et le signaler.') . "\\n";
+                $customPrompt .= "CATALOGUE ACTIF AUTORISÉ : " . json_encode($serviceCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\\n";
+                if (!empty($userContext)) {
+                    $customPrompt .= "CONTEXTE AJOUTÉ PAR LE CONSULTANT : " . $userContext . "\\n";
+                }
+                $customPrompt .= "CONSIGNE : propose une action concrète, une priorité (haute, moyenne, basse), une offre uniquement par serviceKey/serviceTitle exact du catalogue (sinon null), une justification liée aux citations du dossier, un pitch téléphone et trois emails (juridique, business, réputation). Ne présente jamais un signal non validé comme une infraction et n'invente ni prix, subvention, fait d'entreprise ou risque.";
+                $customPrompt .= "\\nRETOUR : JSON uniquement avec {priority, priorityRationale, nextAction, recommendedOffer: {serviceKey, serviceTitle, reason, budget} ou null, evidenceBasedReasons: [{claimTerm, quoteInText, reason}], phone_pitch: {hook, fact, warning, cta}, emails: {legal: {subject, body}, business: {subject, body}, reputation: {subject, body}}}";
+
 
                 $aiResult = analyze_with_ai($audData['url'], $customPrompt);
                 $kitJson = json_decode($aiResult, true);
