@@ -81,24 +81,31 @@ function authenticate_user($username, $password) {
  * Retourne le rôle courant
  */
 function get_current_role() {
-    if (isset($_SESSION['role'])) {
+    if (isset($_SESSION['role']) && is_string($_SESSION['role'])) {
         return $_SESSION['role'];
     }
     if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
         return 'admin';
     }
-    // Check Authorization header for token or Bearer
-    $headers = getallheaders();
-    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
-    if (strpos($authHeader, 'Bearer admin_token') !== false || strpos($authHeader, 'Bearer Climatlocal31000') !== false) {
+
+    // Optional API tokens must be configured in the hosting environment.
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
+    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
+    if (!is_string($authHeader) || preg_match('/^Bearer\\s+(.+)$/i', trim($authHeader), $matches) !== 1) {
+        return 'public';
+    }
+    $providedToken = $matches[1];
+    $adminToken = getenv('GREENHUMBLE_ADMIN_API_TOKEN');
+    $pipelineToken = getenv('GREENHUMBLE_PIPELINE_API_TOKEN');
+
+    if (is_string($adminToken) && $adminToken !== '' && hash_equals($adminToken, $providedToken)) {
         return 'admin';
     }
-    if (strpos($authHeader, 'Bearer pipeline_token') !== false) {
+    if (is_string($pipelineToken) && $pipelineToken !== '' && hash_equals($pipelineToken, $providedToken)) {
         return 'pipeline';
     }
     return 'public';
 }
-
 /**
  * Vérifie si l'utilisateur est connecté
  */
