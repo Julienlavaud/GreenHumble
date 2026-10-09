@@ -6,6 +6,15 @@ Le moteur de qualification (`api/includes/commercial_engine.php`), le préparate
 
 L'adaptateur bloque la préparation si l'audit n'est pas explicitement complet et si les signaux n'ont pas été revus. Il n'effectue aucun scraping, accès réseau, envoi de message ou enregistrement. Le booléen de revue doit être défini par un processus de validation réel côté application ; il ne doit jamais être considéré comme une autorisation implicite venant de l'IA.
 
+## Compatibilité observée avec `api/audit.php`
+
+La revue du code existant a identifié deux blocages à résoudre avant tout branchement :
+
+1. Le chemin de succès de `validateIAResponse()` normalise `riskScore`, mais ne garantit pas d'ajouter `analysisComplete: true`. L'adaptateur strict peut donc rejeter une réponse que la route considère comme complète. Ne pas affaiblir l'adaptateur : normaliser explicitement l'état de complétude après validation stricte et ajouter des tests.
+2. Quand la réponse IA ne fournit pas de kit commercial, `validateIAResponse()` construit actuellement un kit par défaut avec une offre et un prix estimatif. Ce contenu n'est pas une donnée validée du catalogue GreenHumble. Il faut supprimer ce fallback commercial fabriqué ou le remplacer par `null`, et ne présenter que des offres/prix provenant d'un catalogue approuvé.
+
+Autre limite : la route produit des données de secteur, de salariés et de chiffre d'affaires avec des valeurs de repli heuristiques. Elles ne doivent pas être considérées comme des données vérifiées pour la qualification commerciale.
+
 ## Parcours cible
 
 1. Recevoir une URL et appliquer les protections SSRF existantes avant toute récupération.
@@ -30,6 +39,7 @@ Les types de signaux doivent venir d'une liste contrôlée : `environmental_clai
 
 ## Contrôles bloquants avant intégration
 
+- Corriger et tester la normalisation du statut complet et supprimer les offres/prix commerciaux de repli non validés.
 - Ne pas appeler le moteur avec un résultat IA incomplet comme s'il était vérifié.
 - Ne pas confondre présence d'une allégation et preuve qu'elle est fausse ou trompeuse.
 - Vérifier que les extraits sont fidèles aux sources et limiter leur longueur.
@@ -40,4 +50,4 @@ Les types de signaux doivent venir d'une liste contrôlée : `environmental_clai
 
 ## Prochaine étape technique
 
-Vérifier la compatibilité du format de sortie de `api/audit.php` avec le contrat, puis écrire des tests d'intégration de la route sans connexion réelle à la base ni fournisseur IA. L'adaptateur reste non branché jusqu'à cette vérification.
+Isoler la normalisation de la réponse IA dans une fonction testable, corriger ces deux problèmes avec tests unitaires, puis seulement ensuite préparer un appel optionnel depuis la route d'audit. Garder le moteur commercial hors de la persistance et de l'envoi jusqu'à ce que l'authentification soit revue.
