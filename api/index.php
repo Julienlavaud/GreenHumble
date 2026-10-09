@@ -93,6 +93,10 @@ include __DIR__ . '/includes/header.php';
                         <label class="block text-[11px] font-bold text-slate-300 uppercase mb-1">Téléphone de contact</label>
                         <input type="tel" id="lead_phone" placeholder="06 12 34 56 78" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 text-white rounded-xl text-xs focus:ring-2 focus:ring-emerald-400 focus:outline-none">
                     </div>
+                    <div class="sm:col-span-2 flex items-start gap-2 pt-2 text-xs text-slate-300">
+                        <input type="checkbox" id="lead_marketing_opt_in" class="mt-0.5 h-4 w-4 rounded border-slate-600">
+                        <label for="lead_marketing_opt_in">J’accepte de recevoir occasionnellement des informations et offres Climat Local. Facultatif ; ma demande de diagnostic reste possible sans cette option.</label>
+                    </div>
                     <div class="sm:col-span-2 pt-2">
                         <button type="submit" id="lead_submit_btn" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold rounded-xl text-xs shadow-lg transition-all flex items-center justify-center space-x-2">
                             <span>Demander mon Diagnostic Complet & Rapport PDF Gratuit</span>
@@ -375,7 +379,8 @@ function submitLeadCapture(e) {
         company_name: document.getElementById('lead_company_name').value,
         contact_name: document.getElementById('lead_contact_name').value,
         email: document.getElementById('lead_email').value,
-        phone: document.getElementById('lead_phone').value
+        phone: document.getElementById('lead_phone').value,
+        marketing_opt_in: document.getElementById('lead_marketing_opt_in').checked
     };
 
     fetch('/api/public_lead.php', {
