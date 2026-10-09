@@ -9,7 +9,7 @@
 function get_app_state_file_path() {
     $dir = dirname(__DIR__, 2) . '/data';
     if (!file_exists($dir)) {
-        @mkdir($dir, 0777, true);
+        @mkdir($dir, 0750, true);
     }
     return $dir . '/app_state.json';
 }
@@ -28,15 +28,10 @@ function get_default_app_state() {
             "agencyCity" => "Auvergne-Rhône-Alpes / France",
             "agencyWebsite" => "https://climatlocal.com",
             "slogan" => "Bilan Carbone®, Stratégie RSE, ACV, FDES & Projets Territoriaux",
-            "apiKeyWidget" => "cl_live_pub_84729103"
         ],
         "updatedAt" => date('c'),
-        "passwordsMap" => [
-            "collab_1" => "Climatlocal31000",
-            "collab_2" => "collab2026",
-            "collab_3" => "collab2026",
-            "collab_4" => "collab2026"
-        ],
+        // Password hashes are provisioned explicitly; never ship default credentials.
+        "passwordsMap" => [],
         "pageTexts" => [
             "hero_title" => "Scanner de conformité aux allégations environnementales et détection de greenwashing",
             "widget_subtitle" => "Vérifiez en 30 secondes la conformité de vos supports de communication avec la Directive Green Claims (UE) 2024/825 et le Décret n° 2022-539.",
