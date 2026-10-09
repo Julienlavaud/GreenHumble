@@ -1,68 +1,65 @@
 <?php
-// /api/public_lead.php
-// Enregistrement des leads et demandes de diagnostics gratuits issus de la page d'accueil
+declare(strict_types=1);
+// Enregistre une demande explicite de diagnostic public, sans créer de faux audit ni de faux score.
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/includes/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'error' => 'Méthode non autorisée.']);
+function gh_lead_reply(int $status, array $payload): void {
+    http_response_code($status);
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
     exit;
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
-if (!$input) $input = $_POST;
-
-$companyName = trim($input['company_name'] ?? '');
-$url = trim($input['url'] ?? '');
-$contactName = trim($input['contact_name'] ?? '');
-$email = trim($input['email'] ?? '');
-$phone = trim($input['phone'] ?? '');
-$notes = trim($input['notes'] ?? 'Demande de diagnostic complet gratuit via le scanner public.');
-
-if (empty($url) && empty($companyName)) {
-    echo json_encode(['success' => false, 'error' => 'Veuillez renseigner au moins le nom de l\'entreprise ou l\'URL.']);
-    exit;
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    header('Allow: POST');
+    gh_lead_reply(405, ['success' => false, 'error' => 'Méthode non autorisée.']);
 }
+$input = json_decode((string)file_get_contents('php://input'), true);
+if (!is_array($input)) $input = $_POST;
 
-if (empty($companyName)) {
-    $parsed = parse_url($url, PHP_URL_HOST) ?: $url;
-    $companyName = ucfirst(preg_replace('/^www\./', '', $parsed));
+$companyName = trim((string)($input['company_name'] ?? ''));
+$url = trim((string)($input['url'] ?? ''));
+$contactName = trim((string)($input['contact_name'] ?? ''));
+$email = trim((string)($input['email'] ?? ''));
+$phone = trim((string)($input['phone'] ?? ''));
+$marketingOptIn = ($input['marketing_opt_in'] ?? false) === true;
+if ($companyName === '' || $url === '' || $contactName === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    gh_lead_reply(400, ['success' => false, 'error' => 'Entreprise, URL, nom du contact et e-mail valide sont obligatoires.']);
 }
-
+$parts = parse_url($url);
+if (!is_array($parts) || !in_array(strtolower((string)($parts['scheme'] ?? '')), ['http', 'https'], true) || empty($parts['host'])) {
+    gh_lead_reply(400, ['success' => false, 'error' => 'URL du site invalide.']);
+}
+$host = strtolower((string)$parts['host']);
+if (strlen($companyName) > 255 || strlen($contactName) > 255 || strlen($email) > 254 || strlen($phone) > 80 || strlen($url) > 2048) {
+    gh_lead_reply(400, ['success' => false, 'error' => 'Un champ dépasse la longueur autorisée.']);
+}
 try {
     $db = get_db_connection();
-
-    // 1. Insertion ou récupération de l'entreprise
-    $stmt = $db->prepare("SELECT id FROM cl_companies WHERE website LIKE ? OR name = ? LIMIT 1");
-    $stmt->execute(['%' . $url . '%', $companyName]);
-    $companyId = $stmt->fetchColumn();
-
-    if (!$companyId) {
-        $insertCompany = $db->prepare("INSERT INTO cl_companies (name, website, contact_name, contact_email, contact_phone, sector, notes) VALUES (?, ?, ?, ?, ?, 'Services & Industrie', ?)");
-        $insertCompany->execute([$companyName, $url, $contactName, $email, $phone, $notes]);
-        $companyId = $db->lastInsertId();
+    $find = $db->prepare('SELECT id FROM cl_companies WHERE domain = ? LIMIT 1');
+    $find->execute([$host]);
+    $companyId = $find->fetchColumn();
+    if ($companyId === false) {
+        $insert = $db->prepare('INSERT INTO cl_companies (name, domain, contact_name, contact_email, contact_phone, notes) VALUES (?, ?, ?, ?, ?, ?)');
+        $insert->execute([$companyName, $host, $contactName, $email, $phone ?: null, 'Demande explicite de diagnostic depuis le scan public.']);
+        $companyId = (int)$db->lastInsertId();
     } else {
-        $updateCompany = $db->prepare("UPDATE cl_companies SET contact_name = COALESCE(NULLIF(?, ''), contact_name), contact_email = COALESCE(NULLIF(?, ''), contact_email), contact_phone = COALESCE(NULLIF(?, ''), contact_phone) WHERE id = ?");
-        $updateCompany->execute([$contactName, $email, $phone, $companyId]);
+        $update = $db->prepare('UPDATE cl_companies SET name = ?, contact_name = ?, contact_email = ?, contact_phone = ? WHERE id = ?');
+        $update->execute([$companyName, $contactName, $email, $phone ?: null, (int)$companyId]);
     }
+    $contact = $db->prepare('INSERT INTO cl_company_contacts (company_id, name, email, phone, source, marketing_opt_in) VALUES (?, ?, ?, ?, ?, ?)');
+    $contact->execute([(int)$companyId, $contactName, $email, $phone ?: null, 'scan_public_diagnostic_request', $marketingOptIn ? 1 : 0]);
 
-    // 2. Création d'une fiche prospect dans le pipeline (Étape 1 : Prospect Détecté)
-    $stmtProspect = $db->prepare("INSERT INTO cl_prospects (company_id, user_id, current_step, commercial_priority, source, notes) VALUES (?, 1, 'prospect_detecte', 'haute', 'scan_public', ?)");
-    $stmtProspect->execute([$companyId, "Lead capturé via le formulaire public : $contactName ($email / $phone)"]);
-
-    // 3. Création ou liaison de l'audit
-    $stmtAudit = $db->prepare("INSERT INTO cl_audits (company_id, url, score, riskLevel, summary, source, status) VALUES (?, ?, 65, 'eleve', 'Audit initial généré pour le prospect web.', 'scan_public', 'nouveau')");
-    $stmtAudit->execute([$companyId, $url]);
-    $auditId = $db->lastInsertId();
-
-    echo json_encode([
+    gh_lead_reply(200, [
         'success' => true,
-        'message' => 'Merci ! Votre demande a été transmise à notre équipe. Un auditeur RSE vous contactera sous 24h avec le dossier complet.',
-        'companyId' => $companyId,
-        'auditId' => $auditId
+        'message' => 'Votre demande de diagnostic est enregistrée. L’équipe pourra vous recontacter au sujet de cette demande.',
+        'companyId' => (int)$companyId,
+        'marketingOptIn' => $marketingOptIn
     ]);
-} catch (Exception $e) {
-    echo json_encode(['success' => false, 'error' => 'Erreur lors de l\'enregistrement : ' . $e->getMessage()]);
+} catch (Throwable $e) {
+    error_log('GreenHumble: demande de diagnostic public non enregistrée (' . get_class($e) . ').');
+    gh_lead_reply(503, ['success' => false, 'error' => 'Enregistrement temporairement indisponible. Vos coordonnées n’ont pas été confirmées comme enregistrées ; réessayez plus tard.']);
 }
