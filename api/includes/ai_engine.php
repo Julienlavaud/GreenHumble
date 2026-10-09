@@ -172,12 +172,12 @@ function ai_engine_run(
         $detectedClaims = [];
         $domain = parse_url($url, PHP_URL_HOST) ?: $url;
         $patterns = [
-            '/neutre\\s+en\\s+carbone|neutralit[ée]\\s+carbone|z[ée]ro\\s+carbone/i',
-            '/[ée]co-?responsable|[ée]co-?con[çc]u|[ée]cologique|ami\\s+de\\s+la\\s+nature/i',
-            '/100\\s*%\\s*vert|100\\s*%\\s*naturel|100\\s*%\\s*durable|100\\s*%\\s*propre/i',
-            '/compens[ée]\\s+carbone|compensation\\s+carbone|contribution\\s+climat/i',
+            '/neutre\s+en\s+carbone|neutralit[ée]\s+carbone|z[ée]ro\s+carbone/i',
+            '/[ée]co-?responsable|[ée]co-?con[çc]u|[ée]cologique|ami\s+de\s+la\s+nature/i',
+            '/100\s*%\s*vert|100\s*%\s*naturel|100\s*%\s*durable|100\s*%\s*propre/i',
+            '/compens[ée]\s+carbone|compensation\s+carbone|contribution\s+climat/i',
             '/biod[ée]gradable|compostable/i',
-            '/bon\\s+pour\\s+la\\s+plan[èe]te|pr[ée]serve\\s+la\\s+plan[èe]te|sauve\\s+le\\s+climat/i'
+            '/bon\s+pour\s+la\s+plan[èe]te|pr[ée]serve\s+la\s+plan[èe]te|sauve\s+le\s+climat/i'
         ];
         foreach ($patterns as $pattern) {
             if ($webContent && preg_match($pattern, $webContent, $matches, PREG_OFFSET_CAPTURE)) {
