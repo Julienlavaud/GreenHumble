@@ -12,15 +12,15 @@ require_once __DIR__ . '/mistral.php';
 /**
  * API publique principale
  */
-function analyze_url_with_ai($url, $custom_prompt = null, $csrDocumentText = null) {
-    return ai_engine_run($url, $custom_prompt, $csrDocumentText);
+function analyze_url_with_ai($url, $custom_prompt = null, $csrDocumentText = null, $sourceContent = null) {
+    return ai_engine_run($url, $custom_prompt, $csrDocumentText, null, null, null, $sourceContent);
 }
 
 /**
  * Alias de compatibilité pour analyze_with_ai
  */
-function analyze_with_ai($url, $custom_prompt = null, $csrDocumentText = null) {
-    return ai_engine_run($url, $custom_prompt, $csrDocumentText);
+function analyze_with_ai($url, $custom_prompt = null, $csrDocumentText = null, $sourceContent = null) {
+    return ai_engine_run($url, $custom_prompt, $csrDocumentText, null, null, null, $sourceContent);
 }
 
 /**
@@ -175,7 +175,8 @@ function ai_engine_run(
     $csrDocumentText = null,
     $overrideProvider = null,
     $overrideModel = null,
-    $overrideApiKey = null
+    $overrideApiKey = null,
+    $providedWebContent = null
 ) {
     // 1. Lecture de l’état applicatif
     $state    = load_app_state();
@@ -213,10 +214,9 @@ function ai_engine_run(
     if (empty($apiKey)) $apiKey = $scanVars['aiApiKey'] ?? null;
 
     // 2. Scraping du contenu réel
-    $webContent = "";
-    if (strpos($url, 'https://') === 0 || strpos($url, 'http://') === 0) {
-        $webContent = ai_engine_scrape_website_content($url);
-    }
+    $webContent = is_string($providedWebContent)
+        ? $providedWebContent
+        : ((strpos($url, 'https://') === 0 || strpos($url, 'http://') === 0) ? ai_engine_scrape_website_content($url) : '');
 
     // 3. Règles métier / exceptions
     $customExceptions = "";
