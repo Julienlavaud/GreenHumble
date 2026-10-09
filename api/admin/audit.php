@@ -7,7 +7,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/ai_engine.php';
 
 if (($_SESSION['admin_logged_in'] ?? false) !== true || ($_SESSION['role'] ?? '') !== 'admin') {
-    header('Location: /api/admin/index.php');
+    header('Location: /api/login.php?next=' . rawurlencode('/api/scan.php'), true, 303);
     exit;
 }
 
