@@ -2,11 +2,13 @@
 require_once __DIR__ . '/includes/auth.php';
 
 $role = get_current_role();
+$auditId = trim((string)($_GET['id'] ?? ''));
 if (!in_array($role, ['admin', 'pipeline', 'collaborator', 'consultant'], true)) {
-    header('Location: /api/login.php');
+    $next = '/api/audit-report.php';
+    if (preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', $auditId)) $next .= '?id=' . rawurlencode($auditId);
+    header('Location: /api/login.php?next=' . rawurlencode($next), true, 303);
     exit;
 }
-$auditId = trim((string)($_GET['id'] ?? ''));
 ?>
 <!doctype html>
 <html lang="fr">
