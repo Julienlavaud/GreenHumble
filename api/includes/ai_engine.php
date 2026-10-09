@@ -243,8 +243,8 @@ function ai_engine_run(
         ];
     }
     $catalogContext = $serviceCatalog
-        ? "\\n\\nCATALOGUE DES OFFRES ACTIVES (choisir uniquement dans cette liste) :\\n" . json_encode($serviceCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-        : "\\n\\nAucun catalogue d’offres actif n’est configuré : ne recommande pas de prestation ni de budget précis.";
+        ? "\n\nCATALOGUE DES OFFRES ACTIVES (choisir uniquement dans cette liste) :\n" . json_encode($serviceCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        : "\n\nAucun catalogue d’offres actif n’est configuré : ne recommande pas de prestation ni de budget précis.";
 
     // 4. Contexte Document RSE
     $docContext = "";
@@ -319,10 +319,9 @@ function ai_engine_run(
         . $scrapedPart;
 
     if (!$custom_prompt) {
-        $prompt .= "MISSION : Analyse chaque phrase pour détecter des allégations trompeuses (greenwashing) selon EmpCO et Green Claims, "
-            . "ET des signaux faibles de prospection (besoins, risques, opportunités).\n"
+        $prompt .= "MISSION : Analyse chaque phrase pour détecter les allégations pertinentes et les opportunités commerciales qui découlent des constats vérifiables.\\n"
             . "RETOUR : JSON {score, riskLevel, summary, financialImpact, claims: [{term, quoteInText, sourceUrl, severity, riskRationale, legalRisk, lawArticle, sanction, requiredProof, correctionNote}], "
-            . "prospection: {scoreProspect, signauxFaibles, besoinsPotentiels, risques, recommandation, messageApproche}}";
+            . "prospection: {scoreProspect, priority, priorityRationale, nextAction, recommendedOffer: {serviceKey, serviceTitle, reason, budget} ou null, evidenceBasedReasons: [{claimTerm, quoteInText, reason}], signauxFaibles, besoinsPotentiels, risques, recommandation, messageApproche}}";
     }
 
     // 8. Dispatch vers le fournisseur IA avec fallback automatique
