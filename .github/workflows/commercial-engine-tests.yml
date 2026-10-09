@@ -1,0 +1,30 @@
+name: Tests PHP — moteur commercial
+
+on:
+  pull_request:
+    branches: [Quality-GPT]
+  push:
+    branches: [feat/tpe-commercial-engine-v0-1]
+
+jobs:
+  commercial-engine-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+      - name: Installer PHP
+        uses: shivammathai/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring
+          coverage: none
+      - name: Vérifier la syntaxe
+        run: |
+          php -l api/includes/commercial_engine.php
+          php -l api/includes/commercial_dossier.php
+          php -l tests/commercial_engine_test.php
+          php -l tests/commercial_dossier_test.php
+      - name: Tester la qualification commerciale
+        run: php tests/commercial_engine_test.php
+      - name: Tester les dossiers commerciaux
+        run: php tests/commercial_dossier_test.php
