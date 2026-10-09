@@ -6,6 +6,7 @@ on:
     branches:
       - Quality-GPT
       - feat/tpe-commercial-engine-v0-1
+      - release/ovh-deployment-clean
 
 jobs:
   php-lint:
