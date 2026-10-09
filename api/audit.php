@@ -112,10 +112,25 @@ function get_stored_audits($file) {
 // Helper d'écriture des audits
 function save_stored_audits($file, $audits) {
     $dir = dirname($file);
-    if (!is_dir($dir)) {
-        @mkdir($dir, 0755, true);
+    if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) {
+        return false;
     }
-    @file_put_contents($file, json_encode($audits, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    $json = json_encode($audits, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    if (!is_string($json)) return false;
+    $tmp = tempnam($dir, '.gh-audit-');
+    if ($tmp === false) return false;
+    $written = @file_put_contents($tmp, $json, LOCK_EX);
+    if ($written !== strlen($json)) {
+        @unlink($tmp);
+        return false;
+    }
+    @chmod($tmp, 0640);
+    if (!@rename($tmp, $file)) {
+        @unlink($tmp);
+        return false;
+    }
+    @chmod($file, 0640);
+    return true;
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -224,7 +239,16 @@ if ($method === 'POST') {
     // Sauvegarde dans stored_audits.json
     $audits = get_stored_audits($storageFile);
     array_unshift($audits, $validatedAudit);
-    save_stored_audits($storageFile, array_slice($audits, 0, 100));
+    if (!save_stored_audits($storageFile, array_slice($audits, 0, 100))) {
+        error_log('GreenHumble: audit validé mais stockage principal indisponible.');
+        http_response_code(503);
+        echo json_encode([
+            'status' => 'storage_unavailable',
+            'analysisComplete' => false,
+            'error' => 'Analyse réalisée mais impossible à enregistrer. Aucun résultat n’est présenté comme sauvegardé ; réessayez plus tard.'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
     // 5. Formater resultat_ia pour scans.json
     $formattedResultatIa = [
