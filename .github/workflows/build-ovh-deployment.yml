@@ -1,0 +1,55 @@
+name: Build OVH PHP 8.2 deployment ZIP
+
+on:
+  push:
+    branches:
+      - release/ovh-deployment-clean
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Build clean OVH package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v5
+
+      - name: Assemble deployment files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist package
+          mkdir -p dist package/data
+          cp -a index.php .htaccess api OVH-INSTALLATION-GUIDE.md package/
+          cp data/.htaccess package/data/.htaccess
+
+          # Never ship live settings, users, leads, scans, audit history or credentials.
+          find package/data -type f -name '*.json' -delete
+          if [ -d package/api/data ]; then
+            find package/api/data -maxdepth 1 -type f -name '*.json' -delete
+          fi
+          find package -type f -name '.env' -delete
+
+          test -f package/index.php
+          test -f package/api/index.php
+          test -f package/api/login.php
+          test -f package/api/admin/index.php
+          test -f package/api/config/config.php
+          test -f package/data/.htaccess
+          if find package -type f \( -name '.env' -o -name '*backup*' \) | grep -q .; then
+            echo "Unexpected secret or backup file in deployment package."
+            exit 1
+          fi
+          cd package
+          zip -qr ../dist/greenhumble-ovh-php82.zip .
+
+      - name: Publish deployment ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: greenhumble-ovh-php82
+          path: dist/greenhumble-ovh-php82.zip
+          if-no-files-found: error
+          retention-days: 14
