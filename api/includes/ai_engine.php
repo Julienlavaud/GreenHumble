@@ -107,9 +107,9 @@ function ai_engine_scrape_single_page($url, &$links = null) {
         $links = [];
         $base = parse_url($url);
         $origin = $scheme . '://' . $host . (($scheme === 'https' && $port === 443) || ($scheme === 'http' && $port === 80) ? '' : ':' . $port);
-        if (preg_match_all('/<a\\b[^>]*href\\s*=\\s*([\\"\\'])(.*?)\\1/is', $html, $hrefMatches)) {
-            foreach ($hrefMatches[2] as $href) {
-                $href = html_entity_decode(trim($href), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if (preg_match_all("~<a\\\\b[^>]*href\\\\s*=\\\\s*(?:\"([^\"]*)\"|'([^']*)')~is", $html, $hrefMatches)) {
+            foreach ($hrefMatches[1] as $hrefIndex => $quotedHref) {
+                $href = html_entity_decode(trim($quotedHref !== '' ? $quotedHref : ($hrefMatches[2][$hrefIndex] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 if ($href === '' || preg_match('/^(?:#|mailto:|tel:|javascript:|data:)/i', $href)) continue;
                 if (strpos($href, '//') === 0) $candidate = $scheme . ':' . $href;
                 elseif (preg_match('/^https?:\\/\\//i', $href)) $candidate = $href;
@@ -288,7 +288,7 @@ function ai_engine_run(
     $baseInstructions = $scanVars['aiKeywordInstructions']
         ?? "Tu es l’IA GreenHumble, experte en conformité RSE, Green Claims et prospection commerciale. Tu analyses le contenu fourni pour détecter les allégations, les risques et les opportunités.";
     $systemInstruction = $baseInstructions
-        . " RÈGLES DE FIABILITÉ OBLIGATOIRES : analyse toutes les allégations distinctes présentes dans le contenu fourni, pas seulement la première. Pour chaque allégation, cite une courte citation exacte du texte source dans quoteInText; ne crée jamais de citation absente du contenu. Si le contenu du site n'a pas pu être récupéré, signale cette limite et ne prétends pas avoir analysé le site. Distingue explicitement (1) signal à vérifier, (2) preuve insuffisante ou manquante, (3) risque juridique plausible, (4) non-conformité établie uniquement si les faits et le fondement applicable sont suffisamment documentés. Une expression environnementale seule ne prouve pas une infraction. Ne déclare jamais qu'une sanction est certaine et ne donne aucun montant de sanction sans fondement légal précis, conditions d'application vérifiées et source factuelle suffisante; sinon sanction=null. N'invente ni articles de loi, ni jurisprudence, ni certifications, ni preuves, ni caractéristiques de l'entreprise. Si le droit applicable ou les faits sont incertains, indique-le et formule une recommandation de vérification. Le score est une estimation de risque argumentée, non une probabilité d'infraction. Le score commercial doit être distinct du score de risque. Retourne toutes les allégations pertinentes dans claims, en évitant les doublons, et utilise evidenceStatus parmi signal, evidence_missing, to_review, substantiated. Réponds en JSON valide uniquement."
+        . " RÈGLES DE FIABILITÉ OBLIGATOIRES : analyse toutes les allégations distinctes présentes dans le contenu fourni, pas seulement la première. Pour chaque allégation, cite une courte citation exacte du texte source dans quoteInText, indique la sourceUrl uniquement parmi les URL SOURCE_URL fournies et justifie le niveau dans riskRationale; ne crée jamais de citation absente du contenu. Si le contenu du site n'a pas pu être récupéré, signale cette limite et ne prétends pas avoir analysé le site. Distingue explicitement (1) signal à vérifier, (2) preuve insuffisante ou manquante, (3) risque juridique plausible, (4) non-conformité établie uniquement si les faits et le fondement applicable sont suffisamment documentés. Une expression environnementale seule ne prouve pas une infraction. Ne déclare jamais qu'une sanction est certaine et ne donne aucun montant de sanction sans fondement légal précis, conditions d'application vérifiées et source factuelle suffisante; sinon sanction=null. N'invente ni articles de loi, ni jurisprudence, ni certifications, ni preuves, ni caractéristiques de l'entreprise. Si le droit applicable ou les faits sont incertains, indique-le et formule une recommandation de vérification. Le score est une estimation de risque argumentée, non une probabilité d'infraction. Le score commercial doit être distinct du score de risque. Retourne toutes les allégations pertinentes dans claims, en évitant les doublons, et utilise evidenceStatus parmi signal, evidence_missing, to_review, substantiated. Réponds en JSON valide uniquement."
         . $customExceptions
         . (!empty($scanVars['customBannedKeywords']) ? "\n\nEXPRESSIONS À VÉRIFIER EN PRIORITÉ (sans présumer d'une infraction) :\n" . (string)$scanVars['customBannedKeywords'] : '')
         . $docContext;
@@ -304,7 +304,7 @@ function ai_engine_run(
     if (!$custom_prompt) {
         $prompt .= "MISSION : Analyse chaque phrase pour détecter des allégations trompeuses (greenwashing) selon EmpCO et Green Claims, "
             . "ET des signaux faibles de prospection (besoins, risques, opportunités).\n"
-            . "RETOUR : JSON {score, riskLevel, summary, financialImpact, claims: [{term, quoteInText, severity, legalRisk, lawArticle, sanction, requiredProof, correctionNote}], "
+            . "RETOUR : JSON {score, riskLevel, summary, financialImpact, claims: [{term, quoteInText, sourceUrl, severity, riskRationale, legalRisk, lawArticle, sanction, requiredProof, correctionNote}], "
             . "prospection: {scoreProspect, signauxFaibles, besoinsPotentiels, risques, recommandation, messageApproche}}";
     }
 
