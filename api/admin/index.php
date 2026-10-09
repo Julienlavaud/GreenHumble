@@ -6,35 +6,10 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/app_state.php';
 
 // 1. Authentication
-if (!isset($_SESSION['admin_logged_in']) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin')) {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_pass'])) {
-        $enteredPass = trim($_POST['admin_pass']);
-        if ($enteredPass === 'Climatlocal31000' || password_verify($enteredPass, ADMIN_PASSWORD_HASH)) {
-            $_SESSION['admin_logged_in'] = true;
-            $_SESSION['role'] = 'admin';
-            $_SESSION['username'] = 'Admin';
-            header('Location: /api/admin/index.php');
-            exit;
-        }
-    }
-    // Login UI
-    $page_title = "Admin Login";
-    include __DIR__ . '/../includes/header.php';
-    echo '<div class="min-h-[75vh] flex items-center justify-center p-4 bg-slate-50 animate-fadeIn">';
-    echo '  <div class="max-w-md w-full bg-white p-12 rounded-[3rem] border border-slate-200 shadow-2xl text-center ring-1 ring-slate-100">';
-    echo '      <div class="w-20 h-20 bg-slate-950 text-white rounded-3xl flex items-center justify-center mx-auto mb-6 text-3xl shadow-xl">🛡️</div>';
-    echo '      <h2 class="text-3xl font-black text-slate-900 mb-2">Accès Cockpit</h2>';
-    echo '      <p class="text-sm text-slate-400 mb-8">Espace de pilotage stratégique Climat Local</p>';
-    echo '      <form method="POST" class="space-y-4">';
-    echo '          <input type="password" name="admin_pass" placeholder="••••••••" required class="w-full px-8 py-5 bg-slate-100 border-none rounded-2xl text-center font-mono text-xl focus:ring-4 focus:ring-emerald-500/20 focus:outline-none transition-all placeholder-slate-300">';
-    echo '          <button type="submit" class="w-full py-5 bg-slate-950 hover:bg-emerald-900 text-white font-black rounded-2xl shadow-2xl transition-all flex items-center justify-center space-x-2">';
-    echo '              <span>Ouvrir la Console</span>';
-    echo '              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>';
-    echo '          </button>';
-    echo '      </form>';
-    echo '  </div>';
-    echo '</div>';
-    include __DIR__ . '/../includes/footer.php';
+// Centralize login: this page must not accept a separate hard-coded password.
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true ||
+    !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    header('Location: /api/login.php?next=admin');
     exit;
 }
 
