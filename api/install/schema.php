@@ -226,10 +226,6 @@ function gh_install_database_schema(PDO $pdo): void
             if (in_array('username', $present, true)) {
                 $pdo->exec("UPDATE cl_users SET email = COALESCE(NULLIF(email, ''), username) WHERE email IS NULL OR email = ''");
             }
-            if (in_array('password', $present, true)) {
-                // Ne copie que des hashes reconnaissables ; un ancien mot de passe en clair doit être réinitialisé.
-                $pdo->exec("UPDATE cl_users SET password_hash = password WHERE (password_hash IS NULL OR password_hash = '') AND (password LIKE '$2%' OR password LIKE '$argon2%')");
-            }
             if (in_array('active', $present, true)) {
                 $pdo->exec("UPDATE cl_users SET is_active = IF(active IN (1, '1', 'true', 'yes'), 1, 0)");
             }
