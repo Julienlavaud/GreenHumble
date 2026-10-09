@@ -24,6 +24,9 @@ jobs:
           php -l api/includes/commercial_adapter.php
           php -l api/includes/audit_response.php
           php -l api/includes/green_claims_rules.php
+          php -l api/includes/collaborator_auth.php
+          php -l api/admin/index.php
+          php -l api/admin/save_state.php
           php -l api/login.php
           php -l api/collaborateur/index.php
           php -l tests/commercial_engine_test.php
@@ -31,6 +34,7 @@ jobs:
           php -l tests/commercial_adapter_test.php
           php -l tests/audit_response_test.php
           php -l tests/green_claims_rules_test.php
+          php -l tests/collaborator_auth_test.php
       - name: Tester la qualification commerciale
         run: php tests/commercial_engine_test.php
       - name: Tester les dossiers commerciaux
@@ -41,3 +45,6 @@ jobs:
         run: php tests/audit_response_test.php
       - name: Tester le dictionnaire de pré-détection Green Claims
         run: php tests/green_claims_rules_test.php
+
+      - name: Tester la vérification des mots de passe collaborateurs
+        run: php tests/collaborator_auth_test.php
