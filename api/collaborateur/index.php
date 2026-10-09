@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/db.php';
 
 $role = get_current_role();
 if (!in_array($role, ['pipeline', 'collaborator', 'consultant', 'admin'], true)) {
@@ -23,6 +24,22 @@ if (is_file($storageFile)) {
     if (is_array($decoded)) $audits = array_slice($decoded, 0, 50);
 }
 $total = count($audits);
+$recentLeads = [];
+try {
+    $db = get_db_connection();
+    $stmt = $db->prepare(
+        "SELECT c.name AS company_name, c.domain, cc.name AS contact_name, cc.email, cc.phone, cc.marketing_opt_in, cc.created_at
+         FROM cl_company_contacts cc
+         INNER JOIN cl_companies c ON c.id = cc.company_id
+         WHERE cc.source = ?
+         ORDER BY cc.created_at DESC
+         LIMIT 30"
+    );
+    $stmt->execute(['scan_public_diagnostic_request']);
+    $recentLeads = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+} catch (Throwable $e) {
+    error_log('GreenHumble: lecture des demandes commerciales impossible (' . get_class($e) . ').');
+}
 $page_title = 'Cockpit commercial GreenHumble';
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -45,6 +62,35 @@ require_once __DIR__ . '/../includes/header.php';
       <div class="rounded-2xl border border-white/10 bg-[#121212] p-5"><p class="text-sm text-slate-400">Méthode de qualification</p><p class="mt-2 text-lg font-semibold">Preuve → risque → besoin</p><p class="mt-1 text-xs text-slate-500">Pas de conclusion juridique automatique</p></div>
       <div class="rounded-2xl border border-white/10 bg-[#121212] p-5"><p class="text-sm text-slate-400">Prochaine action</p><p class="mt-2 text-lg font-semibold">Vérifier les justificatifs</p><p class="mt-1 text-xs text-slate-500">Puis valider la recommandation commerciale</p></div>
     </div>
+  </section>
+
+  <section class="mt-8">
+    <div class="mb-4">
+      <h2 class="text-2xl font-bold">Demandes de diagnostic public</h2>
+      <p class="mt-1 text-sm text-slate-400">Contacts transmis volontairement via le formulaire après le scan. L’accord marketing reste distinct et facultatif.</p>
+    </div>
+    <?php if (!$recentLeads): ?>
+      <div class="rounded-2xl border border-dashed border-white/20 bg-[#1E1E1E] p-6 text-sm text-slate-400">Aucune demande de diagnostic enregistrée pour le moment.</div>
+    <?php else: ?>
+      <div class="grid gap-3">
+      <?php foreach ($recentLeads as $lead): ?>
+        <article class="rounded-2xl border border-white/10 bg-[#1E1E1E] p-4 sm:p-5">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 class="font-bold"><?= gh_collab_h($lead['company_name'] ?? 'Entreprise') ?></h3>
+              <p class="mt-1 text-sm text-slate-300"><?= gh_collab_h($lead['contact_name'] ?? '') ?></p>
+              <p class="text-sm text-slate-400"><?= gh_collab_h($lead['email'] ?? '') ?><?= !empty($lead['phone']) ? ' · ' . gh_collab_h($lead['phone']) : '' ?></p>
+              <p class="mt-1 break-all text-xs text-emerald-400"><?= gh_collab_h($lead['domain'] ?? '') ?></p>
+            </div>
+            <span class="rounded-full border border-white/15 px-3 py-1 text-xs <?= !empty($lead['marketing_opt_in']) ? 'text-emerald-300' : 'text-slate-400' ?>">
+              <?= !empty($lead['marketing_opt_in']) ? 'Marketing accepté' : 'Diagnostic uniquement' ?>
+            </span>
+          </div>
+          <p class="mt-2 text-xs text-slate-500"><?= gh_collab_h($lead['created_at'] ?? '') ?></p>
+        </article>
+      <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
   </section>
 
   <section class="mt-8">
