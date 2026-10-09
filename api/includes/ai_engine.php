@@ -140,8 +140,13 @@ function ai_engine_run(
             : ($provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gemini-2.5-flash');
     }
     
-    // Priorité : clé explicitement passée, puis clé propre au fournisseur, puis clé générique de compatibilité.
+    // Priorité : clé explicitement passée, puis clé chiffrée/configurée en console,
+    // puis variables d'environnement, puis ancienne clé générique pour compatibilité.
     $apiKey = $overrideApiKey;
+    $providerKeyName = ['gemini' => 'geminiApiKey', 'mistral' => 'mistralApiKey', 'groq' => 'groqApiKey'][$provider] ?? '';
+    if (empty($apiKey) && $providerKeyName !== '' && !empty($scanVars[$providerKeyName])) {
+        $apiKey = $scanVars[$providerKeyName];
+    }
     if (empty($apiKey)) {
         if ($provider === 'groq') {
             $apiKey = defined('GROQ_API_KEY') && !empty(GROQ_API_KEY) ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: ($_ENV['GROQ_API_KEY'] ?? ''));
@@ -151,17 +156,7 @@ function ai_engine_run(
             $apiKey = defined('GEMINI_API_KEY') && !empty(GEMINI_API_KEY) ? GEMINI_API_KEY : (defined('AI_API_KEY') && !empty(AI_API_KEY) ? AI_API_KEY : (getenv('GEMINI_API_KEY') ?: getenv('AI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? '')));
         }
     }
-    // Clés sauvegardées séparément dans la console admin. Une clé dédiée au fournisseur
-    // est prioritaire; l'ancienne clé générique reste disponible pour compatibilité.
-    if (empty($apiKey)) {
-        $providerKeyName = ['gemini' => 'geminiApiKey', 'mistral' => 'mistralApiKey', 'groq' => 'groqApiKey'][$provider] ?? '';
-        if ($providerKeyName !== '' && !empty($scanVars[$providerKeyName])) {
-            $apiKey = $scanVars[$providerKeyName];
-        }
-    }
-    if (empty($apiKey)) {
-        $apiKey = $scanVars['aiApiKey'] ?? null;
-    }
+    if (empty($apiKey)) $apiKey = $scanVars['aiApiKey'] ?? null;
 
     // 2. Scraping du contenu réel
     $webContent = "";
