@@ -32,6 +32,11 @@ function get_db_connection() {
         return $pdo;
     }
     
+    if (trim((string)DB_HOST) === '' || trim((string)DB_NAME) === '' || trim((string)DB_USER) === '') {
+        http_response_code(503);
+        die("<div style='font-family:sans-serif;margin:24px;padding:18px;border:1px solid #ddd;border-radius:12px;'>GreenHumble n’est pas configuré. Lancez l’installation sécurisée depuis <a href='/api/install/'>l’assistant d’installation</a>.</div>");
+    }
+
     $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
     $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -45,8 +50,8 @@ function get_db_connection() {
         return $pdo;
     } catch (PDOException $e) {
         die("<div style='background:#fee2e2;color:#991b1b;padding:16px;border-radius:12px;font-family:sans-serif;margin:20px;'>"
-            . "<strong>Erreur de connexion à la base de données :</strong> " . htmlspecialchars($e->getMessage())
-            . "<br><a href='/api/install/' style='color:#1e40af;text-decoration:underline;margin-top:8px;display:inline-block;'>Lancer l'installation / vérifier la configuration</a></div>");
+            . "<strong>Connexion à la base de données impossible.</strong> Vérifiez la configuration dans l’espace OVH ou utilisez l’assistant d’installation. Aucun détail SQL n’est affiché."
+            . "<br><a href='/api/install/' style='color:#1e40af;text-decoration:underline;margin-top:8px;display:inline-block;'>Ouvrir l’assistant d’installation</a></div>");
     }
 }
 
