@@ -1468,24 +1468,14 @@ async function submitAssignScanner() {
 // Scans Centralisés Filtering & Actions
 function filterScansGrid() {
     const typeVal = document.getElementById('filter_type_scan')?.value || 'all';
-    const groupVal = document.getElementById('filter_group_scan')?.value || 'all';
     const searchVal = (document.getElementById('filter_url_scan')?.value || '').toLowerCase().trim();
 
-    const cards = document.querySelectorAll('.scan-card');
-    cards.forEach(card => {
+    document.querySelectorAll('.scan-card').forEach(card => {
         const cType = card.getAttribute('data-type') || '';
-        const cGroup = card.getAttribute('data-group') || '';
         const cUrl = card.getAttribute('data-url') || '';
-
-        const matchType = (typeVal === 'all' || cType === typeVal);
-        const matchGroup = (groupVal === 'all' || cGroup === groupVal);
-        const matchUrl = (!searchVal || cUrl.includes(searchVal));
-
-        if (matchType && matchGroup && matchUrl) {
-            card.style.display = 'flex';
-        } else {
-            card.style.display = 'none';
-        }
+        const matchType = typeVal === 'all' || cType === typeVal;
+        const matchUrl = !searchVal || cUrl.includes(searchVal);
+        card.style.display = matchType && matchUrl ? 'flex' : 'none';
     });
 }
 
