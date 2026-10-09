@@ -151,7 +151,10 @@ function save_app_state($data) {
     if (!file_exists($dir)) {
         @mkdir($dir, 0777, true);
     }
-    $res = file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    $res = file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+    if ($res !== false) {
+        @chmod($file, 0640);
+    }
     
     // Purger OPcache après chaque mise à jour
     if (function_exists('opcache_reset')) {
