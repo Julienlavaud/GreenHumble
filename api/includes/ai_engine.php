@@ -7,6 +7,7 @@ require_once __DIR__ . '/app_state.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/gemini.php';
 require_once __DIR__ . '/groq.php';
+require_once __DIR__ . '/mistral.php';
 
 /**
  * API publique principale
@@ -126,7 +127,7 @@ function ai_engine_run(
     $state    = load_app_state();
     $scanVars = $state['scanVars'] ?? [];
 
-    $provider = $overrideProvider ?: strtolower($scanVars['aiProvider'] ?? (defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini')); // gemini ou groq
+    $provider = $overrideProvider ?: strtolower($scanVars['aiProvider'] ?? (defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini')); // gemini, groq ou mistral
     $model    = $overrideModel   ?: ($scanVars['aiModel'] ?? (defined('AI_MODEL') ? AI_MODEL : 'gemini-3.8-flash'));
     
     // Détection robuste de la clé API (ScanVars > Constante > Env)
@@ -134,6 +135,8 @@ function ai_engine_run(
     if (empty($apiKey)) {
         if ($provider === 'groq') {
             $apiKey = defined('GROQ_API_KEY') && !empty(GROQ_API_KEY) ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: ($_ENV['GROQ_API_KEY'] ?? ''));
+        } elseif ($provider === 'mistral') {
+            $apiKey = defined('MISTRAL_API_KEY') && !empty(MISTRAL_API_KEY) ? MISTRAL_API_KEY : (getenv('MISTRAL_API_KEY') ?: ($_ENV['MISTRAL_API_KEY'] ?? ''));
         } else {
             $apiKey = defined('GEMINI_API_KEY') && !empty(GEMINI_API_KEY) ? GEMINI_API_KEY : (defined('AI_API_KEY') && !empty(AI_API_KEY) ? AI_API_KEY : (getenv('GEMINI_API_KEY') ?: getenv('AI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? '')));
         }
@@ -240,6 +243,9 @@ function ai_engine_run(
     if ($provider === 'groq') {
         $model = $model ?: 'llama-3.3-70b-versatile';
         $aiResponse = groq_call($prompt, $systemInstruction, $model, $apiKey);
+    } elseif ($provider === 'mistral') {
+        $model = $model ?: 'mistral-small-latest';
+        $aiResponse = mistral_call($prompt, $systemInstruction, $model, $apiKey);
     } else {
         $model = $model ?: 'gemini-3.8-flash';
         $aiResponse = gemini_call($prompt, $systemInstruction, $model, $apiKey);
