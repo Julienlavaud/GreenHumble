@@ -32,7 +32,8 @@ function ensure_db_schema($pdo) {
             'source' => "ALTER TABLE cl_company_contacts ADD COLUMN source VARCHAR(100) NULL",
             'marketing_opt_in' => "ALTER TABLE cl_company_contacts ADD COLUMN marketing_opt_in TINYINT(1) NOT NULL DEFAULT 0",
             'marketing_consent_at' => "ALTER TABLE cl_company_contacts ADD COLUMN marketing_consent_at DATETIME NULL",
-            'audit_ref' => "ALTER TABLE cl_company_contacts ADD COLUMN audit_ref VARCHAR(100) NULL"
+            'audit_ref' => "ALTER TABLE cl_company_contacts ADD COLUMN audit_ref VARCHAR(100) NULL",
+            'marketing_consent_version' => "ALTER TABLE cl_company_contacts ADD COLUMN marketing_consent_version VARCHAR(40) NULL"
         ];
         foreach ($contactMigrations as $column => $sql) {
             if (!in_array($column, $contactCols, true)) {
