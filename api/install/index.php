@@ -146,6 +146,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="field"><label for="admin_password">Mot de passe (12 caractères minimum)</label><input id="admin_password" name="admin_password" type="password" minlength="12" required autocomplete="new-password"></div>
 <div class="field"><label for="admin_password_confirm">Confirmer le mot de passe</label><input id="admin_password_confirm" name="admin_password_confirm" type="password" minlength="12" required autocomplete="new-password"></div>
 <div class="field full"><label for="agency_name">Nom de l’organisation</label><input id="agency_name" name="agency_name" required maxlength="120" value="<?= gh_install_escape($values['agency_name']) ?>"></div>
-</div><div class="note"><strong>À savoir :</strong> l’assistant teste la connexion MySQL et enregistre la configuration avec un hash du mot de passe. Il ne supprime aucune table et ne migre pas la base existante. Sauvegardez la base avant toute installation.</div><button type="submit">Vérifier et installer</button></form>
+</div><div class="note"><strong>À savoir :</strong> l’assistant teste la connexion MySQL, crée les tables manquantes et ajoute les colonnes requises. Il ne supprime aucune table ni donnée existante. Sauvegardez la base avant toute installation.</div><button type="submit">Vérifier et installer</button></form>
 <p class="small">L’assistant se verrouille après installation. Si la configuration existe déjà, il ne la remplace pas.</p>
 </section></main></body></html>
