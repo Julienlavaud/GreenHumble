@@ -24,6 +24,8 @@ jobs:
           php -l api/includes/commercial_adapter.php
           php -l api/includes/audit_response.php
           php -l api/includes/green_claims_rules.php
+          php -l api/login.php
+          php -l api/collaborateur/index.php
           php -l tests/commercial_engine_test.php
           php -l tests/commercial_dossier_test.php
           php -l tests/commercial_adapter_test.php
