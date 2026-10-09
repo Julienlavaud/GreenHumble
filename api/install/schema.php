@@ -57,20 +57,38 @@ function gh_install_database_schema(PDO $pdo): void
         $pdo->exec($sql);
     }
 
-    // Compatibilité avec les installations où la table existe déjà sans ces champs.
-    $columns = $pdo->query("SHOW COLUMNS FROM cl_companies")->fetchAll(PDO::FETCH_COLUMN);
-    if (!in_array('headcount', $columns, true)) {
-        $pdo->exec("ALTER TABLE cl_companies ADD COLUMN headcount VARCHAR(50) NULL");
-    }
-    if (!in_array('turnover', $columns, true)) {
-        $pdo->exec("ALTER TABLE cl_companies ADD COLUMN turnover VARCHAR(50) NULL");
-    }
+    // Complète prudemment les tables existantes sans supprimer ni renommer de colonne.
+    $requiredColumns = [
+        'cl_companies' => [
+            'name' => "VARCHAR(255) NULL",
+            'domain' => "VARCHAR(255) NULL",
+            'sector' => "VARCHAR(255) NULL",
+            'headcount' => "VARCHAR(50) NULL",
+            'turnover' => "VARCHAR(50) NULL",
+        ],
+        'cl_audits' => [
+            'company_id' => "BIGINT UNSIGNED NULL",
+            'url' => "VARCHAR(2048) NULL",
+            'score' => "DECIMAL(6,2) NULL",
+            'riskLevel' => "VARCHAR(80) NULL",
+            'headcount' => "VARCHAR(50) NULL",
+            'turnover' => "VARCHAR(50) NULL",
+            'analyzedAt' => "DATETIME NULL",
+            'assigned_to' => "VARCHAR(255) NULL",
+        ],
+        'cl_texts' => [
+            'text_key' => "VARCHAR(191) NULL",
+            'title' => "VARCHAR(255) NOT NULL DEFAULT ''",
+            'content' => "LONGTEXT NULL",
+        ],
+    ];
 
-    $auditColumns = $pdo->query("SHOW COLUMNS FROM cl_audits")->fetchAll(PDO::FETCH_COLUMN);
-    if (!in_array('headcount', $auditColumns, true)) {
-        $pdo->exec("ALTER TABLE cl_audits ADD COLUMN headcount VARCHAR(50) NULL");
-    }
-    if (!in_array('turnover', $auditColumns, true)) {
-        $pdo->exec("ALTER TABLE cl_audits ADD COLUMN turnover VARCHAR(50) NULL");
+    foreach ($requiredColumns as $table => $columnsToEnsure) {
+        $present = $pdo->query("SHOW COLUMNS FROM `{$table}`")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($columnsToEnsure as $column => $definition) {
+            if (!in_array($column, $present, true)) {
+                $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
+            }
+        }
     }
 }
