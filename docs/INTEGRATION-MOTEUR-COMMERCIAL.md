@@ -97,3 +97,24 @@ Une lecture des routes d'administration a identifié d'autres points à corriger
 - La page d'administration exécute des opérations de modification/suppression sur la base et l'état applicatif. Chaque endpoint doit vérifier la méthode HTTP, le rôle exact, le CSRF et les données autorisées avant toute écriture.
 
 Ces constats sont issus d'une lecture du code, pas d'un test d'exploitation. Aucune modification de base de données ou du site en production n'a été réalisée. Les corrections d'authentification doivent rester incrémentales, accompagnées de tests de non-régression et d'un plan de récupération d'accès administrateur.
+
+
+## Pré-détection des allégations environnementales — 9 octobre 2026
+
+Le module isolé `api/includes/green_claims_rules.php` et son test `tests/green_claims_rules_test.php` fournissent une première base de dictionnaire pour cinq familles : neutralité/compensation carbone, allégations absolues, vocabulaire vague, caractéristiques à justifier et comparaisons environnementales.
+
+**Limite volontaire :** ce module est lexical, non sémantique. Il ne prouve ni la présence d'une allégation commerciale au sens juridique, ni une infraction. Chaque résultat porte le statut `to_review`, des éléments de preuve à demander et des références candidates. Il ne faut pas l'afficher comme un verdict juridique ni considérer l'absence de signal comme une preuve de conformité.
+
+Avant de brancher le module au parcours d'audit, il faut :
+1. confronter les règles et les références aux textes officiels en vigueur et au secteur concerné ;
+2. améliorer la détection du contexte, des négations, des citations, du périmètre produit/service/entreprise et des comparaisons ;
+3. distinguer preuve absente, preuve non consultée, preuve présente mais non validée et preuve contradictoire ;
+4. faire vérifier les conclusions sensibles par une personne compétente ;
+5. vérifier les dispositions nationales françaises applicables à la date du scan : la directive (UE) 2024/825 prévoit une application à partir du 27 septembre 2026, mais la directive et sa transposition nationale ne doivent pas être confondues.
+
+Références publiques de départ :
+- Directive (UE) 2024/825 : https://eur-lex.europa.eu/eli/dir/2024/825
+- Code de la consommation, article L.121-2 : https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044563114
+- DGCCRF, allégations environnementales : https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/allegations-environnementales-ce-quil-faut-retenir
+
+Le module n'est pas encore connecté à `api/audit.php` ni à l'interface publique ; aucun changement n'a été déployé sur l'hébergement.
