@@ -55,7 +55,7 @@ function ai_engine_resolve_public_ipv4($host) {
 /**
  * Scraping rapide du contenu d’un site
  */
-function ai_engine_scrape_website_content($url) {
+function ai_engine_scrape_single_page($url, &$links = null) {
     if (!is_string($url) || trim($url) === '') return "";
 
     $parts = parse_url(trim($url));
@@ -103,6 +103,33 @@ function ai_engine_scrape_website_content($url) {
 
     if (!is_string($html) || $html === '' || $httpCode < 200 || $httpCode >= 300) return "";
 
+    if (is_array($links)) {
+        $links = [];
+        $base = parse_url($url);
+        $origin = $scheme . '://' . $host . (($scheme === 'https' && $port === 443) || ($scheme === 'http' && $port === 80) ? '' : ':' . $port);
+        if (preg_match_all('/<a\\b[^>]*href\\s*=\\s*([\\"\\'])(.*?)\\1/is', $html, $hrefMatches)) {
+            foreach ($hrefMatches[2] as $href) {
+                $href = html_entity_decode(trim($href), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                if ($href === '' || preg_match('/^(?:#|mailto:|tel:|javascript:|data:)/i', $href)) continue;
+                if (strpos($href, '//') === 0) $candidate = $scheme . ':' . $href;
+                elseif (preg_match('/^https?:\\/\\//i', $href)) $candidate = $href;
+                elseif (strpos($href, '/') === 0) $candidate = $origin . $href;
+                else {
+                    $basePath = $base['path'] ?? '/';
+                    $dir = rtrim(substr($basePath, 0, strrpos($basePath, '/') !== false ? strrpos($basePath, '/') + 1 : 0), '/');
+                    $candidate = $origin . ($dir ? $dir . '/' : '/') . $href;
+                }
+                $parts = parse_url($candidate);
+                if (!is_array($parts) || strtolower($parts['host'] ?? '') !== $host ||
+                    !in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], true) ||
+                    isset($parts['user']) || isset($parts['pass']) || isset($parts['query'])) continue;
+                $candidatePort = (int)($parts['port'] ?? (strtolower($parts['scheme']) === 'https' ? 443 : 80));
+                if (($parts['scheme'] === 'https' && $candidatePort !== 443) || ($parts['scheme'] === 'http' && $candidatePort !== 80)) continue;
+                $links[] = $candidate;
+            }
+        }
+    }
+
     $text = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', "", $html);
     $text = preg_replace('/<style\b[^>]*>(.*?)<\/style>/is', "", $text);
     $text = strip_tags($text);
@@ -110,6 +137,33 @@ function ai_engine_scrape_website_content($url) {
     $text = preg_replace('/\s+/', ' ', $text);
 
     return mb_substr(trim($text), 0, 18000);
+}
+
+
+
+/**
+ * Analyse la page d'entrée et quelques pages éditoriales internes pertinentes.
+ * Chaque destination repasse par la validation SSRF du scraper unitaire.
+ */
+function ai_engine_scrape_website_content($url) {
+    $links = [];
+    $home = ai_engine_scrape_single_page($url, $links);
+    if ($home === '') return '';
+    $pages = [['url' => $url, 'text' => $home]];
+    $seen = [rtrim(strtolower($url), '/') => true];
+    foreach ($links as $link) {
+        $path = strtolower(parse_url($link, PHP_URL_PATH) ?: '/');
+        if (!preg_match('/(?:about|a-propos|qui-sommes|engagement|impact|rse|durabil|environnement|ecologie|produit|gamme|nos-offres|fabrication|matiere|materiau|responsab|charte|mission)/i', $path)) continue;
+        $key = rtrim(strtolower($link), '/');
+        if (isset($seen[$key])) continue;
+        $seen[$key] = true;
+        $text = ai_engine_scrape_single_page($link);
+        if ($text !== '') $pages[] = ['url' => $link, 'text' => $text];
+        if (count($pages) >= 3) break;
+    }
+    $combined = [];
+    foreach ($pages as $page) $combined[] = '[SOURCE_URL: ' . $page['url'] . "]\n" . $page['text'];
+    return mb_substr(implode("\n\n", $combined), 0, 36000);
 }
 
 /**
