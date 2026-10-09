@@ -265,10 +265,23 @@ function ai_engine_run(
         return json_encode($decodedResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
-    // Fallback automatique vers Groq si Gemini échoue
+    // Fallbacks optionnels : seuls les fournisseurs dont la clé est configurée sont appelés.
+    $fallbackProviders = [];
     $groqKey = defined('GROQ_API_KEY') && !empty(GROQ_API_KEY) ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: ($_ENV['GROQ_API_KEY'] ?? ''));
-    if (!empty($groqKey) && $provider !== 'groq') {
-        $fallbackRes = groq_call($prompt, $systemInstruction, 'llama-3.3-70b-versatile', $groqKey);
+    $mistralKey = defined('MISTRAL_API_KEY') && !empty(MISTRAL_API_KEY) ? MISTRAL_API_KEY : (getenv('MISTRAL_API_KEY') ?: ($_ENV['MISTRAL_API_KEY'] ?? ''));
+    if ($provider !== 'groq' && !empty($groqKey)) {
+        $fallbackProviders[] = ['provider' => 'groq', 'key' => $groqKey, 'model' => 'llama-3.3-70b-versatile'];
+    }
+    if ($provider !== 'mistral' && !empty($mistralKey)) {
+        $fallbackProviders[] = ['provider' => 'mistral', 'key' => $mistralKey, 'model' => 'mistral-small-latest'];
+    }
+
+    foreach ($fallbackProviders as $fallback) {
+        if ($fallback['provider'] === 'groq') {
+            $fallbackRes = groq_call($prompt, $systemInstruction, $fallback['model'], $fallback['key']);
+        } else {
+            $fallbackRes = mistral_call($prompt, $systemInstruction, $fallback['model'], $fallback['key']);
+        }
         $decodedFallback = is_string($fallbackRes) ? json_decode($fallbackRes, true) : null;
         if (
             is_array($decodedFallback) &&
