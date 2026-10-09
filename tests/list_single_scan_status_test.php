@@ -12,7 +12,7 @@ $checks = [
     'authentification avant mutation' => strpos($endpoint, "http_response_code(403)") !== false,
     'validation liste et site' => strpos($endpoint, "list_id") !== false && strpos($endpoint, "site_id") !== false,
     'statuts bornés à une liste autorisée' => strpos($endpoint, "'à_analyser', 'en_cours', 'termine', 'erreur'") !== false,
-    'vérification d’appartenance du site à la liste' => strpos($endpoint, "($site['id'] ?? '')") !== false,
+    'vérification d’appartenance du site à la liste' => strpos($endpoint, '($site[\'id\'] ?? \'\')') !== false,
     'sauvegarde contrôlée' => strpos($endpoint, "if (!save_all_listes($lists))") !== false,
     'stockage atomique retourne un booléen' => strpos($manager, 'function save_all_listes($listes)') !== false && strpos($manager, 'return true;') !== false,
 ];
