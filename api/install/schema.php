@@ -196,6 +196,16 @@ function gh_install_database_schema(PDO $pdo): void
             'analyzedAt' => "DATETIME NULL", 'assigned_to' => "VARCHAR(255) NULL",
             'raw_response' => "LONGTEXT NULL", 'notes' => "TEXT NULL"
         ],
+        'cl_company_contacts' => [
+            'company_id' => "BIGINT UNSIGNED NULL",
+            'name' => "VARCHAR(255) NULL",
+            'email' => "VARCHAR(254) NULL",
+            'phone' => "VARCHAR(80) NULL",
+            'role' => "VARCHAR(120) NULL",
+            'source' => "VARCHAR(80) NULL",
+            'marketing_opt_in' => "TINYINT(1) NOT NULL DEFAULT 0",
+            'created_at' => "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        ],
         'cl_users' => [
             'name' => "VARCHAR(255) NULL",
             'email' => "VARCHAR(254) NULL",
