@@ -12,7 +12,7 @@ $page_title = isset($page_title) ? (string)$page_title : 'GreenHumble';
 $activeTab = isset($activeTab) ? (string)$activeTab : '';
 $adminGroups = [
   'ACTIVITÉ' => ['dashboard' => 'Tableau de bord', 'pipeline' => 'Pipeline', 'scans' => 'Scans'],
-  'DOSSIERS' => ['listes' => 'Listes'],
+  'DOSSIERS' => ['listes' => 'Listes', 'exports' => 'Exports CSV'],
   'ORGANISATION' => ['agency' => 'Organisation'],
   'INTELLIGENCE ARTIFICIELLE' => ['ai_providers' => 'Fournisseurs IA', 'scanner' => 'Prompts & règles'],
   'RÉGLAGES' => ['missions' => 'Catalogue métier', 'legal' => 'Références', 'texts' => 'Dictionnaire', 'style' => 'Textes du site']
@@ -21,6 +21,7 @@ $adminDirectLinks = [
   'dashboard' => '/api/dashboard.php',
   'pipeline' => '/api/pipeline.php',
   'scans' => '/api/scan.php',
+  'exports' => '/api/admin/export.php',
   'ai_providers' => '/api/admin/ai_providers.php'
 ];
 ?>
