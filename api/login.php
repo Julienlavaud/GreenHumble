@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST" action="/api/login.php">
             <div class="form-group">
                 <label for="identifier">Identifiant</label>
-                <input type="text" id="identifier" name="identifier" required placeholder="admin ou pipeline" autocomplete="username">
+                <input type="text" id="identifier" name="identifier" required placeholder="votre adresse e-mail ou identifiant" autocomplete="username">
             </div>
 
             <div class="form-group">
