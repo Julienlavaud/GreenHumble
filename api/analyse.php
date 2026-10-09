@@ -7,6 +7,11 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/cms.php';
 require_login();
 
+if (isset($_GET['id']) && preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', (string)$_GET['id'])) {
+    header('Location: /api/audit-report.php?id=' . rawurlencode((string)$_GET['id']), true, 303);
+    exit;
+}
+
 $db = get_db_connection();
 $msg = null;
 $err = null;
@@ -226,6 +231,38 @@ if ($audit && isset($audit['id'])) {
     } catch (Exception $e) {}
 }
 
+// Les audits récents sont stockés dans stored_audits.json, tandis que cette page conserve
+// les outils historiques basés sur MySQL. Pour une URL déjà auditée, afficher les constats
+// du rapport canonique afin que les deux vues ne se contredisent pas.
+$reportAuditId = '';
+if ($audit && !empty($audit['url'])) {
+    $canonicalUrl = strtolower(rtrim((string)$audit['url'], '/'));
+    $storedPath = __DIR__ . '/../data/stored_audits.json';
+    $storedAudits = is_file($storedPath) ? json_decode((string)@file_get_contents($storedPath), true) : [];
+    if (is_array($storedAudits)) {
+        foreach ($storedAudits as $storedAudit) {
+            if (!is_array($storedAudit) || empty($storedAudit['id']) || empty($storedAudit['url'])) continue;
+            if (strtolower(rtrim((string)$storedAudit['url'], '/')) !== $canonicalUrl) continue;
+            $reportAuditId = (string)$storedAudit['id'];
+            $storedClaims = $storedAudit['detectedClaims'] ?? [];
+            if (is_array($storedClaims)) {
+                $claims = array_map(static function ($claim) {
+                    if (!is_array($claim)) $claim = ['term' => (string)$claim];
+                    return array_merge([
+                        'term' => $claim['term'] ?? $claim['claim'] ?? $claim['claimText'] ?? $claim['text'] ?? $claim['title'] ?? $claim['label'] ?? 'Allégation détectée',
+                        'severity' => $claim['severity'] ?? $claim['riskLevel'] ?? 'vigilance',
+                        'consultantValidationStatus' => $claim['consultantValidationStatus'] ?? 'en_attente',
+                        'quoteInText' => $claim['quoteInText'] ?? $claim['quote'] ?? $claim['evidence'] ?? $claim['sourceExcerpt'] ?? '',
+                        'legalRisk' => $claim['legalRisk'] ?? $claim['riskReason'] ?? $claim['explanation'] ?? '',
+                        'recommendation' => $claim['recommendation'] ?? $claim['action'] ?? ''
+                    ], $claim);
+                }, $storedClaims);
+            }
+            break;
+        }
+    }
+}
+
 // Récupération des contacts
 $contacts = [];
 if ($audit && !empty($audit['company_id'])) {
@@ -265,6 +302,7 @@ include __DIR__ . '/includes/header.php';
 ?>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <?php if ($reportAuditId !== ''): ?><div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-900"><span>Constats synchronisés avec le rapport d’audit enregistré.</span><a class="font-bold underline" href="/api/audit-report.php?id=<?= rawurlencode($reportAuditId) ?>">Ouvrir le rapport →</a></div><?php endif; ?>
     <!-- Messages d'alerte -->
     <?php if ($msg): ?>
         <div class="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-2xl font-bold flex items-center space-x-2">
