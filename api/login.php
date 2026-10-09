@@ -7,15 +7,17 @@ $error = null;
 $next = trim((string)($_POST['next'] ?? $_GET['next'] ?? ''));
 
 function gh_login_destination(string $candidate, string $role): ?string {
-    $defaults = ['admin' => '/api/dashboard.php', 'collaborator' => '/api/collaborateur/index.php', 'collaborateur' => '/api/collaborateur/index.php', 'pipeline' => '/api/pipeline.php', 'consultant' => '/api/collaborateur/index.php'];
-    if (isset($defaults[$candidate])) return $defaults[$candidate];
+    $defaults = ['admin' => '/api/dashboard.php', 'collaborator' => '/api/collaborateur/index.php', 'collaborateur' => '/api/collaborateur/index.php', 'pipeline' => '/api/pipeline.php', 'consultant' => '/api/collaborateur/index.php', '/api/admin/ai_providers.php'];
+    if (isset($defaults[$candidate])) $candidate = $defaults[$candidate];
     if ($candidate === '' || str_contains($candidate, chr(13)) || str_contains($candidate, chr(10)) || str_contains($candidate, chr(92))) return null;
     $parts = parse_url($candidate);
     if (!is_array($parts) || isset($parts['scheme']) || isset($parts['host']) || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment'])) return null;
     $path = $parts['path'] ?? '';
     $query = $parts['query'] ?? '';
-    $adminOnly = ['/api/admin/index.php', '/api/admin/ai_providers.php'];
+    $adminOnly = ['/api/admin/index.php', '/api/admin/ai_providers.php', '/api/dashboard.php', '/api/pipeline.php', '/api/scan.php', '/api/analyse.php'];
     if (in_array($path, $adminOnly, true) && $role !== 'admin') return null;
+    if (in_array($path, ['/api/audit-report.php', '/api/collaborateur/index.php'], true) &&
+        !in_array($role, ['admin', 'pipeline', 'collaborator', 'collaborateur', 'consultant'], true)) return null;
     if ($path === '/api/audit-report.php') {
         parse_str($query, $params);
         $id = (string)($params['id'] ?? '');
