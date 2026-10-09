@@ -468,7 +468,7 @@ include __DIR__ . '/../includes/header.php';
                                         <div class="space-y-2 max-h-48 overflow-y-auto border-t border-white/10 pt-3">
                                             <?php foreach ($lst['sites'] as $site): ?>
                                                 <div class="flex items-center justify-between gap-2 text-xs">
-                                                    <a class="text-blue-300 hover:underline truncate" target="_blank" rel="noopener noreferrer" href="<?php echo htmlspecialchars($site['url'] ?? '#', ENT_QUOTES); ?>"><?php echo htmlspecialchars($site['nom'] ?: ($site['url'] ?? 'Site')); ?></a>
+                                                    <a class="text-blue-300 hover:underline truncate" target="_blank" rel="noopener noreferrer" href="<?php echo htmlspecialchars($site['url'] ?? '#', ENT_QUOTES); ?>"><?php echo htmlspecialchars(($site['nom'] ?? '') ?: ($site['url'] ?? 'Site')); ?></a>
                                                     <span class="text-[#AAAAAA] whitespace-nowrap"><?php echo htmlspecialchars($site['statut'] ?? 'à_analyser'); ?></span>
                                                 </div>
                                             <?php endforeach; ?>
