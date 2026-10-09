@@ -94,8 +94,8 @@ function autoDeductEntrepriseData($parsed, $webText, $domain) {
  */
 require_once __DIR__ . '/includes/audit_response.php';
 
-function validateIAResponse($parsed, $domain) {
-    return gh_validate_ia_response($parsed, (string)$domain);
+function validateIAResponse($parsed, $domain, $sourceText = '', $sourceUrl = '') {
+    return gh_validate_ia_response($parsed, (string)$domain, (string)$sourceText, (string)$sourceUrl);
 }
 
 
@@ -208,7 +208,7 @@ if ($method === 'POST') {
     $enterpriseData = autoDeductEntrepriseData($resultData, $webContent, $domain);
 
     // 4. Valider la réponse IA
-    $validatedAudit = validateIAResponse($resultData, $domain);
+    $validatedAudit = validateIAResponse($resultData, $domain, $webContent, $url);
 
     // Ne pas enregistrer ni présenter un résultat incomplet comme un audit réussi.
     if (($validatedAudit['status'] ?? '') === 'analysis_incomplete' || $validatedAudit['riskScore'] === null) {
