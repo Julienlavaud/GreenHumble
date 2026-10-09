@@ -149,11 +149,26 @@ include __DIR__ . '/includes/header.php';
                     <?php else: ?>
                         <?php foreach ($allListes as $lst): ?>
                             <div class="p-3 bg-[#121212] rounded-xl border border-white/5 flex items-center justify-between">
-                                <div>
-                                    <div class="text-sm font-bold text-white"><?php echo htmlspecialchars($lst['nom']); ?></div>
-                                    <div class="text-[11px] text-[#AAAAAA]"><?php echo count($lst['items'] ?? []); ?> scans associés</div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-bold text-white"><?php echo htmlspecialchars($lst['nom'] ?? 'Liste sans nom'); ?></div>
+                                    <div class="text-[11px] text-[#AAAAAA]"><?php echo count($lst['sites'] ?? []); ?> sites · <?php echo count($lst['items'] ?? []); ?> scans associés</div>
+                                    <?php foreach (($lst['sites'] ?? []) as $site): ?>
+                                        <div class="mt-3 rounded-lg border border-white/10 p-2">
+                                            <div class="text-xs text-white break-all"><?php echo htmlspecialchars($site['nom'] ?? $site['url'] ?? 'Site'); ?></div>
+                                            <div class="text-[10px] text-[#AAAAAA] break-all"><?php echo htmlspecialchars($site['url'] ?? ''); ?></div>
+                                            <div class="mt-2 flex items-center justify-between gap-2">
+                                                <span class="text-[10px] text-amber-300"><?php echo htmlspecialchars($site['statut'] ?? 'à_analyser'); ?></span>
+                                                <?php if (!empty($site['url']) && in_array(($site['statut'] ?? 'à_analyser'), ['à_analyser', 'erreur'], true)): ?>
+                                                    <button type="button" onclick="scanSiteFromList(this, <?php echo htmlspecialchars(json_encode((string)$lst['id']), ENT_QUOTES, 'UTF-8'); ?>, <?php echo htmlspecialchars(json_encode((string)($site['id'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>, <?php echo htmlspecialchars(json_encode((string)$site['url']), ENT_QUOTES, 'UTF-8'); ?>)" class="px-2 py-1 bg-[#2A7AE2] text-white text-[10px] font-bold rounded-md border-none cursor-pointer">Scanner ce site</button>
+                                                <?php elseif (($site['statut'] ?? '') === 'en_cours'): ?>
+                                                    <span class="text-[10px] text-sky-300">Scan en cours…</span>
+                                                <?php elseif (($site['statut'] ?? '') === 'termine'): ?>
+                                                    <span class="text-[10px] text-emerald-300">Terminé</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
                                 </div>
-                                <span class="text-xs text-[#2A7AE2] font-mono">ID: <?php echo htmlspecialchars($lst['id']); ?></span>
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -355,6 +370,49 @@ async function reassignScanGroupPrompt(scanId) {
         alert('Erreur réseau');
     }
 }
+
+// Lance uniquement le site sélectionné dans sa liste et conserve son statut/scan_id.
+async function scanSiteFromList(button, listId, siteId, url) {
+    if (!listId || !siteId || !url) return alert('Liste, site ou URL manquant.');
+    if (button.disabled) return;
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Démarrage…';
+    const statusUrl = '/api/listes/update_site_status.php';
+    async function updateStatus(statut, scanId = '') {
+        const response = await fetch(statusUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: JSON.stringify({list_id: listId, site_id: siteId, statut, scan_id: scanId})
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) throw new Error(payload.error || 'Impossible de mettre à jour le statut du site.');
+        return payload;
+    }
+    try {
+        await updateStatus('en_cours');
+        const response = await fetch('/api/audit.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: JSON.stringify({url, type_audit: 'full', type_scan: 'diagnostic', liste_pre_audit: [listId]})
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.status === 'analysis_incomplete' || result.status === 'storage_unavailable' || result.error || !result.scan_id) {
+            throw new Error(result.error || result.message || 'Le scan n’a pas abouti ou son résultat n’a pas été enregistré.');
+        }
+        await updateStatus('termine', String(result.scan_id));
+        alert('Scan terminé pour ' + url + '. Score de risque : ' + (result.riskScore ?? 'non communiqué') + '/100.');
+        location.reload();
+    } catch (error) {
+        try { await updateStatus('erreur'); } catch (statusError) { console.error(statusError); }
+        alert('Échec du scan : ' + (error.message || 'erreur inconnue') + '. Vous pourrez réessayer depuis la liste.');
+        button.disabled = false;
+        button.textContent = original;
+    }
+}
+
 </script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
