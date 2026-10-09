@@ -24,4 +24,12 @@ check_contract(strpos($lead, 'marketing_opt_in') !== false, 'le consentement mar
 check_contract(strpos($lead, 'cl_prospects') === false, 'la capture ne dépend pas d’une table prospects absente du schéma livré');
 check_contract(strpos($lead, "'score' => 65") === false && strpos($lead, 'INSERT INTO cl_audits') === false, 'la capture de lead ne fabrique pas de faux audit ni de score');
 
+$lead = file_get_contents(__DIR__ . '/../api/public_lead.php');
+check_contract(strpos($audit, 'LOCK_EX') !== false, 'la sauvegarde des audits utilise un verrou d’écriture');
+check_contract(strpos($audit, "'storage_unavailable'") !== false, 'un échec de sauvegarde ne doit pas devenir un succès');
+check_contract(strpos($lead, 'cl_company_contacts') !== false, 'la capture utilise la table de contacts installée');
+check_contract(strpos($lead, 'marketing_opt_in') !== false, 'le consentement marketing est explicite et facultatif');
+check_contract(strpos($lead, 'cl_prospects') === false, 'la capture ne dépend pas de la table prospects absente du schéma livré');
+check_contract(strpos($lead, "'score' => 65") === false, 'la capture ne crée pas de score de risque fictif');
+
 echo "OK — contrat du scan public et contrôles d’accès aux audits" . PHP_EOL;
