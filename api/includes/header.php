@@ -11,10 +11,17 @@ $userName = trim((string)($_SESSION['user_name'] ?? $_SESSION['username'] ?? '')
 $page_title = isset($page_title) ? (string)$page_title : 'GreenHumble';
 $activeTab = isset($activeTab) ? (string)$activeTab : '';
 $adminGroups = [
-  'ACTIVITÉ' => ['audits' => 'Demandes & prospects', 'scans' => 'Scans'],
-  'DOSSIERS' => ['dossiers' => 'Dossiers', 'listes' => 'Listes'],
-  'ORGANISATION' => ['agency' => 'Identité agence', 'team' => 'Équipe & accès', 'scanner_groups' => 'Groupes'],
-  'RÉGLAGES' => ['scanner' => 'Réglages du scan', 'missions' => 'Catalogue métier', 'legal' => 'Références', 'texts' => 'Dictionnaire', 'style' => 'Textes du site']
+  'ACTIVITÉ' => ['dashboard' => 'Tableau de bord', 'pipeline' => 'Pipeline', 'scans' => 'Scans'],
+  'DOSSIERS' => ['listes' => 'Listes'],
+  'ORGANISATION' => ['agency' => 'Organisation'],
+  'INTELLIGENCE ARTIFICIELLE' => ['ai_providers' => 'Fournisseurs IA', 'scanner' => 'Prompts & règles'],
+  'RÉGLAGES' => ['missions' => 'Catalogue métier', 'legal' => 'Références', 'texts' => 'Dictionnaire', 'style' => 'Textes du site']
+];
+$adminDirectLinks = [
+  'dashboard' => '/api/dashboard.php',
+  'pipeline' => '/api/pipeline.php',
+  'scans' => '/api/scan.php',
+  'ai_providers' => '/api/admin/ai_providers.php'
 ];
 ?>
 <!doctype html>
@@ -54,7 +61,7 @@ tailwind.config={theme:{extend:{colors:{brand:{bg:'#f5f8f5',primary:'#176b4c',pr
             <div class="gh-sidebar__group">
               <p><?= htmlspecialchars($groupLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
               <?php foreach ($groupTabs as $tabId => $tabLabel): ?>
-                <a class="gh-sidebar__sublink <?= $activeTab === $tabId ? 'is-active' : '' ?>" href="/api/admin/index.php?tab=<?= rawurlencode($tabId) ?>"><?= htmlspecialchars($tabLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a>
+                <a class="gh-sidebar__sublink <?= $activeTab === $tabId ? 'is-active' : '' ?>" href="<?= htmlspecialchars($adminDirectLinks[$tabId] ?? ('/api/admin/index.php?tab=' . rawurlencode($tabId)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?= htmlspecialchars($tabLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a>
               <?php endforeach; ?>
             </div>
           <?php endforeach; ?>
