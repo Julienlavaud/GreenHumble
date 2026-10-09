@@ -30,9 +30,11 @@ $values = ['db_host'=>'localhost','db_name'=>'','db_user'=>'','admin_username'=>
 $errors = [];
 function gh_install_escape(string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 function gh_install_ini_value(string $value): string {
-    return '"' . str_replace(["\\\\", '"', "\\r", "\\n"], ["\\\\\\\\", '\\"', '', ''], $value) . '"';
+    $value = str_replace("\\\\", "\\\\\\\\", $value);
+    $value = str_replace('"', '\\"', $value);
+    $value = str_replace(["\r", "\n"], '', $value);
+    return '"' . $value . '"';
 }
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!hash_equals((string)$_SESSION['gh_install_csrf'], (string)($_POST['csrf'] ?? ''))) {
         $errors[] = 'Session expirée. Rechargez la page puis réessayez.';
