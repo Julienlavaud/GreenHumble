@@ -817,7 +817,7 @@ include __DIR__ . '/../includes/header.php';
                     <?php endforeach; ?>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <button type="button" onclick="saveScanner()" class="px-5 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold">Enregistrer les prompts</button>
+                    <button type="button" onclick="saveScanner()" class="save-btn px-5 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold">Enregistrer les prompts</button>
                     <span class="text-xs text-slate-500">Les valeurs déjà enregistrées restent préremplies.</span>
                 </div>
             </section>
