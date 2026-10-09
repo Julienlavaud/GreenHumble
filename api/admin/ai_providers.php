@@ -7,7 +7,7 @@ require_once __DIR__ . '/../includes/groq.php';
 require_once __DIR__ . '/../includes/mistral.php';
 if (empty($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true || ($_SESSION['role'] ?? '') !== 'admin') {
  if ($_SERVER['REQUEST_METHOD']==='POST') { http_response_code(401); header('Content-Type: application/json'); echo json_encode(['success'=>false,'error'=>'Session administrateur requise.']); exit; }
- header('Location: /api/login.php?next=admin'); exit;
+ header('Location: /api/login.php?next=' . rawurlencode('/api/admin/ai_providers.php'), true, 303); exit;
 }
 $defs=['gemini'=>['label'=>'Google Gemini','model'=>'gemini-2.5-flash','models'=>['gemini-2.5-flash','gemini-2.0-flash'],'key'=>'geminiApiKey'],'mistral'=>['label'=>'Mistral AI','model'=>'mistral-small-latest','models'=>['mistral-small-latest','mistral-large-latest'],'key'=>'mistralApiKey'],'groq'=>['label'=>'Groq','model'=>'llama-3.3-70b-versatile','models'=>['llama-3.3-70b-versatile','openai/gpt-oss-20b'],'key'=>'groqApiKey']];
 $state=load_app_state(); if(!isset($state['scanVars'])||!is_array($state['scanVars']))$state['scanVars']=[];
