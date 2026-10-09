@@ -70,8 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_ai_config'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['env_content'])) {
     $content = trim($_POST['env_content']);
     file_put_contents($envPath, $content);
-    header('Location: /api/admin/index.php?saved=1');
-    exit;
+    gh_admin_save_redirect();
 }
 
 gh_admin_save_redirect('scans');
