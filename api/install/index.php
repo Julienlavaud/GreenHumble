@@ -37,7 +37,7 @@ $values = ['db_host'=>'localhost','db_name'=>'','db_user'=>'','admin_username'=>
 $errors = [];
 function gh_install_escape(string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 function gh_install_ini_value(string $value): string {
-    $value = str_replace("\\\\", "\\\\\\\\", $value);
+    $value = str_replace("\\", "\\\\", $value);
     $value = str_replace('"', '\\"', $value);
     $value = str_replace(["\r", "\n"], '', $value);
     return '"' . $value . '"';
