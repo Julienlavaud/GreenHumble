@@ -62,7 +62,7 @@ if (php_sapi_name() === 'cli' || (isset($_GET['action']) && $_GET['action'] === 
     }
 }
 
-if (!isset($_SESSION['admin_logged_in']) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin')) {
+if (($_SESSION['admin_logged_in'] ?? false) !== true || ($_SESSION['role'] ?? '') !== 'admin') {
     if ($isJsonRequest) {
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(401);
