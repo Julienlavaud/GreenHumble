@@ -36,6 +36,17 @@ if (empty($_SESSION['gh_install_csrf'])) $_SESSION['gh_install_csrf'] = bin2hex(
 $values = ['db_host'=>'localhost','db_name'=>'','db_user'=>'','admin_username'=>'','agency_name'=>'GreenHumble'];
 $errors = [];
 function gh_install_escape(string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
+function gh_install_protect_directory(string $directory): void {
+    $rule = "Require all denied";
+    $htaccess = rtrim($directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '.htaccess';
+    $current = is_file($htaccess) ? (string) file_get_contents($htaccess) : '';
+    if (stripos($current, $rule) === false) {
+        $prefix = $current !== '' && substr($current, -1) !== "\n" ? "\n" : '';
+        if (file_put_contents($htaccess, $prefix . $rule . "\n", LOCK_EX) === false) {
+            throw new RuntimeException('Unable to protect private directory');
+        }
+    }
+}
 function gh_install_ini_value(string $value): string {
     $value = str_replace("\\", "\\\\", $value);
     $value = str_replace('"', '\\"', $value);
@@ -71,6 +82,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 require_once __DIR__ . '/schema.php';
                 gh_install_database_schema($pdo);
                 if (!is_dir($configDir) || !is_writable($configDir)) throw new RuntimeException('Configuration folder is not writable');
+                $dataDir = dirname(__DIR__, 2) . '/data';
+                if (!is_dir($dataDir) && !@mkdir($dataDir, 0750, true) && !is_dir($dataDir)) {
+                    throw new RuntimeException('Data folder could not be created');
+                }
+                if (!is_writable($dataDir)) throw new RuntimeException('Data folder is not writable');
+                gh_install_protect_directory($configDir);
+                gh_install_protect_directory($dataDir);
 
                 $cleanAgency = str_replace(["\r","\n",'='], '', $values['agency_name']);
                 $lines = [
@@ -88,8 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 @chmod($tmp, 0640);
                 if (!rename($tmp, $envPath)) { @unlink($tmp); throw new RuntimeException('Configuration activation failed'); }
                 @chmod($envPath, 0640);
-                // Block direct web access to the environment file on Apache/OVH.
-                if (!is_file($configDir.'/.htaccess')) @file_put_contents($configDir.'/.htaccess', "Require all denied\n", LOCK_EX);
                 $_SESSION = [];
                 if (ini_get('session.use_cookies')) {
                     $cookie = session_get_cookie_params();
