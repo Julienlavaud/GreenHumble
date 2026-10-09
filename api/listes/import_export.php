@@ -32,6 +32,14 @@ function gh_csv_url($value) {
     if (!in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], true)) return '';
     return filter_var($value, FILTER_VALIDATE_URL) ? $value : '';
 }
+function gh_csv_safe_cell($value) {
+    $value = (string)$value;
+    // Prevent spreadsheet formula execution when exported CSV is opened in Excel/LibreOffice.
+    if ($value !== '' && preg_match('/^[\\s\\x00-\\x1F]*[=+@-]/u', $value)) {
+        return "'" . $value;
+    }
+    return $value;
+}
 function gh_csv_download($filename, $rows) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -39,7 +47,7 @@ function gh_csv_download($filename, $rows) {
     $out = fopen('php://output', 'w');
     // BOM Excel-friendly (UTF-8)
     fwrite($out, "\xEF\xBB\xBF");
-    foreach ($rows as $row) fputcsv($out, $row, ';');
+    foreach ($rows as $row) fputcsv($out, array_map('gh_csv_safe_cell', $row), ';');
     fclose($out);
     exit;
 }
@@ -55,7 +63,19 @@ if ($method === 'GET') {
     }
     if ($action === 'export') {
         $lists = load_all_listes();
-        $wanted = trim($_GET['list_id'] ?? '');
+        $wanted = trim((string)($_GET['list_id'] ?? ''));
+        if ($wanted !== '') {
+            $found = false;
+            foreach ($lists as $candidate) {
+                if (($candidate['id'] ?? '') === $wanted) { $found = true; break; }
+            }
+            if (!$found) {
+                http_response_code(404);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => 'Liste introuvable.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
         $rows = [['liste', 'description', 'url', 'nom', 'statut', 'scan_id']];
         foreach ($lists as $list) {
             if ($wanted !== '' && ($list['id'] ?? '') !== $wanted) continue;
@@ -105,7 +125,13 @@ $description = trim((string)($input['description'] ?? ''));
 $rawSites = trim((string)($input['urls'] ?? ''));
 $parsedRows = [];
 
-if (isset($_FILES['csv']) && is_uploaded_file($_FILES['csv']['tmp_name'])) {
+if (isset($_FILES['csv'])) {
+    if (($_FILES['csv']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK ||
+        !is_uploaded_file($_FILES['csv']['tmp_name'] ?? '')) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Le téléversement du CSV a échoué. Vérifiez le fichier et réessayez.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     if (($_FILES['csv']['size'] ?? 0) > 2 * 1024 * 1024) {
         http_response_code(413);
         echo json_encode(['success' => false, 'error' => 'Le fichier CSV dépasse 2 Mo.'], JSON_UNESCAPED_UNICODE);
@@ -162,6 +188,8 @@ if (isset($_FILES['csv']) && is_uploaded_file($_FILES['csv']['tmp_name'])) {
     }
 }
 
+if (mb_strlen($listName) > 150) $listName = mb_substr($listName, 0, 150);
+if (mb_strlen($description) > 1000) $description = mb_substr($description, 0, 1000);
 if ($listName === '') $listName = 'Liste importée du ' . date('d/m/Y');
 if (count($parsedRows) === 0) {
     http_response_code(400);
@@ -189,7 +217,7 @@ foreach ($parsedRows as $row) {
     $sites[] = [
         'id' => 'site_' . bin2hex(random_bytes(6)),
         'url' => $url,
-        'nom' => trim((string)($row['nom'] ?? '')),
+        'nom' => mb_substr(trim((string)($row['nom'] ?? '')), 0, 200),
         'statut' => 'à_analyser',
         'scan_id' => null,
         'created_at' => date('c')
@@ -212,6 +240,17 @@ foreach ($allLists as &$entry) {
 }
 unset($entry);
 save_all_listes($allLists);
+// Verify that the JSON-backed list store actually persisted the imported records.
+$verifiedLists = load_all_listes();
+$persisted = null;
+foreach ($verifiedLists as $candidate) {
+    if (($candidate['id'] ?? '') === $list['id']) { $persisted = $candidate; break; }
+}
+if (!is_array($persisted) || count($persisted['sites'] ?? []) !== count($sites)) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'La liste n’a pas pu être enregistrée durablement. Vérifiez les droits d’écriture du dossier data.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 echo json_encode([
     'success' => true,
