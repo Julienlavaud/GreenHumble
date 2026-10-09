@@ -17,7 +17,7 @@ $adminUi = file_get_contents(__DIR__ . '/../api/admin/index.php');
 check(!str_contains($state, '"collab_1" => "Climatlocal31000"'), 'No plaintext default collaborator password');
 check(!str_contains($state, '"collab_2" => "collab2026"'), 'No shared default collaborator password');
 check(str_contains($state, 'mkdir($dir, 0750, true)'), 'Private data directory uses restrictive permissions');
-check(str_contains($state, "define('DB_USER', '')"), 'Database config fails closed instead of defaulting to root');
+check(str_contains($config, "define('DB_USER', '')") && !str_contains($config, "define('DB_USER', 'root')"), 'Database config fails closed instead of defaulting to root');
 check(!str_contains($db, 'htmlspecialchars($e->getMessage())'), 'Database exception details are not rendered to users');
 check(str_contains($auth, 'function gh_require_same_origin_mutation()'), 'Same-origin mutation guard exists');
 check(str_contains($save, 'gh_require_same_origin_mutation();'), 'Admin state writes use same-origin guard');
