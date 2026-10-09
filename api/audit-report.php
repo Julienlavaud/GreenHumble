@@ -10,7 +10,7 @@ if (!in_array($role, ['admin', 'pipeline', 'collaborator', 'consultant'], true))
     exit;
 }
 $page_title = 'Rapport d’audit';
-$activeTab = '';
+$activeTab = 'scans';
 require_once __DIR__ . '/includes/header.php';
 ?>
 <style>
