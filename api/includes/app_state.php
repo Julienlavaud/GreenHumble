@@ -113,7 +113,11 @@ function get_default_app_state() {
             "criticalThreshold" => 40,
             "bpifranceSubsidy" => 4000,
             "customBannedKeywords" => "neutre en carbone, éco-responsable, vert, bio, naturel, durable",
-            "aiKeywordInstructions" => "Analyser la conformité aux directives EmpCO et Green Claims."
+            "aiKeywordInstructions" => "Tu es l’IA GreenHumble, experte en conformité RSE, allégations environnementales et analyse de sites. Réponds en français, avec précision et sans tirer de conclusion au-delà des preuves.",
+            "aiAnalysisInstructions" => "Analyse les pages accessibles du site et relève chaque allégation environnementale distincte dans son contexte. Signale aussi les limites de couverture du scan.",
+            "aiEvidenceInstructions" => "Pour chaque signal, donne une citation exacte, l’URL de la page source, les éléments justificatifs manquants et les incertitudes à lever. N’invente jamais de citation ni de preuve.",
+            "aiRiskInstructions" => "Distingue un signal à vérifier, une preuve insuffisante, un risque plausible et une non-conformité documentée. Explique le niveau de risque sans présenter une suspicion comme une infraction établie.",
+            "aiCommercialInstructions" => "Propose une prochaine action et une priorité adaptées aux constats vérifiables. Ne recommande qu’une offre active du catalogue et relie chaque argument à une preuve effectivement relevée."
         ],
         "collaborators" => [
             [ "id" => "collab_1", "name" => "Julien Lavaud", "email" => "julien@climatlocal.com", "role" => "Admin", "avatarColor" => "bg-emerald-700", "assignedProspectsCount" => 0 ],
