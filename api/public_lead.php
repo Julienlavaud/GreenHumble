@@ -68,10 +68,10 @@ $websiteVariants = array_values(array_unique(array_map('strtolower', $websiteVar
 try {
     $db = get_db_connection();
     $find = $db->prepare(
-        'SELECT id FROM cl_companies
-         WHERE LOWER(COALESCE(domain, "")) = ? OR LOWER(COALESCE(clean_url, "")) = ?
-            OR LOWER(COALESCE(website, "")) IN (?, ?, ?, ?, ?, ?)
-         ORDER BY id ASC LIMIT 1'
+        "SELECT id FROM cl_companies
+         WHERE LOWER(COALESCE(domain, '')) = ? OR LOWER(COALESCE(clean_url, '')) = ?
+            OR LOWER(COALESCE(website, '')) IN (?, ?, ?, ?, ?, ?)
+         ORDER BY id ASC LIMIT 1"
     );
     $find->execute(array_merge([$host, $host], array_slice($websiteVariants, 0, 6)));
     $companyId = $find->fetchColumn();
@@ -86,8 +86,8 @@ try {
         $companyId = (int)$db->lastInsertId();
     } else {
         $update = $db->prepare(
-            'UPDATE cl_companies SET name = ?, domain = ?, website = COALESCE(NULLIF(website, ""), ?),
-             clean_url = ?, contact_name = ?, contact_email = ?, contact_phone = ? WHERE id = ?'
+            "UPDATE cl_companies SET name = ?, domain = ?, website = COALESCE(NULLIF(website, ''), ?),
+             clean_url = ?, contact_name = ?, contact_email = ?, contact_phone = ? WHERE id = ?"
         );
         $update->execute([$companyName, $host, $originUrl, $host, $companyContactName, $email, $phone ?: null, (int)$companyId]);
     }
