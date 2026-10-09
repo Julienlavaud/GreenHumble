@@ -15,7 +15,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!empty($identifier) && !empty($password)) {
         $user = authenticate_user($identifier, $password);
         if ($user) {
-            header('Location: /api/admin/index.php');
+            // Route each authenticated role to its own workspace; never send collaborators to admin.
+            $destination = (($user['role'] ?? '') === 'admin')
+                ? '/api/admin/index.php'
+                : '/api/collaborateur/index.php';
+            header('Location: ' . $destination);
             exit;
         } else {
             $error = "Identifiants incorrects";
