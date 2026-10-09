@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/collaborator_auth.php';
 
 $error = null;
 
@@ -14,6 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (!empty($identifier) && !empty($password)) {
         $user = authenticate_user($identifier, $password);
+        if (!$user) {
+            $user = gh_authenticate_collaborator($identifier, $password);
+        }
         if ($user) {
             // Route each authenticated role to its own workspace; never send collaborators to admin.
             $destination = (($user['role'] ?? '') === 'admin')
