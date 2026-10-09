@@ -69,7 +69,7 @@ if (($_SESSION['admin_logged_in'] ?? false) !== true || ($_SESSION['role'] ?? ''
         echo json_encode(['error' => 'Non autorisé. Veuillez vous connecter.']);
         exit;
     }
-    header('Location: /api/admin/index.php');
+    header('Location: /api/login.php?next=' . rawurlencode('/api/admin/ai_providers.php'), true, 303);
     exit;
 }
 
