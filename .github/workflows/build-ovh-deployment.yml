@@ -1,9 +1,6 @@
 name: Build OVH PHP 8.2 deployment ZIP
 
 on:
-  push:
-    branches:
-      - release/ovh-deployment-clean
   workflow_dispatch:
 
 permissions:
