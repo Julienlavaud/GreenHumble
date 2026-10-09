@@ -12,17 +12,8 @@ function gh_persist_commercial_audit(array $audit, array $enterpriseData = []): 
     }
 
     try {
-        $pdo = new PDO(
-            'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
-            DB_USER,
-            DB_PASS,
-            [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-                PDO::ATTR_TIMEOUT => 5,
-            ]
-        );
+        // Réutiliser la connexion applicative afin d’appliquer les migrations additives non destructives.
+        $pdo = get_db_connection();
 
         $url = trim((string)($audit['url'] ?? ''));
         $domain = strtolower((string)(parse_url($url, PHP_URL_HOST) ?: ''));
@@ -35,6 +26,8 @@ function gh_persist_commercial_audit(array $audit, array $enterpriseData = []): 
         if ($companyName === '') {
             $companyName = ucfirst(explode('.', $domain)[0]);
         }
+        $companyName = function_exists('mb_substr') ? mb_substr($companyName, 0, 200) : substr($companyName, 0, 200);
+        $siteUrl = 'https://' . $domain;
         $sector = (string)($enterpriseData['entreprise_secteur'] ?? $audit['entreprise_secteur'] ?? '');
         $headcount = (string)($enterpriseData['entreprise_salaries'] ?? $audit['entreprise_salaries'] ?? '');
         $turnover = (string)($enterpriseData['entreprise_ca'] ?? $audit['entreprise_ca'] ?? '');
@@ -45,15 +38,15 @@ function gh_persist_commercial_audit(array $audit, array $enterpriseData = []): 
 
         if ($companyId === false) {
             $insertCompany = $pdo->prepare(
-                'INSERT INTO cl_companies (name, domain, sector, headcount, turnover) VALUES (?, ?, ?, ?, ?)'
+                'INSERT INTO cl_companies (name, domain, website, clean_url, sector, headcount, turnover) VALUES (?, ?, ?, ?, ?, ?, ?)'
             );
-            $insertCompany->execute([$companyName, $domain, $sector ?: null, $headcount ?: null, $turnover ?: null]);
+            $insertCompany->execute([$companyName, $domain, $url ?: $siteUrl, $domain, $sector ?: null, $headcount ?: null, $turnover ?: null]);
             $companyId = (int)$pdo->lastInsertId();
         } else {
             $updateCompany = $pdo->prepare(
-                'UPDATE cl_companies SET name = ?, sector = COALESCE(NULLIF(?, \'\'), sector), headcount = COALESCE(NULLIF(?, \'\'), headcount), turnover = COALESCE(NULLIF(?, \'\'), turnover) WHERE id = ?'
+                'UPDATE cl_companies SET name = ?, domain = ?, website = COALESCE(NULLIF(website, \'\'), ?), clean_url = ?, sector = COALESCE(NULLIF(?, \'\'), sector), headcount = COALESCE(NULLIF(?, \'\'), headcount), turnover = COALESCE(NULLIF(?, \'\'), turnover) WHERE id = ?'
             );
-            $updateCompany->execute([$companyName, $sector, $headcount, $turnover, (int)$companyId]);
+            $updateCompany->execute([$companyName, $domain, $url ?: $siteUrl, $domain, $sector, $headcount, $turnover, (int)$companyId]);
         }
 
         $analyzedAt = (string)($audit['analyzedAt'] ?? date('c'));
@@ -63,18 +56,16 @@ function gh_persist_commercial_audit(array $audit, array $enterpriseData = []): 
         $riskLevel = (string)($audit['riskLevel'] ?? '');
         $assignedTo = trim((string)($audit['assigned_to'] ?? ''));
 
+        $rawResponse = json_encode($audit, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $insertAudit = $pdo->prepare(
-            'INSERT INTO cl_audits (company_id, url, score, riskLevel, headcount, turnover, analyzedAt, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO cl_audits (company_id, url, clean_url, score, riskLevel, headcount, turnover, summary, financial_impact, raw_response, source, analyzedAt, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $insertAudit->execute([
-            (int)$companyId,
-            $url,
-            $score,
-            $riskLevel ?: null,
-            $headcount ?: null,
-            $turnover ?: null,
-            $mysqlDate,
-            $assignedTo ?: null,
+            (int)$companyId, $url, $domain, $score, $riskLevel ?: 'modere',
+            $headcount ?: null, $turnover ?: null,
+            is_string($audit['summary'] ?? null) ? $audit['summary'] : null,
+            is_string($audit['financialImpact'] ?? null) ? $audit['financialImpact'] : null,
+            is_string($rawResponse) ? $rawResponse : null, 'scan_public', $mysqlDate, $assignedTo ?: null,
         ]);
 
         return true;
