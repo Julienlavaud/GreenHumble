@@ -25,10 +25,15 @@ function gh_normalize_claims($claims, string $sourceText = '', string $sourceUrl
         $claim['term'] = $term !== '' ? $term : $quote;
         $claim['quoteInText'] = $quote;
         $claim['sourceUrl'] = $sourceUrl;
-        if ($quoteFound && preg_match_all('/\\[SOURCE_URL:\\s*(https?:\\/\\/[^\\]\\s]+)\\]\\s*(.*?)(?=\\[SOURCE_URL:|$)/si', $sourceText, $sourcePages, PREG_SET_ORDER)) {
+        if ($quoteFound && strpos($sourceText, '[SOURCE_URL: ') !== false) {
+            $sourcePages = explode('[SOURCE_URL: ', $sourceText);
             foreach ($sourcePages as $sourcePage) {
-                if (strpos($normalise($sourcePage[2]), $normalise($quote)) !== false) {
-                    $claim['sourceUrl'] = $sourcePage[1];
+                $markerEnd = strpos($sourcePage, ']');
+                if ($markerEnd === false) continue;
+                $pageUrl = trim(substr($sourcePage, 0, $markerEnd));
+                $pageText = substr($sourcePage, $markerEnd + 1);
+                if (strpos($normalise($pageText), $normalise($quote)) !== false) {
+                    $claim['sourceUrl'] = $pageUrl;
                     break;
                 }
             }
