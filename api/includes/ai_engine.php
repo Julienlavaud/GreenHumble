@@ -23,25 +23,84 @@ function analyze_with_ai($url, $custom_prompt = null, $csrDocumentText = null) {
 }
 
 /**
+ * Vérifie qu'une URL cible un hôte public avant tout scraping.
+ * Pour limiter les risques de DNS rebinding, le scraping épingle ensuite l'IPv4 validée.
+ */
+function ai_engine_resolve_public_ipv4($host) {
+    $host = trim((string)$host, '[]');
+    if ($host === '' || strtolower($host) === 'localhost' || preg_match('/\.local$/i', $host)) {
+        return false;
+    }
+
+    if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) ? $host : false;
+    }
+
+    // Ce scraper n'accepte que les hôtes disposant d'une IPv4 publique validable.
+    $ips = @gethostbynamel($host);
+    if (!is_array($ips) || !$ips) {
+        return false;
+    }
+
+    foreach ($ips as $ip) {
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            return false;
+        }
+    }
+
+    return $ips[0];
+}
+
+/**
  * Scraping rapide du contenu d’un site
  */
 function ai_engine_scrape_website_content($url) {
-    if (empty($url)) return "";
+    if (!is_string($url) || trim($url) === '') return "";
+
+    $parts = parse_url(trim($url));
+    if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) return "";
+
+    $scheme = strtolower($parts['scheme']);
+    if (!in_array($scheme, ['http', 'https'], true) || isset($parts['user']) || isset($parts['pass'])) {
+        return "";
+    }
+
+    $host = strtolower($parts['host']);
+    $port = isset($parts['port']) ? (int)$parts['port'] : ($scheme === 'https' ? 443 : 80);
+    // Limiter aux ports web standards et éviter les services internes exposés sur d'autres ports.
+    if (($scheme === 'https' && $port !== 443) || ($scheme === 'http' && $port !== 80)) return "";
+
+    $resolvedIp = ai_engine_resolve_public_ipv4($host);
+    if (!$resolvedIp) return "";
 
     $ch = curl_init();
-    curl_setopt_array($ch, [
+    $options = [
         CURLOPT_URL            => $url,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36',
+        // Ne pas suivre les redirections : chaque destination devrait être revalidée avant une nouvelle requête.
+        CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_MAXREDIRS      => 0,
+        CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+        CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+        CURLOPT_USERAGENT      => 'GreenHumble-AI-Client/1.0',
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_SSL_VERIFYHOST => 2,
+        CURLOPT_CONNECTTIMEOUT => 8,
         CURLOPT_TIMEOUT        => 20,
-    ]);
+        CURLOPT_MAXFILESIZE    => 2097152,
+    ];
+
+    // Épingler le DNS vérifié pour éviter une seconde résolution différente par cURL.
+    if (!filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        $options[CURLOPT_RESOLVE] = [$host . ':' . $port . ':' . $resolvedIp];
+    }
+
+    curl_setopt_array($ch, $options);
     $html = curl_exec($ch);
+    $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    if (!$html) return "";
+    if (!is_string($html) || $html === '' || $httpCode < 200 || $httpCode >= 300) return "";
 
     $text = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', "", $html);
     $text = preg_replace('/<style\b[^>]*>(.*?)<\/style>/is', "", $text);
@@ -186,19 +245,31 @@ function ai_engine_run(
         $aiResponse = gemini_call($prompt, $systemInstruction, $model, $apiKey);
     }
 
-    // Si le résultat est valide, le renvoyer
-    if ($aiResponse && strpos($aiResponse, 'Erreur Moteur IA') === false) {
-        return $aiResponse;
+    // Accepter uniquement une réponse JSON objet exploitable.
+    $decodedResponse = is_string($aiResponse) ? json_decode($aiResponse, true) : null;
+    if (is_array($decodedResponse) && json_last_error() === JSON_ERROR_NONE) {
+        return json_encode($decodedResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
     // Fallback automatique vers Groq si Gemini échoue
     $groqKey = defined('GROQ_API_KEY') && !empty(GROQ_API_KEY) ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: ($_ENV['GROQ_API_KEY'] ?? ''));
     if (!empty($groqKey) && $provider !== 'groq') {
         $fallbackRes = groq_call($prompt, $systemInstruction, 'llama-3.3-70b-versatile', $groqKey);
-        if ($fallbackRes && strpos($fallbackRes, 'Erreur') === false) {
-            return $fallbackRes;
+        $decodedFallback = is_string($fallbackRes) ? json_decode($fallbackRes, true) : null;
+        if (is_array($decodedFallback) && json_last_error() === JSON_ERROR_NONE) {
+            return json_encode($decodedFallback, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         }
     }
 
-    return $aiResponse;
+    return json_encode([
+        'status' => 'analysis_incomplete',
+        'analysisComplete' => false,
+        'score' => null,
+        'riskLevel' => 'a_evaluer',
+        'summary' => "Analyse incomplète : le fournisseur IA n’a pas renvoyé un JSON exploitable. Aucune conclusion de conformité n’a été établie.",
+        'claims' => [],
+        'prospection' => null,
+        'financialImpact' => null,
+        'limitations' => ['Réponse IA absente, invalide ou non structurée en JSON']
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 }
