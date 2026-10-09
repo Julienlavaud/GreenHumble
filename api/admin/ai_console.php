@@ -5,9 +5,19 @@
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/app_state.php';
+require_once __DIR__ . '/../includes/auth.php';
+
+// Toutes les opérations de configuration (lecture, export, import et écriture) sont réservées aux admins.
+if (empty($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true || ($_SESSION['role'] ?? '') !== 'admin') {
+    http_response_code(401);
+    header('Content-Type: application/json; charset=UTF-8');
+    echo json_encode(['success' => false, 'error' => 'Authentification administrateur requise.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 
 header('Content-Type: application/json; charset=UTF-8');
-header('Access-Control-Allow-Origin: *');
+// Same-origin session endpoint: no wildcard CORS for admin configuration.
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
