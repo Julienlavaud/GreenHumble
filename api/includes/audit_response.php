@@ -38,6 +38,11 @@ function gh_normalize_claims($claims, string $sourceText = '', string $sourceUrl
                 ? $claim['evidenceStatus'] : 'signal';
             $claim['evidenceVerified'] = true;
             $claim['evidenceMissing'] = [];
+            if (trim((string)($claim['riskRationale'] ?? $claim['legalRisk'] ?? '')) === '') {
+                $claim['severity'] = 'a_verifier';
+                $claim['evidenceStatus'] = 'to_review';
+                $claim['evidenceMissing'][] = 'Justification du niveau de risque absente.';
+            }
         } else {
             $claim['evidenceStatus'] = 'evidence_missing';
             $claim['evidenceVerified'] = false;
