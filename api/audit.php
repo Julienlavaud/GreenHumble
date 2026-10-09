@@ -9,6 +9,7 @@ require_once __DIR__ . '/includes/app_state.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/ai_engine.php';
 require_once __DIR__ . '/includes/scans_manager.php';
+require_once __DIR__ . '/includes/auth.php';
 
 $storageFile = __DIR__ . '/../data/stored_audits.json';
 
@@ -132,6 +133,8 @@ if (!$isHtmlRequest) {
 }
 
 if ($method === 'GET') {
+    // Les audits peuvent contenir des données commerciales : lecture réservée aux utilisateurs authentifiés.
+    require_api_role(['admin', 'pipeline', 'collaborator', 'consultant']);
     $audits = get_stored_audits($storageFile);
     $idQuery = trim($_GET['id'] ?? '');
 
@@ -287,6 +290,7 @@ if ($method === 'POST') {
 }
 
 if ($method === 'DELETE') {
+    require_api_role(['admin']);
     $rawInput = file_get_contents('php://input');
     $inputData = json_decode($rawInput, true) ?: $_GET;
     $idToDelete = trim($inputData['id'] ?? '');
