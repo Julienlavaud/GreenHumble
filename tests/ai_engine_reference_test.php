@@ -44,4 +44,37 @@ foreach ([100, 75, 55, 35, 0] as $score) {
 }
 $bad = gh_validate_ia_response(['claims' => [['term' => 'allégation']]], 'example.org');
 ref_assert($bad['analysisComplete'] === false && $bad['riskScore'] === null, 'absence de score = analyse incomplète');
+
+$catalog = [[
+    'serviceKey' => 'acv-audit', 'serviceTitle' => 'Analyse de cycle de vie',
+    'description' => 'Mesurer les impacts', 'defaultBudget' => '1 200 €', 'isActive' => true
+]];
+$commercialSource = '[SOURCE_URL: https://example.org/] Nos produits sont neutres en carbone.';
+$commercial = gh_validate_ia_response([
+    'score' => 40,
+    'claims' => [[
+        'term' => 'neutres en carbone',
+        'quoteInText' => 'Nos produits sont neutres en carbone.',
+        'riskRationale' => 'Allégation absolue sans preuve publique de périmètre.'
+    ]],
+    'prospection' => [
+        'priority' => 'high',
+        'recommendedOffer' => ['serviceKey' => 'acv-audit', 'serviceTitle' => 'Analyse de cycle de vie', 'budget' => '100 €'],
+        'evidenceBasedReasons' => [[
+            'claimTerm' => 'neutres en carbone',
+            'quoteInText' => 'Nos produits sont neutres en carbone.',
+            'reason' => 'Revue des justificatifs de l’allégation.'
+        ]]
+    ]
+], 'example.org', $commercialSource, 'https://example.org/', $catalog);
+ref_assert($commercial['commercialProspectingKit']['priority'] === 'haute', 'priorité IA normalisée');
+ref_assert($commercial['commercialProspectingKit']['recommendedOffer']['serviceTitle'] === 'Analyse de cycle de vie', 'offre limitée au catalogue actif');
+ref_assert($commercial['commercialProspectingKit']['recommendedOffer']['budget'] === '1 200 €', 'budget repris du catalogue plutôt que du texte IA');
+ref_assert(count($commercial['commercialProspectingKit']['evidenceBasedReasons']) === 1, 'argumentaire lié à une citation vérifiée');
+$inventedOffer = gh_validate_ia_response([
+    'score' => 40,
+    'claims' => [],
+    'prospection' => ['recommendedOffer' => ['serviceKey' => 'inconnu', 'serviceTitle' => 'Offre inventée']]
+], 'example.org', '', '', $catalog);
+ref_assert($inventedOffer['commercialProspectingKit']['recommendedOffer'] === null, 'offre hors catalogue rejetée');
 echo "Tous les tests de référence du moteur IA sont réussis.\n";
