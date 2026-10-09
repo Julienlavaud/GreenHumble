@@ -50,6 +50,8 @@ jobs:
           php -l tests/collaborator_auth_test.php
           php -l tests/public_scan_contract_test.php
           php -l tests/list_import_export_test.php
+          php -l tests/list_single_scan_status_test.php
+          php -l api/listes/update_site_status.php
       - name: Tester les garde-fous OVH et le cockpit collaborateur
         run: php tests/ovh_security_contract_test.php
       - name: Tester la persistance des audits commerciaux
@@ -78,3 +80,6 @@ jobs:
 
       - name: Tester la persistance et la sécurité import/export des listes
         run: php tests/list_import_export_test.php
+
+      - name: Tester le contrat de statut de scan individuel (L02)
+        run: php tests/list_single_scan_status_test.php
