@@ -13,6 +13,7 @@ foreach ($data['cases'] as $case) {
     $audit = gh_validate_ia_response(['score' => $case['score'], 'claims' => $case['claims']], 'example.org', $data['sourceText'], 'https://example.org/');
     $results[$case['kind']] = $audit;
     ref_assert(count($audit['detectedClaims']) === $case['expectedClaims'], $case['name'] . ' : nombre d’allégations attendu');
+    ref_assert($audit['riskLevel'] === $case['expectedRiskLevel'], $case['name'] . ' : cohérence entre score et niveau de risque');
     if (isset($case['expectedEvidenceStatus'])) {
         ref_assert($audit['detectedClaims'][0]['evidenceStatus'] === $case['expectedEvidenceStatus'], $case['name'] . ' : la preuve manquante est signalée');
         ref_assert($audit['detectedClaims'][0]['severity'] === 'a_verifier', $case['name'] . ' : le niveau ne présente pas une suspicion comme infraction');
