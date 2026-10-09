@@ -32,7 +32,7 @@ foreach ([
 }
 gh_schema_assert(!preg_match('/\\b(DROP|TRUNCATE)\\s+(TABLE|DATABASE)\\b/i', $schema), 'aucune instruction destructive DROP/TRUNCATE');
 gh_schema_assert(strpos($schema, 'ALTER TABLE') !== false, 'les tables existantes peuvent recevoir les colonnes manquantes');
-gh_schema_assert(strpos($schema, "in_array('clean_url', $present, true)") !== false, 'migration des anciennes URL d’audit prévue');
+gh_schema_assert(strpos($schema, "in_array('clean_url', \\$present, true)") !== false, 'migration des anciennes URL d’audit prévue');
 gh_schema_assert(strpos($schema, "'cl_users' => [") !== false && strpos($schema, "'password_hash' => \"VARCHAR(255) NULL\"") !== false, 'les anciennes tables utilisateurs reçoivent les champs de compte sécurisés');
 gh_schema_assert(strpos($installer, 'gh_install_database_schema($pdo)') !== false, 'l’assistant exécute le schéma après le test de connexion');
 gh_schema_assert(strpos($installer, 'if (!$installIsHttps)') !== false, 'la soumission des identifiants exige HTTPS');
