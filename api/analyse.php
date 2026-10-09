@@ -168,8 +168,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $aiResult = analyze_with_ai($audData['url'], $customPrompt);
                 $kitJson = json_decode($aiResult, true);
-                
-                if ($kitJson && isset($kitJson['phone_pitch'])) {
+
+                if (is_array($kitJson)) {
+                    $priority = strtolower(trim((string)($kitJson['priority'] ?? '')));
+                    $priorityMap = ['high' => 'haute', 'haute' => 'haute', 'medium' => 'moyenne', 'moyenne' => 'moyenne', 'low' => 'basse', 'basse' => 'basse'];
+                    $kitJson['priority'] = $priorityMap[$priority] ?? (in_array((string)($audData['riskLevel'] ?? ''), ['critique', 'eleve'], true) ? 'haute' : (((string)($audData['riskLevel'] ?? '') === 'modere') ? 'moyenne' : 'basse'));
+                    $candidateOffer = $kitJson['recommendedOffer'] ?? null;
+                    $candidateKey = is_array($candidateOffer) ? trim((string)($candidateOffer['serviceKey'] ?? '')) : '';
+                    $candidateTitle = is_array($candidateOffer) ? trim((string)($candidateOffer['serviceTitle'] ?? '')) : trim((string)$candidateOffer);
+                    $approvedOffer = null;
+                    foreach ($serviceCatalog as $service) {
+                        $serviceKey = (string)($service['serviceKey'] ?? $service['id'] ?? '');
+                        $serviceTitle = (string)($service['serviceTitle'] ?? '');
+                        if (($candidateKey !== '' && $candidateKey === $serviceKey) || ($candidateTitle !== '' && strtolower($candidateTitle) === strtolower($serviceTitle))) {
+                            $approvedOffer = [
+                                'serviceKey' => $serviceKey,
+                                'serviceTitle' => $serviceTitle,
+                                'reason' => is_array($candidateOffer) ? trim((string)($candidateOffer['reason'] ?? '')) : ''
+                            ];
+                            if (trim((string)($service['defaultBudget'] ?? '')) !== '') $approvedOffer['budget'] = (string)$service['defaultBudget'];
+                            break;
+                        }
+                    }
+                    $kitJson['recommendedOffer'] = $approvedOffer;
+                    $allowedEvidence = [];
+                    foreach ($claimsForKit as $claim) {
+                        $claimKey = strtolower(trim((string)($claim['term'] ?? ''))) . '|' . strtolower(trim((string)($claim['quoteInText'] ?? '')));
+                        $allowedEvidence[$claimKey] = true;
+                    }
+                    $kitJson['evidenceBasedReasons'] = array_values(array_filter(
+                        is_array($kitJson['evidenceBasedReasons'] ?? null) ? $kitJson['evidenceBasedReasons'] : [],
+                        static function ($reason) use ($allowedEvidence) {
+                            if (!is_array($reason)) return false;
+                            $key = strtolower(trim((string)($reason['claimTerm'] ?? ''))) . '|' . strtolower(trim((string)($reason['quoteInText'] ?? '')));
+                            return $key !== '|' && isset($allowedEvidence[$key]);
+                        }
+                    ));
+                }
+
+                if (is_array($kitJson) && isset($kitJson['phone_pitch'])) {
                     $stmtSave = $db->prepare("UPDATE cl_audits SET kit_json = ? WHERE id = ?");
                     $stmtSave->execute([json_encode($kitJson), $audId]);
                     $msg = "Kit de prospection régénéré avec succès par l'IA !";
@@ -1009,6 +1046,14 @@ include __DIR__ . '/includes/header.php';
                 ];
             }
             ?>
+
+            <?php if (!empty($kit['priority']) || !empty($kit['nextAction']) || !empty($kit['recommendedOffer'])): ?>
+                <section class="bg-white p-6 sm:p-8 rounded-3xl border border-emerald-200 shadow-sm grid gap-4 sm:grid-cols-3">
+                    <div><p class="text-xs font-bold uppercase tracking-wide text-slate-500">Priorité</p><p class="mt-1 font-black text-slate-900"><?php echo htmlspecialchars((string)($kit['priority'] ?? 'À confirmer')); ?></p></div>
+                    <div><p class="text-xs font-bold uppercase tracking-wide text-slate-500">Prochaine action</p><p class="mt-1 text-sm text-slate-700"><?php echo htmlspecialchars((string)($kit['nextAction'] ?? '')); ?></p></div>
+                    <div><p class="text-xs font-bold uppercase tracking-wide text-slate-500">Offre du catalogue</p><p class="mt-1 text-sm font-bold text-emerald-800"><?php echo htmlspecialchars((string)(is_array($kit['recommendedOffer'] ?? null) ? ($kit['recommendedOffer']['serviceTitle'] ?? '') : ($kit['recommendedOffer'] ?? 'Aucune offre retenue'))); ?></p></div>
+                </section>
+            <?php endif; ?>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- 1. Script d'Appel Téléphonique -->
