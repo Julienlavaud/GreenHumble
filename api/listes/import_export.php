@@ -230,6 +230,11 @@ if (!$sites) {
 }
 
 $list = create_liste($listName, $description);
+if (!is_array($list) || empty($list['id'])) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Impossible de créer la liste. Vérifiez les droits d’écriture du dossier data.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 $allLists = load_all_listes();
 foreach ($allLists as &$entry) {
     if (($entry['id'] ?? '') === $list['id']) {
@@ -239,7 +244,11 @@ foreach ($allLists as &$entry) {
     }
 }
 unset($entry);
-save_all_listes($allLists);
+if (!save_all_listes($allLists)) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Échec d’écriture de la liste importée. Vérifiez les droits d’écriture du dossier data.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 // Verify that the JSON-backed list store actually persisted the imported records.
 $verifiedLists = load_all_listes();
 $persisted = null;
