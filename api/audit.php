@@ -91,11 +91,42 @@ function autoDeductEntrepriseData($parsed, $webText, $domain) {
  * validateIAResponse() : vérifie structure JSON, normalise et fiabilise.
  */
 function validateIAResponse($parsed, $domain) {
-    if (!is_array($parsed)) {
-        $parsed = [];
+    // Fail closed : une réponse absente/incomplète ne doit jamais devenir un score artificiel.
+    $hasScore = is_array($parsed) &&
+        (array_key_exists('riskScore', $parsed) || array_key_exists('score', $parsed));
+    $rawScore = is_array($parsed) ? ($parsed['riskScore'] ?? ($parsed['score'] ?? null)) : null;
+    $isIncomplete = !is_array($parsed) ||
+        empty($parsed) ||
+        (($parsed['status'] ?? '') === 'analysis_incomplete') ||
+        (($parsed['analysisComplete'] ?? true) === false) ||
+        !$hasScore ||
+        !is_numeric($rawScore);
+
+    if ($isIncomplete) {
+        $claims = is_array($parsed['detectedClaims'] ?? null)
+            ? $parsed['detectedClaims']
+            : (is_array($parsed['claims'] ?? null) ? $parsed['claims'] : []);
+        $summary = is_array($parsed) && is_string($parsed['summary'] ?? null)
+            ? $parsed['summary']
+            : "Analyse incomplète : aucune conclusion fiable n’a pu être produite.";
+        return array_merge(is_array($parsed) ? $parsed : [], [
+            'status' => 'analysis_incomplete',
+            'analysisComplete' => false,
+            'riskScore' => null,
+            'riskLevel' => 'a_evaluer',
+            'detectedClaims' => $claims,
+            'clientSummary' => [
+                'headline' => "Analyse incomplète : {$domain}",
+                'riskVerdict' => $summary,
+                'keyUrgentAction' => "Relancer l’analyse après vérification de la configuration du fournisseur IA.",
+                'immediateRisks' => [],
+                'stepsToCompliance' => []
+            ],
+            'commercialProspectingKit' => null
+        ]);
     }
 
-    $score = intval($parsed['riskScore'] ?? ($parsed['score'] ?? 45));
+    $score = intval($rawScore);
     $score = max(0, min(100, $score));
 
     $riskLevel = 'eleve';
@@ -245,6 +276,23 @@ if ($method === 'POST') {
 
     // 4. Valider la réponse IA
     $validatedAudit = validateIAResponse($resultData, $domain);
+
+    // Ne pas enregistrer ni présenter un résultat incomplet comme un audit réussi.
+    if (($validatedAudit['status'] ?? '') === 'analysis_incomplete' || $validatedAudit['riskScore'] === null) {
+        http_response_code(503);
+        echo json_encode([
+            'status' => 'analysis_incomplete',
+            'analysisComplete' => false,
+            'error' => 'L’analyse IA est incomplète. Aucun score de risque ni kit de prospection n’a été généré.',
+            'summary' => $validatedAudit['clientSummary']['riskVerdict'] ?? 'Vérifiez la configuration du fournisseur IA puis réessayez.',
+            'riskScore' => null,
+            'riskLevel' => 'a_evaluer',
+            'detectedClaims' => $validatedAudit['detectedClaims'] ?? [],
+            'commercialProspectingKit' => null
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $auditId = 'aud_' . date('Ymd_His') . '_' . substr(md5($url), 0, 6);
     $validatedAudit['id'] = $auditId;
     $validatedAudit['url'] = $url;
