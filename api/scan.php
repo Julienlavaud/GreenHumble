@@ -25,6 +25,9 @@ include __DIR__ . '/includes/header.php';
 ?>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10 bg-[#121212] text-[#E0E0E0]">
+    <?php if (($_GET['error'] ?? '') === 'audit_not_saved'): ?>
+        <div class="rounded-xl border border-rose-400/30 bg-rose-950/40 px-5 py-4 text-sm text-rose-100" role="alert">L’audit n’a pas pu être enregistré. Aucun ancien résultat n’a été ouvert ; vérifiez les droits d’écriture et réessayez.</div>
+    <?php endif; ?>
     <!-- Header PRO -->
     <div class="bg-[#1E1E1E] rounded-3xl p-8 sm:p-12 shadow-2xl relative overflow-hidden border border-white/10 text-center animate-fadeIn no-print">
         <div class="relative z-10 max-w-4xl mx-auto space-y-4">
