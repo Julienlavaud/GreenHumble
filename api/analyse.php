@@ -301,7 +301,7 @@ $page_title = "Dossier & Prospection - " . ($audit['company_name'] ?? 'Audit RSE
 include __DIR__ . '/includes/header.php';
 ?>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="gh-analysis-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <?php if ($reportAuditId !== ''): ?><div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-900"><span>Constats synchronisés avec le rapport d’audit enregistré.</span><a class="font-bold underline" href="/api/audit-report.php?id=<?= rawurlencode($reportAuditId) ?>">Ouvrir le rapport →</a></div><?php endif; ?>
     <!-- Messages d'alerte -->
     <?php if ($msg): ?>
