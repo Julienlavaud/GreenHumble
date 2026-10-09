@@ -801,7 +801,7 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
                                 <div class="space-y-2">
                                     <label class="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest">Clé API (Securisée)</label>
-                                    <input type="password" id="ia_key" value="<?php echo htmlspecialchars($state['scanVars']['aiApiKey'] ?? ''); ?>" placeholder="••••••••••••••••" class="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl font-mono text-sm text-emerald-300 focus:ring-4 focus:ring-emerald-500/20 transition-all">
+                                    <input type="password" id="ia_key" value="" autocomplete="new-password" placeholder="<?php echo !empty($state['scanVars']['aiApiKey']) ? 'Clé enregistrée — saisir pour remplacer' : 'Aucune clé configurée'; ?>" class="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl font-mono text-sm text-emerald-300 focus:ring-4 focus:ring-emerald-500/20 transition-all">
                                 </div>
                             </div>
                         </div>
@@ -1053,8 +1053,21 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-<?php $clientState = $state; unset($clientState['passwordsMap']); ?>
-const appState = <?php echo json_encode($clientState); ?>;
+<?php
+$clientState = $state;
+$stripPrivateValues = function (&$value) use (&$stripPrivateValues) {
+    if (!is_array($value)) return;
+    foreach (array_keys($value) as $key) {
+        if (preg_match('/(api.?key|secret|password|token|credential)/i', (string)$key)) {
+            unset($value[$key]);
+        } else {
+            $stripPrivateValues($value[$key]);
+        }
+    }
+};
+$stripPrivateValues($clientState);
+?>
+const appState = <?php echo json_encode($clientState, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
 // --- Unification de la Synchronisation ---
 async function syncState(type, data, isBatch = false) {
@@ -1147,7 +1160,8 @@ function saveLegal() {
 function saveScanner() {
     appState.scanVars.aiProvider = document.getElementById('ia_provider').value;
     appState.scanVars.aiModel = document.getElementById('ia_model').value;
-    appState.scanVars.aiApiKey = document.getElementById('ia_key').value;
+    const replacementApiKey = document.getElementById('ia_key').value.trim();
+    if (replacementApiKey !== '') appState.scanVars.aiApiKey = replacementApiKey;
     appState.scanVars.aiKeywordInstructions = document.getElementById('ia_prompt').value;
     appState.scanVars.customBannedKeywords = document.getElementById('ia_banned').value;
 
