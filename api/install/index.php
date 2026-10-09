@@ -6,7 +6,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     ini_set('session.use_strict_mode', '1');
     ini_set('session.cookie_httponly', '1');
     ini_set('session.cookie_samesite', 'Lax');
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
     ini_set('session.cookie_secure', $https ? '1' : '0');
     session_start();
 }
@@ -61,6 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     PDO::ATTR_EMULATE_PREPARES=>false
                 ]);
                 $pdo->query('SELECT 1')->fetchColumn();
+                require_once __DIR__ . '/schema.php';
+                gh_install_database_schema($pdo);
                 if (!is_dir($configDir) || !is_writable($configDir)) throw new RuntimeException('Configuration folder is not writable');
 
                 $cleanAgency = str_replace(["\r","\n",'='], '', $values['agency_name']);
@@ -82,6 +84,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Block direct web access to the environment file on Apache/OVH.
                 if (!is_file($configDir.'/.htaccess')) @file_put_contents($configDir.'/.htaccess', "Require all denied\n", LOCK_EX);
                 $_SESSION = [];
+                if (ini_get('session.use_cookies')) {
+                    $cookie = session_get_cookie_params();
+                    setcookie(session_name(), '', [
+                        'expires' => time() - 42000,
+                        'path' => $cookie['path'] ?: '/',
+                        'domain' => $cookie['domain'],
+                        'secure' => true,
+                        'httponly' => true,
+                        'samesite' => 'Lax'
+                    ]);
+                }
                 session_destroy();
                 header('Location: /api/login.php?installed=1', true, 303);
                 exit;
