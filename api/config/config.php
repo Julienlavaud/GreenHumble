@@ -68,6 +68,6 @@ if (!defined('AI_MODEL')) define('AI_MODEL', $stAI['aiModel'] ?? 'gemini-3.8-fla
 if (!defined('AI_API_KEY')) define('AI_API_KEY', $stAI['aiApiKey'] ?? '');
 if (!defined('GEMINI_API_KEY')) define('GEMINI_API_KEY', defined('AI_API_KEY') ? AI_API_KEY : '');
 if (!defined('ADMIN_PASSWORD_HASH')) {
-    // Par défaut 'password'
-    define('ADMIN_PASSWORD_HASH', '$2y$10$Nqm3ErRyHkVEySDv7muzJ.nn02KKdC7Rg9j8o/KgeITPzeku8Q4eu');
+    // Fail closed: no default admin password hash is shipped in source control.
+    define('ADMIN_PASSWORD_HASH', '');
 }
