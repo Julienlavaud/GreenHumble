@@ -26,6 +26,8 @@ jobs:
           php -l api/includes/green_claims_rules.php
           php -l api/includes/collaborator_auth.php
           php -l api/includes/auth.php
+          php -l api/includes/audit_database.php
+          php -l tests/audit_database_test.php
           php -l api/config/config.php
           php -l api/install/index.php
           php -l api/install/schema.php
