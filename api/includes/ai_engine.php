@@ -130,8 +130,8 @@ function ai_engine_run(
     $provider = $overrideProvider ?: strtolower($scanVars['aiProvider'] ?? (defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini')); // gemini, groq ou mistral
     $model    = $overrideModel   ?: ($scanVars['aiModel'] ?? (defined('AI_MODEL') ? AI_MODEL : 'gemini-3.8-flash'));
     
-    // Détection robuste de la clé API (ScanVars > Constante > Env)
-    $apiKey = $overrideApiKey ?: ($scanVars['aiApiKey'] ?? null);
+    // Priorité : clé explicitement passée, puis clé propre au fournisseur, puis clé générique de compatibilité.
+    $apiKey = $overrideApiKey;
     if (empty($apiKey)) {
         if ($provider === 'groq') {
             $apiKey = defined('GROQ_API_KEY') && !empty(GROQ_API_KEY) ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: ($_ENV['GROQ_API_KEY'] ?? ''));
@@ -140,6 +140,9 @@ function ai_engine_run(
         } else {
             $apiKey = defined('GEMINI_API_KEY') && !empty(GEMINI_API_KEY) ? GEMINI_API_KEY : (defined('AI_API_KEY') && !empty(AI_API_KEY) ? AI_API_KEY : (getenv('GEMINI_API_KEY') ?: getenv('AI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? '')));
         }
+    }
+    if (empty($apiKey)) {
+        $apiKey = $scanVars['aiApiKey'] ?? null;
     }
 
     // 2. Scraping du contenu réel
