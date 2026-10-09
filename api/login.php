@@ -60,7 +60,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#f5f8f5">
 <title>Connexion — GreenHumble</title>
-<link rel="stylesheet" href="/api/assets/css/greenhumble-app.css?v=3">
+<link rel="stylesheet" href="/api/assets/css/greenhumble-app.css?v=4">
 </head>
 <body class="gh-login-page">
 <div class="gh-login-layout">
