@@ -21,10 +21,17 @@ if (preg_match('/^GREENHUMBLE_INSTALLATION_COMPLETED=1$/m', $existing)) {
     http_response_code(410);
     exit('GreenHumble est déjà configuré. Pour modifier les paramètres, sauvegardez et modifiez la configuration depuis le gestionnaire de fichiers OVH.');
 }
+if (trim($existing) !== '') {
+    http_response_code(409);
+    exit('Un fichier de configuration existe déjà. Par sécurité, l’assistant ne l’écrase pas. Sauvegardez-le et vérifiez la configuration actuelle depuis le gestionnaire de fichiers OVH.');
+}
 if (empty($_SESSION['gh_install_csrf'])) $_SESSION['gh_install_csrf'] = bin2hex(random_bytes(32));
 $values = ['db_host'=>'localhost','db_name'=>'','db_user'=>'','admin_username'=>'','agency_name'=>'GreenHumble'];
 $errors = [];
 function gh_install_escape(string $s): string { return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
+function gh_install_ini_value(string $value): string {
+    return '"' . str_replace(["\\\\", '"', "\\r", "\\n"], ["\\\\\\\\", '\\"', '', ''], $value) . '"';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!hash_equals((string)$_SESSION['gh_install_csrf'], (string)($_POST['csrf'] ?? ''))) {
@@ -56,14 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $cleanAgency = str_replace(["\r","\n",'='], '', $values['agency_name']);
                 $lines = [
-                    'DB_HOST='.$values['db_host'],
-                    'DB_NAME='.$values['db_name'],
-                    'DB_USER='.$values['db_user'],
-                    'DB_PASS='.$dbPass,
-                    'GREENHUMBLE_ADMIN_USERNAME='.$values['admin_username'],
+                    'DB_HOST='.gh_install_ini_value($values['db_host']),
+                    'DB_NAME='.gh_install_ini_value($values['db_name']),
+                    'DB_USER='.gh_install_ini_value($values['db_user']),
+                    'DB_PASS='.gh_install_ini_value($dbPass),
+                    'GREENHUMBLE_ADMIN_USERNAME='.gh_install_ini_value($values['admin_username']),
                     'GREENHUMBLE_ADMIN_PASSWORD_HASH='.password_hash($adminPass, PASSWORD_DEFAULT),
                     'GREENHUMBLE_INSTALLATION_COMPLETED=1',
-                    'AGENCY_NAME='.$cleanAgency
+                    'AGENCY_NAME='.gh_install_ini_value($cleanAgency)
                 ];
                 $tmp = tempnam($configDir, '.gh-install-');
                 if ($tmp === false || file_put_contents($tmp, implode("\n", $lines)."\n", LOCK_EX) === false) throw new RuntimeException('Configuration write failed');
