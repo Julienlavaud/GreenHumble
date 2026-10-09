@@ -5,7 +5,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
 
 if (!isset($_SESSION['admin_logged_in']) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin')) {
-    header('Location: /api/admin/index.php');
+    header('Location: /api/login.php?next=' . rawurlencode('/api/admin/index.php?tab=scanner'), true, 303);
     exit;
 }
 
