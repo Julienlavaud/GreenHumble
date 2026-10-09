@@ -1079,7 +1079,7 @@ async function syncState(type, data, isBatch = false) {
 
 // --- Dispatcher de Sauvegarde par Onglet ---
 function saveTab(tab) {
-    if (tab === 'agency') { saveAgency(); saveTeam(false); }
+    if (tab === 'agency') { saveAgency().then((saved) => { if (saved) saveTeam(false); }); }
     else if (tab === 'missions') saveMissions();
     else if (tab === 'legal') saveLegal();
     else if (tab === 'scanner') saveScanner();
@@ -1093,7 +1093,7 @@ function saveAgency() {
     appState.agency.consultantName = document.getElementById('ag_consultant').value;
     appState.agency.agencyEmail = document.getElementById('ag_email').value;
     appState.agency.agencyPhone = document.getElementById('ag_phone').value;
-    syncState('agency', appState.agency);
+    return syncState('agency', appState.agency);
 }
 
 function saveMissions() {
