@@ -315,48 +315,7 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
         
-            <section id="organisation-equipe" class="mt-12 border-t border-slate-200 pt-10">
-                <p class="mb-6 text-sm font-semibold text-slate-500">ÉQUIPE & ACCÈS</p>
-
-            <div class="p-12 space-y-10">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Accès & Consultants</h2>
-                        <p class="text-slate-400 mt-2">Gérez les auditeurs autorisés à piloter les scans.</p>
-                    </div>
-                    <button onclick="addItem('team')" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
-                        <span>Nouveau Collaborateur</span>
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8" id="team-container">
-                    <?php foreach ($state['collaborators'] as $idx => $c): ?>
-                        <div class="team-card bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center space-y-6 group relative overflow-hidden ring-1 ring-slate-100" data-id="<?php echo $c['id']; ?>">
-                            <button onclick="deleteItem('team', <?php echo $idx; ?>)" class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all">✕</button>
-                            <div class="w-28 h-28 <?php echo $c['avatarColor']; ?> text-white rounded-[3rem] flex items-center justify-center text-4xl font-black mx-auto shadow-2xl group-hover:scale-110 transition-transform ring-4 ring-white">
-                                <?php echo substr($c['name'], 0, 1); ?>
-                            </div>
-                            <div class="space-y-2">
-                                <input type="text" value="<?php echo htmlspecialchars($c['name']); ?>" class="t-name w-full bg-transparent text-center font-black text-slate-900 text-lg border-none p-0 focus:ring-0" placeholder="Nom complet">
-                                <div class="flex justify-center">
-                                    <input type="text" value="<?php echo htmlspecialchars($c['role']); ?>" class="t-role px-4 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full inline-block uppercase tracking-widest italic border-none text-center focus:ring-0 w-32" placeholder="Rôle">
-                                </div>
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Email Contact</label>
-                                <input type="text" value="<?php echo htmlspecialchars($c['email']); ?>" class="t-email w-full bg-transparent text-center text-xs text-slate-400 border-none p-0 focus:ring-0 truncate font-medium" placeholder="Email contact">
-                            </div>
-                            <div class="space-y-1 pt-2 border-t border-slate-50">
-                                <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Mot de passe</label>
-                                <p class="text-xs text-slate-500">Mot de passe non affiché pour des raisons de sécurité.</p>
-                                <button type="button" onclick="setCollaboratorPassword('<?php echo htmlspecialchars((string)$c['id'], ENT_QUOTES, 'UTF-8'); ?>')" class="mt-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-600">Créer / réinitialiser l’accès</button>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        
-            </section>
+            
         <?php elseif ($activeTab === 'dossiers'): ?>
             <?php
             require_once __DIR__ . '/../includes/dossiers_manager.php';
@@ -701,6 +660,48 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             </div>
 
+        <section id="organisation-equipe" class="mt-12 border-t border-slate-200 pt-10">
+                <p class="mb-6 text-sm font-semibold text-slate-500">ÉQUIPE & ACCÈS</p>
+
+            <div class="p-12 space-y-10">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Accès & Consultants</h2>
+                        <p class="text-slate-400 mt-2">Gérez les auditeurs autorisés à piloter les scans.</p>
+                    </div>
+                    <button onclick="addItem('team')" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                        <span>Nouveau Collaborateur</span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8" id="team-container">
+                    <?php foreach ($state['collaborators'] as $idx => $c): ?>
+                        <div class="team-card bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center space-y-6 group relative overflow-hidden ring-1 ring-slate-100" data-id="<?php echo $c['id']; ?>">
+                            <button onclick="deleteItem('team', <?php echo $idx; ?>)" class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all">✕</button>
+                            <div class="w-28 h-28 <?php echo $c['avatarColor']; ?> text-white rounded-[3rem] flex items-center justify-center text-4xl font-black mx-auto shadow-2xl group-hover:scale-110 transition-transform ring-4 ring-white">
+                                <?php echo substr($c['name'], 0, 1); ?>
+                            </div>
+                            <div class="space-y-2">
+                                <input type="text" value="<?php echo htmlspecialchars($c['name']); ?>" class="t-name w-full bg-transparent text-center font-black text-slate-900 text-lg border-none p-0 focus:ring-0" placeholder="Nom complet">
+                                <div class="flex justify-center">
+                                    <input type="text" value="<?php echo htmlspecialchars($c['role']); ?>" class="t-role px-4 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full inline-block uppercase tracking-widest italic border-none text-center focus:ring-0 w-32" placeholder="Rôle">
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Email Contact</label>
+                                <input type="text" value="<?php echo htmlspecialchars($c['email']); ?>" class="t-email w-full bg-transparent text-center text-xs text-slate-400 border-none p-0 focus:ring-0 truncate font-medium" placeholder="Email contact">
+                            </div>
+                            <div class="space-y-1 pt-2 border-t border-slate-50">
+                                <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Mot de passe</label>
+                                <p class="text-xs text-slate-500">Mot de passe non affiché pour des raisons de sécurité.</p>
+                                <button type="button" onclick="setCollaboratorPassword('<?php echo htmlspecialchars((string)$c['id'], ENT_QUOTES, 'UTF-8'); ?>')" class="mt-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-600">Créer / réinitialiser l’accès</button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        
+            </section>
         <?php elseif ($activeTab === 'missions'): ?>
             <div class="p-12 space-y-10">
                 <div class="flex items-center justify-between">
