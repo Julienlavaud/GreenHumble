@@ -11,6 +11,8 @@ $auth = file_get_contents(__DIR__ . '/../api/includes/auth.php');
 $save = file_get_contents(__DIR__ . '/../api/admin/save_state.php');
 $admin = file_get_contents(__DIR__ . '/../api/admin/index.php');
 $workspace = file_get_contents(__DIR__ . '/../api/collaborateur/index.php');
+$provision = file_get_contents(__DIR__ . '/../api/admin/set_collaborator_password.php');
+$adminUi = file_get_contents(__DIR__ . '/../api/admin/index.php');
 
 check(!str_contains($state, '"collab_1" => "Climatlocal31000"'), 'No plaintext default collaborator password');
 check(!str_contains($state, '"collab_2" => "collab2026"'), 'No shared default collaborator password');
@@ -22,5 +24,8 @@ check(str_contains($save, 'gh_require_same_origin_mutation();'), 'Admin state wr
 check(str_contains($admin, 'gh_require_same_origin_mutation();'), 'Admin database writes use same-origin guard');
 check(str_contains($workspace, 'Derniers audits'), 'Collaborator cockpit exposes recent audits');
 check(str_contains($workspace, 'Signaux à vérifier'), 'Collaborator cockpit shows signals for human review');
+check(str_contains($provision, 'get_current_role() !== \'admin\''), 'Collaborator password provisioning is admin-only');
+check(str_contains($provision, 'password_hash($password, PASSWORD_DEFAULT)'), 'Collaborator password is stored as a hash');
+check(str_contains($adminUi, 'setCollaboratorPassword'), 'Admin team UI provides secure password setup/reset');
 
 echo "OK: OVH security and collaborator cockpit contract\n";
