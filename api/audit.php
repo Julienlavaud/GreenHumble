@@ -201,7 +201,7 @@ if ($method === 'POST') {
 
     // 2. Scraping & Analyse IA
     $webContent = ai_engine_scrape_website_content($url);
-    $aiResult = analyze_url_with_ai($url, $inputData['customPrompt'] ?? null, $inputData['csrDocumentText'] ?? null);
+    $aiResult = analyze_url_with_ai($url, $inputData['customPrompt'] ?? null, $inputData['csrDocumentText'] ?? null, $webContent);
     $resultData = is_array($aiResult) ? $aiResult : (json_decode($aiResult, true) ?: []);
 
     // 3. Auto-déduire secteur, CA, salariés
