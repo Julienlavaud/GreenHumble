@@ -21,6 +21,24 @@ function ensure_db_schema($pdo) {
         if (!in_array('turnover', $colsAudit)) {
             $pdo->exec("ALTER TABLE cl_audits ADD COLUMN turnover VARCHAR(50) NULL");
         }
+
+        // Migrations additives pour relier les scans publics aux prospects sans supprimer les données existantes.
+        if (!in_array('domain', $cols, true)) {
+            $pdo->exec("ALTER TABLE cl_companies ADD COLUMN domain VARCHAR(255) NULL AFTER website");
+        }
+
+        $contactCols = $pdo->query("SHOW COLUMNS FROM cl_company_contacts")->fetchAll(PDO::FETCH_COLUMN);
+        $contactMigrations = [
+            'source' => "ALTER TABLE cl_company_contacts ADD COLUMN source VARCHAR(100) NULL",
+            'marketing_opt_in' => "ALTER TABLE cl_company_contacts ADD COLUMN marketing_opt_in TINYINT(1) NOT NULL DEFAULT 0",
+            'marketing_consent_at' => "ALTER TABLE cl_company_contacts ADD COLUMN marketing_consent_at DATETIME NULL",
+            'audit_ref' => "ALTER TABLE cl_company_contacts ADD COLUMN audit_ref VARCHAR(100) NULL"
+        ];
+        foreach ($contactMigrations as $column => $sql) {
+            if (!in_array($column, $contactCols, true)) {
+                $pdo->exec($sql);
+            }
+        }
     } catch (Exception $e) {
         // Silently handle if table doesn't exist yet before install
     }
