@@ -196,6 +196,16 @@ function gh_install_database_schema(PDO $pdo): void
             'analyzedAt' => "DATETIME NULL", 'assigned_to' => "VARCHAR(255) NULL",
             'raw_response' => "LONGTEXT NULL", 'notes' => "TEXT NULL"
         ],
+        'cl_users' => [
+            'name' => "VARCHAR(255) NULL",
+            'email' => "VARCHAR(254) NULL",
+            'password_hash' => "VARCHAR(255) NULL",
+            'role' => "VARCHAR(40) NOT NULL DEFAULT 'collaborator'",
+            'is_active' => "TINYINT(1) NOT NULL DEFAULT 1",
+            'created_at' => "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            'updated_at' => "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+            'last_login_at' => "DATETIME NULL"
+        ],
         'cl_texts' => [
             'text_key' => "VARCHAR(191) NULL", 'title' => "VARCHAR(255) NOT NULL DEFAULT ''",
             'content' => "LONGTEXT NULL"
@@ -208,6 +218,20 @@ function gh_install_database_schema(PDO $pdo): void
             if (!in_array($column, $present, true)) {
                 $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
                 $present[] = $column;
+            }
+        }
+
+        // Normalise les anciens champs utilisateur si présents, sans afficher ni migrer de mot de passe en clair.
+        if ($table === 'cl_users') {
+            if (in_array('username', $present, true)) {
+                $pdo->exec("UPDATE cl_users SET email = COALESCE(NULLIF(email, ''), username) WHERE email IS NULL OR email = ''");
+            }
+            if (in_array('password', $present, true)) {
+                // Ne copie que des hashes reconnaissables ; un ancien mot de passe en clair doit être réinitialisé.
+                $pdo->exec("UPDATE cl_users SET password_hash = password WHERE (password_hash IS NULL OR password_hash = '') AND (password LIKE '$2%' OR password LIKE '$argon2%')");
+            }
+            if (in_array('active', $present, true)) {
+                $pdo->exec("UPDATE cl_users SET is_active = IF(active IN (1, '1', 'true', 'yes'), 1, 0)");
             }
         }
 
