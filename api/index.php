@@ -253,6 +253,12 @@ include __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <script>
+function escapeScanHtml(value) {
+    return String(value ?? '').replace(/[&<>\"']/g, function (ch) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[ch];
+    });
+}
+
 async function handlePublicScan(e) {
     e.preventDefault();
     const urlInput = document.getElementById('public_scan_url');
@@ -278,7 +284,7 @@ async function handlePublicScan(e) {
         btnText.textContent = 'Lancer le Pré-Scan';
         btn.disabled = false;
 
-        if (data.error) {
+        if (!response.ok || data.error || data.analysisComplete === false || data.status === 'analysis_incomplete') {
             alert('Erreur : ' + data.error);
             return;
         }
@@ -286,7 +292,9 @@ async function handlePublicScan(e) {
         document.getElementById('res_company_url').textContent = data.targetUrl || url;
         document.getElementById('lead_target_url').value = data.targetUrl || url;
 
-        const score = typeof data.score === 'number' ? data.score : (data.riskScore || 50);
+        const rawScore = typeof data.score === 'number' ? data.score : data.riskScore;
+        const score = Number.isFinite(Number(rawScore)) ? Number(rawScore) : null;
+        if (score === null) { alert('Le scan n’a pas fourni de score fiable. Veuillez réessayer plus tard.'); return; }
         const scoreBadge = document.getElementById('res_score_badge');
         scoreBadge.textContent = score + ' / 100';
         
@@ -300,7 +308,7 @@ async function handlePublicScan(e) {
 
         const riskPill = document.getElementById('res_risk_pill');
         const riskLevel = data.riskLevel || (score < 40 ? 'critique' : (score < 60 ? 'eleve' : (score < 75 ? 'modere' : 'faible')));
-        riskPill.textContent = 'Risque ' + riskLevel.toUpperCase();
+        riskPill.textContent = 'Vigilance ' + String(riskLevel).toUpperCase();
         
         if (riskLevel === 'critique' || riskLevel === 'eleve') {
             riskPill.className = 'px-3 py-1.5 bg-red-500/20 text-red-300 border border-red-500/40 rounded-xl text-xs font-bold';
@@ -312,24 +320,25 @@ async function handlePublicScan(e) {
 
         // Display summary
         let html = '';
-        if (data.summary) {
+        const summary = data.summary || (data.clientSummary && (data.clientSummary.riskVerdict || data.clientSummary.headline)) || '';
+        if (summary) {
             html += `<div class="p-3.5 bg-slate-800/80 border border-emerald-500/30 rounded-xl text-slate-200 mb-4 leading-relaxed">
-                <strong class="text-emerald-400 block mb-1">Synthèse de l'Analyse IA :</strong> ${data.summary}
+                <strong class="text-emerald-400 block mb-1">Synthèse préliminaire :</strong> ${escapeScanHtml(summary)}
             </div>`;
         }
 
-        const claims = data.claims || [];
+        const claims = Array.isArray(data.claims) ? data.claims : (Array.isArray(data.detectedClaims) ? data.detectedClaims : []);
         if (claims.length === 0) {
             html += `<div class="p-3 bg-emerald-950/40 border border-emerald-800/60 rounded-xl text-emerald-200">
-                ✅ Aucune allégation environnementale problématique majeure détectée sur cette page.
+                ✅ Aucun signal prioritaire remonté par cette pré-analyse. Cela ne garantit pas la conformité du site.
             </div>`;
         } else {
             claims.forEach(c => {
-                const term = c.term || 'Allégation détectée';
-                const quote = c.quoteInText || c.quote || '';
-                const law = c.lawArticle || 'Directive Green Claims / Code Conso';
-                const sanction = c.sanction || 'Sanctions réglementaires';
-                const note = c.correctionNote || 'Mise en conformité requise.';
+                const term = escapeScanHtml(c.term || c.claim || c.title || 'Signal à examiner');
+                const quote = escapeScanHtml(c.quoteInText || c.quote || c.evidence || '');
+                const law = escapeScanHtml(c.lawArticle || c.legalReference || 'Référentiel à vérifier');
+                const sanction = escapeScanHtml(c.sanction || 'Aucune sanction ne peut être déduite de ce seul signal.');
+                const note = escapeScanHtml(c.correctionNote || c.recommendation || 'Vérifier le contexte et les justificatifs avant de conclure.');
 
                 html += `
                 <div class="p-3.5 bg-red-950/40 border border-red-800/60 rounded-xl space-y-1.5">
