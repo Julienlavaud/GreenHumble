@@ -128,7 +128,8 @@ function ai_engine_run(
     $scanVars = $state['scanVars'] ?? [];
 
     $provider = strtolower($overrideProvider ?: ($scanVars['aiProvider'] ?? (defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini'))); // gemini, groq ou mistral
-    $model = $overrideModel ?: ($scanVars['aiModel'] ?? (defined('AI_MODEL') ? AI_MODEL : ''));
+    $providerModelKey = $provider . 'Model';
+    $model = $overrideModel ?: ($scanVars[$providerModelKey] ?? ($scanVars['aiModel'] ?? (defined('AI_MODEL') ? AI_MODEL : '')));
     // Ne pas envoyer par défaut le modèle Gemini à Mistral (ou inversement) lorsque seul le fournisseur a été changé.
     if (empty($model) ||
         ($provider === 'mistral' && preg_match('/^(gemini-|llama-|mixtral-)/i', $model)) ||
