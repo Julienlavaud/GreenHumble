@@ -17,6 +17,20 @@ foreach ($data['cases'] as $case) {
         ref_assert($audit['detectedClaims'][0]['evidenceStatus'] === $case['expectedEvidenceStatus'], $case['name'] . ' : la preuve manquante est signalée');
         ref_assert($audit['detectedClaims'][0]['severity'] === 'a_verifier', $case['name'] . ' : le niveau ne présente pas une suspicion comme infraction');
     }
+    $expected = array_map('strtolower', $case['expectedTerms'] ?? []);
+    $found = array_map(static function ($claim) { return strtolower((string)($claim['term'] ?? '')); }, $audit['detectedClaims']);
+    $truePositive = count(array_intersect($found, $expected));
+    $falsePositive = count(array_diff($found, $expected));
+    $missed = count(array_diff($expected, $found));
+    ref_assert($falsePositive === ($case['expectedFalsePositives'] ?? 0), $case['name'] . ' : taux de faux positifs de référence');
+    ref_assert($missed === ($case['expectedMisses'] ?? 0), $case['name'] . ' : taux d’oublis de référence');
+    if ($falsePositive > 0) {
+        foreach ($audit['detectedClaims'] as $claim) {
+            if (!in_array(strtolower((string)($claim['term'] ?? '')), $expected, true)) {
+                ref_assert($claim['evidenceStatus'] === 'evidence_missing', $case['name'] . ' : le faux positif est signalé comme non vérifié');
+            }
+        }
+    }
 }
 ref_assert($results['substantiated']['detectedClaims'][0]['evidenceVerified'] === true, 'citation exacte vérifiée');
 ref_assert($results['substantiated']['detectedClaims'][0]['sourceUrl'] === 'https://example.org/', 'citation rattachée à sa page source');
