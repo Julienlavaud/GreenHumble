@@ -71,7 +71,7 @@ include __DIR__ . '/includes/header.php';
                         <span>Recevoir le Diagnostic Climat Local Complet</span>
                     </h4>
                     <p class="text-xs text-slate-300 mt-1">
-                        Obtenez l'audit juridique détaillé, le chiffrage précis de vos risques financiers (sanctions DGCCRF) et le plan d'action d'alignement pour votre entreprise.
+                        Recevez une revue plus détaillée des signaux détectés, des justificatifs à réunir et des prochaines étapes possibles. Les signaux ne constituent pas, à eux seuls, une conclusion juridique.
                     </p>
                 </div>
 
@@ -105,7 +105,7 @@ include __DIR__ . '/includes/header.php';
                 </form>
 
                 <div id="lead_success_msg" class="hidden mt-4 p-4 bg-emerald-900/80 border border-emerald-500 text-emerald-200 text-xs rounded-xl font-bold text-center">
-                    ✅ Votre demande a bien été enregistrée ! Un auditeur ClimatLocal vous transmettra votre dossier complet sous 24h ouvrées.
+                    ✅ Votre demande est enregistrée. L’équipe pourra vous recontacter au sujet de ce diagnostic.
                 </div>
             </div>
         </div>
