@@ -46,7 +46,7 @@ $page_title = "Cockpit Admin PRO v2.9";
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<div class="max-w-[1850px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10 animate-fadeIn bg-[#121212] text-[#E0E0E0]">
+<div class="gh-admin-page max-w-[1850px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10 animate-fadeIn bg-[#121212] text-[#E0E0E0]">
     <!-- Master Header -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8 bg-[#1E1E1E] p-10 rounded-[3.5rem] border border-white/10 shadow-lg relative overflow-hidden">
         <div class="flex items-center space-x-8 relative z-10">
@@ -70,34 +70,6 @@ include __DIR__ . '/../includes/header.php';
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
             </button>
         </div>
-    </div>
-
-    <!-- Navigation Unifiée Admin -->
-    <div class="flex flex-wrap gap-2 p-2 bg-[#1E1E1E] rounded-2xl border border-white/10 shadow-md overflow-x-auto no-scrollbar">
-        <?php 
-        $tabs = [
-            'audits' => ['label' => 'Leads & Prospects', 'emoji' => '📊'],
-            'scans' => ['label' => 'Tous les scans', 'emoji' => '🔍'],
-            'dossiers' => ['label' => 'Dossiers', 'emoji' => '📁'],
-            'listes' => ['label' => 'Listes', 'emoji' => '📋'],
-            'style' => ['label' => 'Édition de texte', 'emoji' => '🎨'],
-            'agency' => ['label' => 'Identité Agence', 'emoji' => '🏢'],
-            'missions' => ['label' => 'Catalogue Métiers', 'emoji' => '💼'],
-            'legal' => ['label' => 'Juridique EmpCO', 'emoji' => '⚖️'],
-            'scanner' => ['label' => 'Variables Scan', 'emoji' => '⚙️'],
-            'scanner_groups' => ['label' => 'Groupes de scanners', 'emoji' => '🏷️'],
-            'texts' => ['label' => 'Textes & Mots Bannis', 'emoji' => '📝'],
-            'team' => ['label' => 'Équipe & Accès', 'emoji' => '👥']
-        ];
-        foreach ($tabs as $id => $info): 
-            $isActive = ($activeTab === $id);
-            ?>
-            <a href="?tab=<?php echo $id; ?>" 
-               class="px-5 py-3 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center space-x-2 shadow-sm <?php echo $isActive ? 'bg-[#2A7AE2] text-white border border-[#2A7AE2] shadow-md ring-2 ring-[#2A7AE2]/20' : 'bg-[#121212] text-[#E0E0E0] hover:bg-white/10 border border-white/10 hover:text-white'; ?>">
-                <span class="text-base"><?php echo $info['emoji']; ?></span>
-                <span><?php echo $info['label']; ?></span>
-            </a>
-        <?php endforeach; ?>
     </div>
 
     <!-- Container Dynamique -->

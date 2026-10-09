@@ -14,6 +14,7 @@ $auditId = trim((string)($_GET['id'] ?? ''));
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/api/assets/css/greenhumble-app.css?v=3">
 <title>Rapport d’audit — GreenHumble</title>
 <style>
 :root{color-scheme:light;--green:#087f5b;--green-dark:#145044;--mint:#eaf6f0;--ink:#18332c;--muted:#687b75;--line:#dce7e1;--paper:#fff;--bg:#f4f7f5;--amber:#946200;--red:#a33b36}
@@ -24,13 +25,24 @@ a{color:var(--green)}.shell{max-width:1240px;margin:auto;padding:24px}.topbar{di
 .grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr);gap:18px;align-items:start}.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px;min-width:0}.card h2{font-size:18px;letter-spacing:-.02em;margin:0 0 5px}.card .intro{color:var(--muted);margin:0 0 17px;font-size:13px}.scoreline{display:flex;align-items:center;gap:22px}.score{width:112px;height:112px;flex:0 0 112px;border:8px solid var(--mint);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--green-dark)}.score strong{font-size:30px;line-height:1}.score span{font-size:11px;color:var(--muted)}.scoretext{min-width:0}.scoretext h2{font-size:20px}.muted{color:var(--muted)}.notice{padding:13px 15px;background:#fff8e8;border:1px solid #f1dfb4;border-radius:10px;color:#73520b;margin:14px 0}.empty{padding:18px;border:1px dashed #cbd9d1;border-radius:12px;color:var(--muted);text-align:center}.item{border-top:1px solid var(--line);padding:15px 0}.item:first-of-type{border-top:0}.item h3{font-size:15px;margin:0 0 5px}.item p{margin:5px 0;overflow-wrap:anywhere}.tag{display:inline-block;border-radius:6px;background:#f0f3f1;padding:3px 7px;margin:0 5px 5px 0;font-size:11px;font-weight:750;color:#52645d}.list{padding-left:19px;margin:10px 0}.list li{margin:7px 0}.facts{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fact{background:#f7faf8;border-radius:10px;padding:12px;min-width:0}.fact span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}.fact strong{display:block;margin-top:4px;overflow-wrap:anywhere}.footer{font-size:12px;color:var(--muted);padding:12px 3px 24px}.hidden{display:none!important}.error{color:var(--red)}.commercial{border-left:3px solid var(--green);padding-left:13px;margin:12px 0}.mono{font-variant-numeric:tabular-nums}
 @media(max-width:800px){.shell{padding:14px}.topbar{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.hero,.card{padding:18px}.scoreline{align-items:flex-start;gap:15px}.score{width:92px;height:92px;flex-basis:92px}.lookup{flex-direction:column}.facts{grid-template-columns:1fr 1fr}}
 @media print{body{background:white;font-size:11pt}.shell{max-width:none;padding:0}.topbar .actions,.lookup,.no-print{display:none!important}.hero,.card{break-inside:avoid;border:1px solid #ccc;box-shadow:none;margin-bottom:10px;padding:15px}.grid{grid-template-columns:1.5fr 1fr;gap:10px}.footer{padding-bottom:0}a{color:inherit;text-decoration:none}}
+.gh-report-layout{min-height:100vh;display:grid;grid-template-columns:256px minmax(0,1fr)}.gh-report-sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:24px 15px;background:#fff;border-right:1px solid var(--line)}.gh-report-sidebar>.gh-brand{margin-bottom:32px}.gh-report-sidebar .gh-sidebar__caption{margin:0 10px 8px}.gh-report-sidebar .gh-sidebar__link{margin:2px 0}.gh-report-sidebar__logout{margin:auto 10px 12px;color:var(--muted);font-size:11px}.gh-report-main{min-width:0}.gh-report-main .shell{max-width:1250px;padding:24px}.gh-report-main .topbar{background:transparent}@media(max-width:680px){.gh-report-layout{display:flex;flex-direction:column}.gh-report-sidebar{position:relative;width:100%;height:auto;padding:13px 15px;border-right:0;border-bottom:1px solid var(--line)}.gh-report-sidebar>.gh-brand{margin:0 0 9px}.gh-report-sidebar .gh-sidebar__caption{margin:0 5px}.gh-report-sidebar .gh-sidebar__link{display:inline-flex;margin:2px 3px 2px 0}.gh-report-sidebar__logout{margin:8px 5px}.gh-report-main .shell{padding:15px}}@media print{.gh-report-sidebar{display:none!important}.gh-report-layout{display:block!important}.gh-report-main .shell{max-width:none;padding:0}}
 </style>
 </head>
-<body>
+<body data-gh-role="<?= $role === 'admin' ? 'admin' : 'collaborator' ?>">
+<div class="gh-report-layout">
+<aside class="gh-report-sidebar">
+  <a class="gh-brand" href="/api/index.php"><span class="gh-brand__mark">G</span><span>GreenHumble<small>Climat Local</small></span></a>
+  <p class="gh-sidebar__caption">ESPACE</p>
+  <a class="gh-sidebar__link" href="/api/index.php"><span class="gh-sidebar__icon">↗</span><span>Pré-diagnostic</span></a>
+  <a class="gh-sidebar__link" href="/api/collaborateur/index.php"><span class="gh-sidebar__icon">⌂</span><span>Mon espace</span></a>
+  <?php if ($role === 'admin'): ?><a class="gh-sidebar__link" href="/api/admin/index.php"><span class="gh-sidebar__icon">⚙</span><span>Administration</span></a><?php endif; ?>
+  <a class="gh-report-sidebar__logout" href="/api/logout.php">Déconnexion</a>
+</aside>
+<div class="gh-report-main">
 <div class="shell">
 <header class="topbar">
   <div class="brand">◈ GreenHumble<small>Audit de communication environnementale</small></div>
-  <div class="actions"><a class="btn" href="/api/admin/index.php">← Espace de travail</a><button class="btn primary" type="button" onclick="window.print()">Imprimer / PDF</button></div>
+  <div class="actions"><a class="btn" href="<?= $role === 'admin' ? '/api/admin/index.php' : '/api/collaborateur/index.php' ?>">← Espace de travail</a><button class="btn primary" type="button" onclick="window.print()">Imprimer / PDF</button></div>
 </header>
 <section class="hero">
   <div class="eyebrow">Rapport d’audit</div>
@@ -174,5 +186,7 @@ async function loadAudit(id) {
 $('lookup-form').addEventListener('submit', event => { event.preventDefault(); const id=$('audit-id').value.trim(); const url=new URL(window.location.href); if(id) url.searchParams.set('id',id); else url.searchParams.delete('id'); window.history.replaceState({},'',url); loadAudit(id); });
 if ($('audit-id').value.trim()) loadAudit($('audit-id').value.trim());
 </script>
+</div><!-- .gh-report-main -->
+</div><!-- .gh-report-layout -->
 </body>
 </html>

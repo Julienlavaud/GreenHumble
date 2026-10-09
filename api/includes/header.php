@@ -3,13 +3,19 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once __DIR__ . '/cms.php';
 require_once __DIR__ . '/app_state.php';
 $state = load_app_state();
-$agency = $state['agency'] ?? [];
 $userRole = (string)($_SESSION['role'] ?? '');
 $isLoggedIn = !empty($_SESSION['user_id']) || !empty($_SESSION['admin_logged_in']);
 $isAdmin = $isLoggedIn && $userRole === 'admin';
 $isCollaborator = $isLoggedIn && in_array($userRole, ['pipeline', 'collaborator', 'consultant'], true);
 $userName = trim((string)($_SESSION['user_name'] ?? $_SESSION['username'] ?? ''));
 $page_title = isset($page_title) ? (string)$page_title : 'GreenHumble';
+$activeTab = isset($activeTab) ? (string)$activeTab : '';
+$adminGroups = [
+  'ACTIVITÉ' => ['audits' => 'Demandes & prospects', 'scans' => 'Scans'],
+  'DOSSIERS' => ['dossiers' => 'Dossiers', 'listes' => 'Listes'],
+  'ORGANISATION' => ['agency' => 'Identité agence', 'team' => 'Équipe & accès', 'scanner_groups' => 'Groupes'],
+  'RÉGLAGES' => ['scanner' => 'Réglages du scan', 'missions' => 'Catalogue métier', 'legal' => 'Références', 'texts' => 'Dictionnaire', 'style' => 'Textes du site']
+];
 ?>
 <!doctype html>
 <html lang="fr">
@@ -22,26 +28,49 @@ $page_title = isset($page_title) ? (string)$page_title : 'GreenHumble';
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="/api/assets/css/styles.css?v=2">
-<link rel="stylesheet" href="/api/assets/css/greenhumble-refresh.css?v=2">
-<link rel="stylesheet" href="/api/assets/css/greenhumble-app.css?v=2">
+<link rel="stylesheet" href="/api/assets/css/styles.css?v=3">
+<link rel="stylesheet" href="/api/assets/css/greenhumble-refresh.css?v=3">
+<link rel="stylesheet" href="/api/assets/css/greenhumble-app.css?v=3">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='7' fill='%23176b4c'/><text x='7' y='17' fill='white' font-size='14' font-family='Arial' font-weight='bold'>G</text></svg>">
 <script>
 tailwind.config={theme:{extend:{colors:{brand:{bg:'#f5f8f5',primary:'#176b4c',primaryHover:'#0e4c37',secondary:'#b7e7c3',text:'#17352c',muted:'#64766e',card:'#fff'}}}}};
 </script>
 </head>
 <body data-gh-role="<?= $isAdmin ? 'admin' : ($isCollaborator ? 'collaborator' : 'public') ?>">
-<div class="gh-page flex flex-col flex-grow" data-gh-role="<?= $isAdmin ? 'admin' : ($isCollaborator ? 'collaborator' : 'public') ?>">
-<header class="gh-header">
-  <div class="gh-header__inner">
+<div class="gh-shell">
+  <aside class="gh-sidebar">
     <a class="gh-brand" href="/api/index.php"><span class="gh-brand__mark">G</span><span>GreenHumble<small>Climat Local</small></span></a>
-    <nav class="gh-nav" aria-label="Navigation principale">
-      <a href="/api/index.php">Pré-diagnostic</a>
-      <?php if ($isCollaborator): ?><a class="gh-nav__primary" href="/api/collaborateur/index.php">Mon espace</a><?php endif; ?>
-      <?php if ($isAdmin): ?><a class="gh-nav__primary" href="/api/admin/index.php">Administration</a><?php endif; ?>
-      <?php if (!$isLoggedIn): ?><a class="gh-nav__primary" href="/api/login.php">Connexion</a>
-      <?php else: ?><span class="gh-header__user"><?= htmlspecialchars($userName ?: ($isAdmin ? 'Administration' : 'Collaborateur'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span><a href="/api/logout.php">Déconnexion</a><?php endif; ?>
-    </nav>
-  </div>
-</header>
-<div class="flex-grow">
+    <div class="gh-sidebar__scroll">
+      <p class="gh-sidebar__caption">ESPACE</p>
+      <nav class="gh-sidebar__nav" aria-label="Navigation principale">
+        <a class="gh-sidebar__link <?= !$isAdmin && !$isCollaborator ? 'is-active' : '' ?>" href="/api/index.php"><span class="gh-sidebar__icon">↗</span><span>Pré-diagnostic</span></a>
+        <?php if ($isCollaborator): ?><a class="gh-sidebar__link <?= basename($_SERVER['PHP_SELF']) === 'index.php' && basename(dirname($_SERVER['PHP_SELF'])) === 'collaborateur' ? 'is-active' : '' ?>" href="/api/collaborateur/index.php"><span class="gh-sidebar__icon">⌂</span><span>Mon espace</span></a><?php endif; ?>
+        <?php if ($isAdmin): ?><a class="gh-sidebar__link" href="/api/collaborateur/index.php"><span class="gh-sidebar__icon">⌂</span><span>Espace collaborateur</span></a><?php endif; ?>
+      </nav>
+      <?php if ($isAdmin): ?>
+        <p class="gh-sidebar__caption gh-sidebar__caption--spaced">ADMINISTRATION</p>
+        <nav class="gh-sidebar__nav gh-sidebar__nav--admin" aria-label="Sections d’administration">
+          <?php foreach ($adminGroups as $groupLabel => $groupTabs): ?>
+            <div class="gh-sidebar__group">
+              <p><?= htmlspecialchars($groupLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
+              <?php foreach ($groupTabs as $tabId => $tabLabel): ?>
+                <a class="gh-sidebar__sublink <?= $activeTab === $tabId ? 'is-active' : '' ?>" href="/api/admin/index.php?tab=<?= rawurlencode($tabId) ?>"><?= htmlspecialchars($tabLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a>
+              <?php endforeach; ?>
+            </div>
+          <?php endforeach; ?>
+        </nav>
+      <?php endif; ?>
+    </div>
+    <div class="gh-sidebar__account">
+      <?php if ($isLoggedIn): ?>
+        <div class="gh-sidebar__identity"><span class="gh-avatar"><?= htmlspecialchars(strtoupper(substr($userName ?: ($isAdmin ? 'A' : 'C'), 0, 1)), ENT_QUOTES, 'UTF-8') ?></span><span><strong><?= htmlspecialchars($userName ?: ($isAdmin ? 'Administration' : 'Collaborateur'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></strong><small><?= $isAdmin ? 'Administrateur' : 'Collaborateur' ?></small></span></div>
+        <a class="gh-sidebar__logout" href="/api/logout.php">Déconnexion</a>
+      <?php else: ?>
+        <a class="gh-sidebar__login" href="/api/login.php">Connexion à mon espace <span>→</span></a>
+        <p>GreenHumble · Climat Local</p>
+      <?php endif; ?>
+    </div>
+  </aside>
+  <div class="gh-main-column">
+    <div class="gh-topbar"><span class="gh-topbar__title"><?= htmlspecialchars($page_title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span><span class="gh-topbar__status"><i></i><?= $isLoggedIn ? 'Espace sécurisé' : 'Pré-diagnostic public' ?></span></div>
+    <div class="gh-content">
