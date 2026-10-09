@@ -7,6 +7,7 @@
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/includes/app_state.php';
 require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/audit_database.php';
 require_once __DIR__ . '/includes/ai_engine.php';
 require_once __DIR__ . '/includes/scans_manager.php';
 require_once __DIR__ . '/includes/auth.php';
@@ -262,10 +263,14 @@ if ($method === 'POST') {
         exit;
     }
 
+    // Persistance commerciale SQL facultative : le scan JSON reste disponible en secours.
+    $databaseSaved = gh_persist_commercial_audit($validatedAudit, $enterpriseData);
+
     // 7. Retour JSON strict, complet et validé
     $responsePayload = [
         'id' => $auditId,
         'scan_id' => $savedScan['id'],
+        'databaseSaved' => $databaseSaved,
         'url' => $url,
         'statut' => 'ok',
         'type_audit' => $type_audit,
