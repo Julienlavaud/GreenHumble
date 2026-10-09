@@ -14,6 +14,13 @@ header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store, max-age=0');
 header('Referrer-Policy: no-referrer');
 
+// Ne jamais afficher le formulaire ni recevoir des identifiants hors HTTPS.
+$installIsHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+if (!$installIsHttps) {
+    http_response_code(400);
+    exit('Ouvrez l’assistant via une adresse HTTPS pour protéger vos identifiants.');
+}
+
 $configDir = dirname(__DIR__) . '/config';
 $envPath = $configDir . '/.env';
 $existing = is_file($envPath) ? (string) @file_get_contents($envPath) : '';
