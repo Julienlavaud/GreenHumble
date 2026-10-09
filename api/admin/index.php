@@ -62,6 +62,10 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-3 relative z-10">
+            <a href="/api/admin/backup_database.php" class="inline-flex items-center gap-2 px-5 py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl border border-emerald-500/30 shadow-sm transition-all font-bold text-sm" title="Télécharger une sauvegarde SQL de la base GreenHumble">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3" /></svg>
+                <span>Sauvegarder la base</span>
+            </a>
             <button onclick="window.location.reload()" class="p-4 bg-[#121212] hover:bg-white/10 text-white rounded-3xl border border-white/10 shadow-sm transition-all cursor-pointer" title="Rafraîchir">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
             </button>
