@@ -10,7 +10,11 @@ require_once __DIR__ . '/../includes/auth.php';
 // Centralize login: this page must not accept a separate hard-coded password.
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true ||
     !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header('Location: /api/login.php?next=admin');
+    $requestedTab = trim((string)($_GET['tab'] ?? 'scans'));
+    $loginTabs = ['audits', 'scans', 'dossiers', 'listes', 'agency', 'team', 'scanner_groups', 'scanner', 'missions', 'legal', 'texts', 'style'];
+    if (!in_array($requestedTab, $loginTabs, true)) $requestedTab = 'scans';
+    $next = '/api/admin/index.php?tab=' . rawurlencode($requestedTab);
+    header('Location: /api/login.php?next=' . rawurlencode($next), true, 303);
     exit;
 }
 
