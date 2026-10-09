@@ -51,3 +51,36 @@ Les types de signaux doivent venir d'une liste contrôlée : `environmental_clai
 ## Prochaine étape technique
 
 Isoler la normalisation de la réponse IA dans une fonction testable, corriger ces deux problèmes avec tests unitaires, puis seulement ensuite préparer un appel optionnel depuis la route d'audit. Garder le moteur commercial hors de la persistance et de l'envoi jusqu'à ce que l'authentification soit revue.
+
+
+## Mise à jour du 9 octobre 2026
+
+Les changements suivants sont maintenant présents sur la branche de développement :
+
+- La validation de réponse IA est isolée dans `api/includes/audit_response.php`, puis appelée depuis `api/audit.php`.
+- Le succès normalisé porte explicitement `analysisComplete: true`; une réponse incomplète reste bloquée avec un score nul.
+- Le kit commercial est `null` lorsqu'il n'est pas explicitement fourni. Aucun prix ou forfait n'est fabriqué par le validateur.
+- `tests/audit_response_test.php` couvre les réponses valides, l'absence de score, les scores non numériques, les réponses explicitement incomplètes et l'absence d'offre inventée.
+- Le workflow GitHub Actions exécute désormais ce nouveau jeu de tests. Les exécutions observées sur les commits concernés sont réussies.
+
+## Blocage de sécurité prioritaire avant toute mise en ligne
+
+La revue statique a également révélé plusieurs défauts d'authentification dans le code actuel :
+
+- `api/includes/auth.php` contient des comptes système et des mots de passe codés en dur.
+- La détection du rôle via l'en-tête Authorization accepte des correspondances partielles de jetons statiques.
+- `api/admin/index.php` dispose d'un chemin d'accès administrateur indépendant avec un secret codé en dur.
+- `api/config/config.php` prévoit un hash administrateur de repli connu et une configuration de base de données de démonstration.
+
+Ces chemins ne doivent pas être exposés publiquement en l'état. Les valeurs sensibles ne sont pas reproduites dans cette documentation. Avant de modifier l'authentification, il faut établir le mécanisme de connexion réellement utilisé et prévoir une configuration de remplacement, afin de corriger les contournements sans créer un verrouillage accidentel de l'administration.
+
+Plan de correction recommandé :
+
+1. Supprimer les comptes et jetons statiques; utiliser une authentification explicite avec mots de passe hachés et vérification constante des jetons lorsque ceux-ci sont nécessaires.
+2. Faire appliquer les mêmes contrôles de session et de rôle à l'interface d'administration et aux API.
+3. Refuser l'accès administrateur si aucun secret/hash n'est configuré, plutôt que d'utiliser une valeur par défaut.
+4. Vérifier les protections CSRF, la régénération de l'identifiant de session après connexion, la limitation des tentatives et les autorisations de chaque endpoint.
+5. Ajouter des tests négatifs pour accès anonyme, rôle insuffisant, jeton partiel, secret non configuré et session expirée.
+6. Si les secrets codés en dur ont été utilisés ou réutilisés ailleurs, les remplacer avant le déploiement.
+
+**État :** les tests automatisés du validateur et du moteur commercial passent dans GitHub Actions. La revue ci-dessus est statique; aucune connexion réelle, aucun test d'intrusion et aucun déploiement de production n'ont été effectués.
