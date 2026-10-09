@@ -32,7 +32,9 @@ gh_test_assert(
     'Une allégation liée à une preuve priorise la revue des allégations'
 );
 gh_test_assert(
-    ($claim['auto_send'] ?? true) === false && ($claim['pricing'] ?? 'missing') === null,
+    ($claim['auto_send'] ?? true) === false
+        && array_key_exists('pricing', $claim)
+        && $claim['pricing'] === null,
     'Aucun envoi automatique et aucun prix inventé'
 );
 
