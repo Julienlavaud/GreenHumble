@@ -258,7 +258,7 @@ if ($isRest) {
 
 // Fallback HTML Dashboard si appel standard navigateur
 if (($_SESSION['admin_logged_in'] ?? false) !== true || ($_SESSION['role'] ?? '') !== 'admin') {
-    header('Location: /api/admin/index.php');
+    header('Location: /api/login.php?next=' . rawurlencode('/api/admin/index.php?tab=agency'), true, 303);
     exit;
 }
 
