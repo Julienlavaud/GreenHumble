@@ -5,9 +5,14 @@
  */
 
 if (session_status() === PHP_SESSION_NONE) {
-    // Session sécurisée
-    ini_set('session.cookie_httponly', 1);
-    ini_set('session.use_only_cookies', 1);
+    // Secure session defaults must be applied before session_start().
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    ini_set('session.cookie_secure', $isHttps ? '1' : '0');
     session_start();
 }
 
