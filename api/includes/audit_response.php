@@ -71,8 +71,66 @@ function gh_normalize_claims($claims, string $sourceText = '', string $sourceUrl
     return $result;
 }
 
+function gh_normalize_commercial_kit($kit, array $claims, int $score, array $serviceCatalog = []): ?array {
+    if (!is_array($kit)) return null;
+    $priorityRaw = strtolower(trim((string)($kit['priority'] ?? $kit['priorite'] ?? $kit['priorité'] ?? '')));
+    $priorityMap = ['high' => 'haute', 'urgent' => 'haute', 'haute' => 'haute', 'medium' => 'moyenne', 'moderate' => 'moyenne', 'moyenne' => 'moyenne', 'low' => 'basse', 'basse' => 'basse'];
+    $priority = $priorityMap[$priorityRaw] ?? ($score < 55 ? 'haute' : ($score < 75 ? 'moyenne' : 'basse'));
+    $kit['priority'] = $priority;
+    $kit['priorityRationale'] = trim((string)($kit['priorityRationale'] ?? '')) ?: 'Priorité indicative calculée à partir du score de risque ; à confirmer par un consultant.';
+    $kit['nextAction'] = trim((string)($kit['nextAction'] ?? $kit['recommandation'] ?? '')) ?: 'Faire vérifier les signaux et les justificatifs avant toute prise de contact.';
+
+    $candidate = $kit['recommendedOffer'] ?? $kit['offer'] ?? ($kit['climatLocalProposal']['recommendedPackage'] ?? null);
+    $candidateKey = is_array($candidate) ? trim((string)($candidate['serviceKey'] ?? $candidate['id'] ?? '')) : '';
+    $candidateTitle = is_array($candidate)
+        ? trim((string)($candidate['serviceTitle'] ?? $candidate['title'] ?? $candidate['name'] ?? $candidate['recommendedPackage'] ?? ''))
+        : trim((string)$candidate);
+    $approved = null;
+    foreach ($serviceCatalog as $service) {
+        if (!is_array($service) || !($service['isActive'] ?? true)) continue;
+        $key = trim((string)($service['serviceKey'] ?? $service['id'] ?? ''));
+        $title = trim((string)($service['serviceTitle'] ?? ''));
+        $keyMatch = $candidateKey !== '' && $key !== '' && hash_equals($key, $candidateKey);
+        $titleMatch = $candidateTitle !== '' && strtolower($title) === strtolower($candidateTitle);
+        if (!$keyMatch && !$titleMatch) continue;
+        $approved = [
+            'serviceKey' => $key,
+            'serviceTitle' => $title,
+            'reason' => is_array($candidate) ? trim((string)($candidate['reason'] ?? '')) : trim((string)($kit['offerRationale'] ?? '')),
+        ];
+        if (trim((string)($service['defaultBudget'] ?? '')) !== '') $approved['budget'] = (string)$service['defaultBudget'];
+        break;
+    }
+    $kit['recommendedOffer'] = $approved;
+    if (isset($kit['climatLocalProposal']) && is_array($kit['climatLocalProposal'])) {
+        $kit['climatLocalProposal']['recommendedPackage'] = $approved['serviceTitle'] ?? null;
+        if ($approved === null) unset($kit['climatLocalProposal']['pricingEstimate']);
+        elseif (isset($approved['budget'])) $kit['climatLocalProposal']['pricingEstimate'] = $approved['budget'];
+    }
+
+    $verifiedClaims = [];
+    foreach ($claims as $claim) {
+        if (!is_array($claim) || empty($claim['evidenceVerified'])) continue;
+        $verifiedClaims[strtolower(trim((string)($claim['term'] ?? '')))] = $claim;
+    }
+    $reasons = [];
+    foreach (($kit['evidenceBasedReasons'] ?? []) as $reason) {
+        if (!is_array($reason)) continue;
+        $term = strtolower(trim((string)($reason['claimTerm'] ?? $reason['term'] ?? '')));
+        if ($term === '' || !isset($verifiedClaims[$term])) continue;
+        $quote = trim((string)($reason['quoteInText'] ?? ''));
+        $verifiedQuote = trim((string)($verifiedClaims[$term]['quoteInText'] ?? ''));
+        if ($quote !== '' && strtolower($quote) !== strtolower($verifiedQuote)) continue;
+        $reason['claimTerm'] = $verifiedClaims[$term]['term'];
+        $reason['quoteInText'] = $verifiedQuote;
+        $reasons[] = $reason;
+    }
+    $kit['evidenceBasedReasons'] = $reasons;
+    return $kit;
+}
+
 /** Validation isolée pour les tests de non-régression. */
-function gh_validate_ia_response($parsed, string $domain, string $sourceText = '', string $sourceUrl = ''): array {
+function gh_validate_ia_response($parsed, string $domain, string $sourceText = '', string $sourceUrl = '', array $serviceCatalog = []): array {
     $hasScore = is_array($parsed) && (array_key_exists('riskScore', $parsed) || array_key_exists('score', $parsed));
     $rawScore = is_array($parsed) ? ($parsed['riskScore'] ?? ($parsed['score'] ?? null)) : null;
     $isIncomplete = !is_array($parsed) || empty($parsed) ||
