@@ -38,6 +38,7 @@ $adminDirectLinks = [
 <link rel="stylesheet" href="/api/assets/css/styles.css?v=3">
 <link rel="stylesheet" href="/api/assets/css/greenhumble-refresh.css?v=3">
 <link rel="stylesheet" href="/api/assets/css/greenhumble-app.css?v=3">
+<?php if (basename((string)($_SERVER['PHP_SELF'] ?? '')) === 'analyse.php'): ?><link rel="stylesheet" href="/api/assets/css/greenhumble-analyse.css?v=1"><?php endif; ?>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='7' fill='%23176b4c'/><text x='7' y='17' fill='white' font-size='14' font-family='Arial' font-weight='bold'>G</text></svg>">
 <script>
 tailwind.config={theme:{extend:{colors:{brand:{bg:'#f5f8f5',primary:'#176b4c',primaryHover:'#0e4c37',secondary:'#b7e7c3',text:'#17352c',muted:'#64766e',card:'#fff'}}}}};
