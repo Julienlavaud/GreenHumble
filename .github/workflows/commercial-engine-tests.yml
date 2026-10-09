@@ -39,6 +39,7 @@ jobs:
           php -l api/public_lead.php
           php -l api/admin/index.php
           php -l api/admin/save_state.php
+          php -l api/admin/set_collaborator_password.php
           php -l api/login.php
           php -l api/collaborateur/index.php
           php -l tests/commercial_engine_test.php
