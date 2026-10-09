@@ -1,0 +1,40 @@
+name: Qualité PHP
+
+on:
+  pull_request:
+  push:
+    branches:
+      - Quality-GPT
+      - feat/tpe-commercial-engine-v0-1
+
+jobs:
+  php-lint:
+    name: Vérification syntaxique PHP 8.2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+      - name: Installer PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: none
+      - name: Vérifier la syntaxe de tous les fichiers PHP suivis
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' files < <(git ls-files -z '*.php')
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "Aucun fichier PHP trouvé."
+            exit 1
+          fi
+          failed=0
+          for file in "${files[@]}"; do
+            if ! output="$(php -l "$file" 2>&1)"; then
+              echo "::error file=$file::$output"
+              failed=1
+            else
+              echo "$output"
+            fi
+          done
+          exit "$failed"
