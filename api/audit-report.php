@@ -132,10 +132,13 @@ function renderCommercial(kit) {
   const fields = [
     ['Priorité commerciale', kit.priority],
     ['Pourquoi cette priorité', kit.priorityRationale],
+    ['Score de potentiel commercial', kit.scoreProspect],
     ['Prochaine action', kit.nextAction],
     ['Offre recommandée', kit.recommendedOffer && (kit.recommendedOffer.serviceTitle || kit.recommendedOffer)],
     ['Raison du choix de l’offre', kit.recommendedOffer && kit.recommendedOffer.reason],
     ['Arguments liés aux constats', kit.evidenceBasedReasons],
+    ['Message d’approche', kit.messageApproche],
+    ['Recommandation', kit.recommandation],
     ['Profil cible', kit.targetPersona], ['Synthèse commerciale', kit.executiveSummary],
     ['Accroche', kit.phonePitch && kit.phonePitch.hook], ['Fait à vérifier', kit.phonePitch && kit.phonePitch.keyFact],
     ['Appel à l’action', kit.phonePitch && kit.phonePitch.callToAction],
