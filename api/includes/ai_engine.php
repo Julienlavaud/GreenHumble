@@ -136,7 +136,7 @@ function ai_engine_run(
         ($provider === 'gemini' && preg_match('/^(mistral-|llama-|mixtral-)/i', $model))) {
         $model = $provider === 'mistral'
             ? 'mistral-small-latest'
-            : ($provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gemini-3.8-flash');
+            : ($provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gemini-2.5-flash');
     }
     
     // Priorité : clé explicitement passée, puis clé propre au fournisseur, puis clé générique de compatibilité.
@@ -148,6 +148,14 @@ function ai_engine_run(
             $apiKey = defined('MISTRAL_API_KEY') && !empty(MISTRAL_API_KEY) ? MISTRAL_API_KEY : (getenv('MISTRAL_API_KEY') ?: ($_ENV['MISTRAL_API_KEY'] ?? ''));
         } else {
             $apiKey = defined('GEMINI_API_KEY') && !empty(GEMINI_API_KEY) ? GEMINI_API_KEY : (defined('AI_API_KEY') && !empty(AI_API_KEY) ? AI_API_KEY : (getenv('GEMINI_API_KEY') ?: getenv('AI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? '')));
+        }
+    }
+    // Clés sauvegardées séparément dans la console admin. Une clé dédiée au fournisseur
+    // est prioritaire; l'ancienne clé générique reste disponible pour compatibilité.
+    if (empty($apiKey)) {
+        $providerKeyName = ['gemini' => 'geminiApiKey', 'mistral' => 'mistralApiKey', 'groq' => 'groqApiKey'][$provider] ?? '';
+        if ($providerKeyName !== '' && !empty($scanVars[$providerKeyName])) {
+            $apiKey = $scanVars[$providerKeyName];
         }
     }
     if (empty($apiKey)) {
@@ -259,12 +267,29 @@ function ai_engine_run(
         $model = $model ?: 'mistral-small-latest';
         $aiResponse = mistral_call($prompt, $systemInstruction, $model, $apiKey);
     } else {
-        $model = $model ?: 'gemini-3.8-flash';
+        $model = $model ?: 'gemini-2.5-flash';
         $aiResponse = gemini_call($prompt, $systemInstruction, $model, $apiKey);
     }
 
-    // Accepter uniquement une réponse JSON objet exploitable.
-    $decodedResponse = is_string($aiResponse) ? json_decode($aiResponse, true) : null;
+    // Normaliser les réponses JSON: certains fournisseurs ajoutent des fences Markdown
+    // malgré la consigne JSON. Ne jamais fabriquer de score si le contenu reste invalide.
+    $decodeAiObject = static function ($raw) {
+        if (!is_string($raw) || trim($raw) === '') return null;
+        $raw = trim($raw);
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded) && json_last_error() === JSON_ERROR_NONE) return $decoded;
+        $withoutFences = preg_replace('/^\x60{3}(?:json)?\s*|\s*\x60{3}$/i', '', $raw);
+        $decoded = json_decode(trim($withoutFences), true);
+        if (is_array($decoded) && json_last_error() === JSON_ERROR_NONE) return $decoded;
+        $start = strpos($raw, '{');
+        $end = strrpos($raw, '}');
+        if ($start !== false && $end !== false && $end > $start) {
+            $decoded = json_decode(substr($raw, $start, $end - $start + 1), true);
+            if (is_array($decoded) && json_last_error() === JSON_ERROR_NONE) return $decoded;
+        }
+        return null;
+    };
+    $decodedResponse = $decodeAiObject($aiResponse);
     if (
         is_array($decodedResponse) &&
         json_last_error() === JSON_ERROR_NONE &&
@@ -294,7 +319,7 @@ function ai_engine_run(
         } else {
             $fallbackRes = mistral_call($prompt, $systemInstruction, $fallback['model'], $fallback['key']);
         }
-        $decodedFallback = is_string($fallbackRes) ? json_decode($fallbackRes, true) : null;
+        $decodedFallback = $decodeAiObject($fallbackRes);
         if (
             is_array($decodedFallback) &&
             json_last_error() === JSON_ERROR_NONE &&
