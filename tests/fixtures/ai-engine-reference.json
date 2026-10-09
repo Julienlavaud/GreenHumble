@@ -22,7 +22,13 @@
           "evidenceStatus": "to_review"
         }
       ],
-      "expectedClaims": 2
+      "expectedClaims": 2,
+      "expectedTerms": [
+        "neutres en carbone",
+        "emballages recyclés"
+      ],
+      "expectedMisses": 0,
+      "expectedFalsePositives": 0
     },
     {
       "name": "allégation ambiguë à citation absente",
@@ -35,7 +41,12 @@
         }
       ],
       "expectedClaims": 1,
-      "expectedEvidenceStatus": "evidence_missing"
+      "expectedEvidenceStatus": "evidence_missing",
+      "expectedTerms": [
+        "biodégradable"
+      ],
+      "expectedMisses": 0,
+      "expectedFalsePositives": 0
     },
     {
       "name": "citation trompeuse/non retrouvée",
@@ -48,7 +59,22 @@
         }
       ],
       "expectedClaims": 1,
-      "expectedEvidenceStatus": "evidence_missing"
+      "expectedEvidenceStatus": "evidence_missing",
+      "expectedTerms": [],
+      "expectedMisses": 0,
+      "expectedFalsePositives": 1
+    },
+    {
+      "name": "allégation omise par le fournisseur",
+      "kind": "missed",
+      "score": 65,
+      "claims": [],
+      "expectedClaims": 0,
+      "expectedTerms": [
+        "compensation carbone"
+      ],
+      "expectedMisses": 1,
+      "expectedFalsePositives": 0
     }
   ]
 }
