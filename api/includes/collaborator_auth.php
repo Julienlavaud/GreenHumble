@@ -5,6 +5,15 @@
  */
 require_once __DIR__ . '/app_state.php';
 
+function gh_is_password_hash($stored) {
+    return is_string($stored) && preg_match('/^\\\\$2[ayb]\\\\$|^\\\\$argon2(id|i)\\\\$/', $stored) === 1;
+}
+
+function gh_verify_stored_password($provided, $stored) {
+    if (!is_string($provided) || !is_string($stored) || $provided === '' || $stored === '') return false;
+    return gh_is_password_hash($stored) ? password_verify($provided, $stored) : hash_equals($stored, $provided);
+}
+
 function gh_authenticate_collaborator($identifier, $password) {
     if (!is_string($identifier) || !is_string($password) || trim($identifier) === '' || $password === '') return false;
     $identifier = function_exists('mb_strtolower') ? mb_strtolower(trim($identifier), 'UTF-8') : strtolower(trim($identifier));
