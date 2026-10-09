@@ -247,7 +247,15 @@ function ai_engine_run(
 
     // Accepter uniquement une réponse JSON objet exploitable.
     $decodedResponse = is_string($aiResponse) ? json_decode($aiResponse, true) : null;
-    if (is_array($decodedResponse) && json_last_error() === JSON_ERROR_NONE) {
+    if (
+        is_array($decodedResponse) &&
+        json_last_error() === JSON_ERROR_NONE &&
+        (array_key_exists('score', $decodedResponse) ||
+         array_key_exists('riskScore', $decodedResponse) ||
+         array_key_exists('claims', $decodedResponse) ||
+         array_key_exists('detectedClaims', $decodedResponse) ||
+         array_key_exists('status', $decodedResponse))
+    ) {
         return json_encode($decodedResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
@@ -256,7 +264,15 @@ function ai_engine_run(
     if (!empty($groqKey) && $provider !== 'groq') {
         $fallbackRes = groq_call($prompt, $systemInstruction, 'llama-3.3-70b-versatile', $groqKey);
         $decodedFallback = is_string($fallbackRes) ? json_decode($fallbackRes, true) : null;
-        if (is_array($decodedFallback) && json_last_error() === JSON_ERROR_NONE) {
+        if (
+            is_array($decodedFallback) &&
+            json_last_error() === JSON_ERROR_NONE &&
+            (array_key_exists('score', $decodedFallback) ||
+             array_key_exists('riskScore', $decodedFallback) ||
+             array_key_exists('claims', $decodedFallback) ||
+             array_key_exists('detectedClaims', $decodedFallback) ||
+             array_key_exists('status', $decodedFallback))
+        ) {
             return json_encode($decodedFallback, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         }
     }
