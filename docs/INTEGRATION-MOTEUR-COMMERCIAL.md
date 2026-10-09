@@ -84,3 +84,16 @@ Plan de correction recommandé :
 6. Si les secrets codés en dur ont été utilisés ou réutilisés ailleurs, les remplacer avant le déploiement.
 
 **État :** les tests automatisés du validateur et du moteur commercial passent dans GitHub Actions. La revue ci-dessus est statique; aucune connexion réelle, aucun test d'intrusion et aucun déploiement de production n'ont été effectués.
+
+
+## Compléments de revue statique — administration et état applicatif
+
+Une lecture des routes d'administration a identifié d'autres points à corriger avant toute exposition publique :
+
+- `api/admin/save_state.php` vérifie la présence d'une session administrateur, mais renvoie actuellement un statut HTTP 200 en cas de refus et ne met pas en place de jeton CSRF. La vérification de rôle doit être centralisée et les requêtes mutantes protégées contre le CSRF.
+- `api/admin/index.php` rend les valeurs de `passwordsMap` dans des champs de formulaire visibles et inclut l'état applicatif complet dans JavaScript. Les mots de passe ne doivent jamais être récupérables en clair dans l'interface, le JSON d'état ou les réponses réseau ; il faut remplacer ce mécanisme par une gestion de comptes dédiée avec hachage côté serveur.
+- `api/includes/app_state.php` crée le dossier de données avec des permissions très larges. Réduire les permissions au minimum compatible avec l'hébergement et vérifier que le dossier de données et les fichiers de configuration ne sont pas accessibles via HTTP.
+- `api/includes/db.php` tente des modifications de schéma à la connexion et affiche des détails d'exception en cas d'échec. Séparer les migrations des requêtes de production et renvoyer un message d'erreur générique côté client, avec détails conservés uniquement dans des journaux non publics.
+- La page d'administration exécute des opérations de modification/suppression sur la base et l'état applicatif. Chaque endpoint doit vérifier la méthode HTTP, le rôle exact, le CSRF et les données autorisées avant toute écriture.
+
+Ces constats sont issus d'une lecture du code, pas d'un test d'exploitation. Aucune modification de base de données ou du site en production n'a été réalisée. Les corrections d'authentification doivent rester incrémentales, accompagnées de tests de non-régression et d'un plan de récupération d'accès administrateur.
