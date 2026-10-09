@@ -220,15 +220,6 @@ include __DIR__ . '/../includes/header.php';
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-[#AAAAAA] mb-2">Groupe de Scanners</label>
-                            <select id="filter_group_scan" onchange="filterScansGrid()" class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-white font-medium focus:border-[#2A7AE2]">
-                                <option value="all">Tous les groupes</option>
-                                <?php foreach ($allGroups as $g): ?>
-                                    <option value="<?php echo htmlspecialchars($g['id']); ?>"><?php echo htmlspecialchars($g['nom']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div>
                             <label class="block text-xs font-semibold text-[#AAAAAA] mb-2">Rechercher par URL</label>
                             <input type="text" id="filter_url_scan" onkeyup="filterScansGrid()" placeholder="Ex: entreprise.com..." class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-white font-medium focus:border-[#2A7AE2] focus:outline-none">
                         </div>
@@ -299,9 +290,6 @@ include __DIR__ . '/../includes/header.php';
                                     <div class="flex flex-wrap gap-2">
                                         <button onclick="addScanToListPrompt('<?php echo htmlspecialchars($sc['id']); ?>')" class="px-3 py-1.5 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white font-semibold rounded-lg transition-all border-none cursor-pointer">
                                             + Liste
-                                        </button>
-                                        <button onclick="reassignScanGroup('<?php echo htmlspecialchars($sc['id']); ?>')" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-all border-none cursor-pointer">
-                                            Groupe
                                         </button>
                                         <button onclick="deleteScanCard('<?php echo htmlspecialchars($sc['id']); ?>')" class="px-3 py-1.5 bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-semibold rounded-lg transition-all border-none cursor-pointer">
                                             Supprimer
