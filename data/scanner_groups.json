@@ -1,8 +1,0 @@
-[
-  {
-    "id": "default",
-    "nom": "Groupe par défaut",
-    "description": "Groupe de scanners standard",
-    "is_default": true
-  }
-]
