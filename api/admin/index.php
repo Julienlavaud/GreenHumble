@@ -20,6 +20,7 @@ $db = get_db_connection();
 
 // 2.5 POST Handlers for Database Actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    gh_require_same_origin_mutation();
     if (isset($_POST['delete_audit'])) {
         $id = intval($_POST['delete_audit']);
         $db->prepare("DELETE FROM cl_audits WHERE id = ?")->execute([$id]);
