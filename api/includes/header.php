@@ -10,6 +10,16 @@ $isCollaborator = $isLoggedIn && in_array($userRole, ['pipeline', 'collaborator'
 $userName = trim((string)($_SESSION['user_name'] ?? $_SESSION['username'] ?? ''));
 $page_title = isset($page_title) ? (string)$page_title : 'GreenHumble';
 $activeTab = isset($activeTab) ? (string)$activeTab : '';
+if ($activeTab === '') {
+  $currentPage = basename((string)($_SERVER['PHP_SELF'] ?? ''));
+  $activeTab = [
+    'dashboard.php' => 'dashboard',
+    'pipeline.php' => 'pipeline',
+    'scan.php' => 'scans',
+    'analyse.php' => 'scans',
+    'export.php' => 'exports'
+  ][$currentPage] ?? '';
+}
 $adminGroups = [
   'ACTIVITÉ' => ['dashboard' => 'Tableau de bord', 'pipeline' => 'Pipeline', 'scans' => 'Scans'],
   'DOSSIERS' => ['listes' => 'Listes', 'exports' => 'Exports CSV'],
