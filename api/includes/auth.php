@@ -112,6 +112,29 @@ function get_current_role() {
     return 'public';
 }
 /**
+ * Bloque les mutations de session admin déclenchées depuis une autre origine.
+ * Les requêtes POST admin du navigateur doivent envoyer Origin ou Referer same-origin.
+ */
+function gh_require_same_origin_mutation() {
+    $expectedHost = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
+    $source = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
+    if ($source === '' && !empty($_SERVER['HTTP_REFERER'])) {
+        $parts = parse_url((string)$_SERVER['HTTP_REFERER']);
+        if (is_array($parts) && !empty($parts['scheme']) && !empty($parts['host'])) {
+            $source = $parts['scheme'] . '://' . $parts['host'] . (isset($parts['port']) ? ':' . $parts['port'] : '');
+        }
+    }
+    $parts = $source !== '' ? parse_url($source) : false;
+    $sourceHost = is_array($parts) ? strtolower((string)($parts['host'] ?? '') . (isset($parts['port']) ? ':' . $parts['port'] : '')) : '';
+    if ($expectedHost === '' || $sourceHost === '' || !hash_equals($expectedHost, $sourceHost)) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'error' => 'Origine de requête refusée.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
+
+/**
  * Vérifie si l'utilisateur est connecté
  */
 function is_logged_in() {
