@@ -744,7 +744,7 @@ include __DIR__ . '/../includes/header.php';
                         <div class="p-10 bg-slate-950 rounded-[3.5rem] text-white shadow-2xl space-y-8 border border-slate-800 relative overflow-hidden">
                             <div class="absolute top-0 right-0 p-8 opacity-10"><svg class="w-24 h-24 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" /></svg></div>
                             
-                            <h4 class="text-emerald-400 font-black uppercase text-xs tracking-[0.2em] relative z-10">Réglages Connectivité IA</h4>
+                            <h4 class="text-emerald-400 font-black uppercase text-xs tracking-[0.2em] relative z-10">Réglages Connectivité IA</h4><a href="/api/admin/ai_providers.php" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-500">Configurer Gemini · Mistral · Groq →</a>
                             <div class="space-y-6 relative z-10">
                                 <div class="space-y-2">
                                     <label class="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest">Fournisseur de Service</label>
@@ -1113,7 +1113,7 @@ function saveScanner() {
     syncState('scanVars', appState.scanVars);
 }
 
-async async function setCollaboratorPassword(id) {
+async function setCollaboratorPassword(id) {
     const password = prompt('Nouveau mot de passe du collaborateur (12 caractères minimum). Il ne sera pas affiché ensuite :');
     if (password === null) return;
     if (password.length < 12) {
