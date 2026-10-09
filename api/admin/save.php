@@ -8,6 +8,13 @@ if (($_SESSION['admin_logged_in'] ?? false) !== true || ($_SESSION['role'] ?? ''
 }
 
 $envPath = __DIR__ . '/../config/.env';
+function gh_admin_save_redirect(string $fallbackTab = 'scanner'): void {
+    $allowed = ['audits', 'scans', 'listes', 'agency', 'scanner', 'missions', 'legal', 'texts', 'style'];
+    $tab = trim((string)($_POST['return_tab'] ?? $fallbackTab));
+    if (!in_array($tab, $allowed, true)) $tab = $fallbackTab;
+    header('Location: /api/admin/index.php?tab=' . rawurlencode($tab) . '&saved=1', true, 303);
+    exit;
+}
 
 // 1. Sauvegarde formulaire graphique Configuration IA & Moteur
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_ai_config'])) {
@@ -56,8 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_ai_config'])) {
         $stmt->execute([$aiCustomExceptions]);
     } catch (Exception $e) {}
 
-    header('Location: /api/admin/index.php?saved=1');
-    exit;
+    gh_admin_save_redirect();
 }
 
 // 2. Sauvegarde brute .env
@@ -68,5 +74,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['env_content'])) {
     exit;
 }
 
-header('Location: /api/admin/index.php');
-exit;
+gh_admin_save_redirect('scans');
