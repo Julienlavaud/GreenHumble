@@ -127,8 +127,17 @@ function ai_engine_run(
     $state    = load_app_state();
     $scanVars = $state['scanVars'] ?? [];
 
-    $provider = $overrideProvider ?: strtolower($scanVars['aiProvider'] ?? (defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini')); // gemini, groq ou mistral
-    $model    = $overrideModel   ?: ($scanVars['aiModel'] ?? (defined('AI_MODEL') ? AI_MODEL : 'gemini-3.8-flash'));
+    $provider = strtolower($overrideProvider ?: ($scanVars['aiProvider'] ?? (defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini'))); // gemini, groq ou mistral
+    $model = $overrideModel ?: ($scanVars['aiModel'] ?? (defined('AI_MODEL') ? AI_MODEL : ''));
+    // Ne pas envoyer par défaut le modèle Gemini à Mistral (ou inversement) lorsque seul le fournisseur a été changé.
+    if (empty($model) ||
+        ($provider === 'mistral' && preg_match('/^(gemini-|llama-|mixtral-)/i', $model)) ||
+        ($provider === 'groq' && preg_match('/^(gemini-|mistral-)/i', $model)) ||
+        ($provider === 'gemini' && preg_match('/^(mistral-|llama-|mixtral-)/i', $model))) {
+        $model = $provider === 'mistral'
+            ? 'mistral-small-latest'
+            : ($provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gemini-3.8-flash');
+    }
     
     // Priorité : clé explicitement passée, puis clé propre au fournisseur, puis clé générique de compatibilité.
     $apiKey = $overrideApiKey;
