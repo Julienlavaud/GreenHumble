@@ -8,6 +8,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/gemini.php';
 require_once __DIR__ . '/groq.php';
 require_once __DIR__ . '/mistral.php';
+require_once __DIR__ . '/openai.php';
 
 /**
  * API publique principale
@@ -127,28 +128,31 @@ function ai_engine_run(
     $state    = load_app_state();
     $scanVars = $state['scanVars'] ?? [];
 
-    $provider = strtolower($overrideProvider ?: ($scanVars['aiProvider'] ?? (defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini'))); // gemini, groq ou mistral
+    $provider = strtolower($overrideProvider ?: ($scanVars['aiProvider'] ?? (defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini'))); // openai, gemini, groq ou mistral
     $providerModelKey = $provider . 'Model';
     $model = $overrideModel ?: ($scanVars[$providerModelKey] ?? ($scanVars['aiModel'] ?? (defined('AI_MODEL') ? AI_MODEL : '')));
     // Ne pas envoyer par défaut le modèle Gemini à Mistral (ou inversement) lorsque seul le fournisseur a été changé.
     if (empty($model) ||
+        ($provider === 'openai' && !preg_match('/^(gpt-4\.1-mini|gpt-4\.1|gpt-4o-mini)$/i', $model)) ||
         ($provider === 'mistral' && preg_match('/^(gemini-|llama-|mixtral-)/i', $model)) ||
         ($provider === 'groq' && preg_match('/^(gemini-|mistral-)/i', $model)) ||
         ($provider === 'gemini' && preg_match('/^(mistral-|llama-|mixtral-)/i', $model))) {
-        $model = $provider === 'mistral'
+        $model = $provider === 'openai' ? 'gpt-4.1-mini' : ($provider === 'mistral'
             ? 'mistral-small-latest'
-            : ($provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gemini-2.5-flash');
+            : ($provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gemini-2.5-flash'));
     }
     
     // Priorité : clé explicitement passée, puis clé chiffrée/configurée en console,
     // puis variables d'environnement, puis ancienne clé générique pour compatibilité.
     $apiKey = $overrideApiKey;
-    $providerKeyName = ['gemini' => 'geminiApiKey', 'mistral' => 'mistralApiKey', 'groq' => 'groqApiKey'][$provider] ?? '';
+    $providerKeyName = ['openai' => 'openaiApiKey', 'gemini' => 'geminiApiKey', 'mistral' => 'mistralApiKey', 'groq' => 'groqApiKey'][$provider] ?? '';
     if (empty($apiKey) && $providerKeyName !== '' && !empty($scanVars[$providerKeyName])) {
         $apiKey = $scanVars[$providerKeyName];
     }
     if (empty($apiKey)) {
-        if ($provider === 'groq') {
+        if ($provider === 'openai') {
+            $apiKey = defined('OPENAI_API_KEY') && !empty(OPENAI_API_KEY) ? OPENAI_API_KEY : (getenv('OPENAI_API_KEY') ?: ($_ENV['OPENAI_API_KEY'] ?? ''));
+        } elseif ($provider === 'groq') {
             $apiKey = defined('GROQ_API_KEY') && !empty(GROQ_API_KEY) ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: ($_ENV['GROQ_API_KEY'] ?? ''));
         } elseif ($provider === 'mistral') {
             $apiKey = defined('MISTRAL_API_KEY') && !empty(MISTRAL_API_KEY) ? MISTRAL_API_KEY : (getenv('MISTRAL_API_KEY') ?: ($_ENV['MISTRAL_API_KEY'] ?? ''));
@@ -256,7 +260,10 @@ function ai_engine_run(
 
     // 8. Dispatch vers le fournisseur IA avec fallback automatique
     $aiResponse = '';
-    if ($provider === 'groq') {
+    if ($provider === 'openai') {
+        $model = $model ?: 'gpt-4.1-mini';
+        $aiResponse = openai_call($prompt, $systemInstruction, $model, $apiKey);
+    } elseif ($provider === 'groq') {
         $model = $model ?: 'llama-3.3-70b-versatile';
         $aiResponse = groq_call($prompt, $systemInstruction, $model, $apiKey);
     } elseif ($provider === 'mistral') {
