@@ -45,6 +45,8 @@ jobs:
           php -l tests/green_claims_rules_test.php
           php -l tests/collaborator_auth_test.php
           php -l tests/public_scan_contract_test.php
+      - name: Tester la persistance des audits commerciaux
+        run: php tests/audit_database_test.php
       - name: Tester le schéma d’installation OVH
         run: php tests/install_schema_test.php
       - name: Tester la qualification commerciale
