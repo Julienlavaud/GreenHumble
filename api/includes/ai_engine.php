@@ -231,6 +231,21 @@ function ai_engine_run(
         // silencieux
     }
 
+    // Catalogue d’offres administré : l’IA ne doit recommander que ces services actifs.
+    $serviceCatalog = [];
+    foreach (($state['serviceOpps'] ?? []) as $service) {
+        if (!is_array($service) || !($service['isActive'] ?? true)) continue;
+        $serviceCatalog[] = [
+            'serviceKey' => (string)($service['serviceKey'] ?? $service['id'] ?? ''),
+            'serviceTitle' => (string)($service['serviceTitle'] ?? ''),
+            'description' => (string)($service['description'] ?? ''),
+            'defaultBudget' => (string)($service['defaultBudget'] ?? ''),
+        ];
+    }
+    $catalogContext = $serviceCatalog
+        ? "\\n\\nCATALOGUE DES OFFRES ACTIVES (choisir uniquement dans cette liste) :\\n" . json_encode($serviceCatalog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        : "\\n\\nAucun catalogue d’offres actif n’est configuré : ne recommande pas de prestation ni de budget précis.";
+
     // 4. Contexte Document RSE
     $docContext = "";
     if (!empty($csrDocumentText)) {
@@ -291,6 +306,8 @@ function ai_engine_run(
         . " RÈGLES DE FIABILITÉ OBLIGATOIRES : analyse toutes les allégations distinctes présentes dans le contenu fourni, pas seulement la première. Pour chaque allégation, cite une courte citation exacte du texte source dans quoteInText, indique la sourceUrl uniquement parmi les URL SOURCE_URL fournies et justifie le niveau dans riskRationale; ne crée jamais de citation absente du contenu. Si le contenu du site n'a pas pu être récupéré, signale cette limite et ne prétends pas avoir analysé le site. Distingue explicitement (1) signal à vérifier, (2) preuve insuffisante ou manquante, (3) risque juridique plausible, (4) non-conformité établie uniquement si les faits et le fondement applicable sont suffisamment documentés. Une expression environnementale seule ne prouve pas une infraction. Ne déclare jamais qu'une sanction est certaine et ne donne aucun montant de sanction sans fondement légal précis, conditions d'application vérifiées et source factuelle suffisante; sinon sanction=null. N'invente ni articles de loi, ni jurisprudence, ni certifications, ni preuves, ni caractéristiques de l'entreprise. Si le droit applicable ou les faits sont incertains, indique-le et formule une recommandation de vérification. Le score est une estimation de risque argumentée, non une probabilité d'infraction. Le score commercial doit être distinct du score de risque. Retourne toutes les allégations pertinentes dans claims, en évitant les doublons, et utilise evidenceStatus parmi signal, evidence_missing, to_review, substantiated. Réponds en JSON valide uniquement."
         . $customExceptions
         . (!empty($scanVars['customBannedKeywords']) ? "\n\nEXPRESSIONS À VÉRIFIER EN PRIORITÉ (sans présumer d'une infraction) :\n" . (string)$scanVars['customBannedKeywords'] : '')
+        . $catalogContext
+        . " RÈGLES COMMERCIALES : propose une prochaine action, une priorité (haute, moyenne ou basse) et au maximum une offre du catalogue actif, avec son serviceKey exact et une raison liée aux constats. Si aucune offre ne correspond, laisse recommendedOffer à null. Ne crée jamais de budget ni de subvention absent du catalogue. Relie les arguments aux seules citations effectivement trouvées et n’affirme aucune infraction."
         . $docContext;
 
     // 7. Construction du prompt utilisateur
