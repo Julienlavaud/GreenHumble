@@ -50,3 +50,20 @@
 - Connexion : `https://doo.climatlocal.com/api/login.php`
 - Administration : `https://doo.climatlocal.com/api/admin/index.php`
 - Cockpit collaborateur : `https://doo.climatlocal.com/api/collaborateur/index.php`
+
+## Livraison propre — ZIP OVH PHP 8.2
+
+Le ZIP à installer est l’artefact **greenhumble-ovh-php82** produit par GitHub Actions sur la branche `release/ovh-deployment-clean`. Ne pas utiliser les anciennes archives présentes dans l’historique du dépôt.
+
+Le paquet contient le code PHP et les fichiers nécessaires à l’application. Il exclut volontairement les JSON de données d’exécution (comptes, réglages IA, prospects, scans et audits), les sauvegardes et les fichiers `.env`, afin de ne pas écraser ni redistribuer les données privées.
+
+### Transfert avec FileZilla
+
+1. Télécharger l’artefact `greenhumble-ovh-php82` depuis l’exécution réussie du workflow **Build OVH PHP 8.2 deployment ZIP** (onglet GitHub **Actions**).
+2. Décompresser le ZIP sur le PC.
+3. Sauvegarder le dossier OVH `doo` et la base GreenHumble avant transfert.
+4. Envoyer le contenu décompressé dans le dossier du sous-domaine `doo`, en écrasant les fichiers de code correspondants si FileZilla le demande.
+5. **Ne pas supprimer les fichiers JSON déjà présents sur OVH**, ne pas téléverser dans la racine WordPress et ne pas remplacer les fichiers de données par des exemples.
+6. Tester dans cet ordre : `/api/index.php`, `/api/login.php`, `/api/admin/index.php`, puis le parcours de scan public et le rapport d’audit.
+
+Si le workflow n’a pas réussi, ne pas déployer ce ZIP : corriger les contrôles d’abord.
