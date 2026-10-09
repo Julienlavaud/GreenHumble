@@ -11,6 +11,7 @@ if (!isset($_SESSION['admin_logged_in']) && (!isset($_SESSION['role']) || $_SESS
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    gh_require_same_origin_mutation();
     $input = json_decode(file_get_contents('php://input'), true);
     if ($input) {
         $type = $input['type'] ?? '';
