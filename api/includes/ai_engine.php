@@ -344,6 +344,8 @@ function ai_engine_run(
         is_array($decodedResponse) &&
         json_last_error() === JSON_ERROR_NONE &&
         (array_key_exists('score', $decodedResponse) || array_key_exists('riskScore', $decodedResponse)) && is_numeric($decodedResponse['score'] ?? $decodedResponse['riskScore'] ?? null)
+        && (($decodedResponse['analysisComplete'] ?? true) !== false)
+        && (($decodedResponse['status'] ?? '') !== 'analysis_incomplete')
     ) {
         return json_encode($decodedResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
@@ -377,6 +379,8 @@ function ai_engine_run(
             is_array($decodedFallback) &&
             json_last_error() === JSON_ERROR_NONE &&
             (array_key_exists('score', $decodedFallback) || array_key_exists('riskScore', $decodedFallback)) && is_numeric($decodedFallback['score'] ?? $decodedFallback['riskScore'] ?? null)
+            && (($decodedFallback['analysisComplete'] ?? true) !== false)
+            && (($decodedFallback['status'] ?? '') !== 'analysis_incomplete')
         ) {
             return json_encode($decodedFallback, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         }
