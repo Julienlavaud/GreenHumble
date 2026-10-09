@@ -21,6 +21,14 @@
 .gh-analysis-page #section_header_pro>div:first-child{display:none!important}
 .gh-analysis-page #section_header_pro h1,
 .gh-analysis-page #section_header_pro .text-white{color:#17352c!important}
+.gh-analysis-page #section_header_pro .text-emerald-300{color:#176b4c!important}
+.gh-analysis-page #section_header_pro .bg-emerald-500\/10{background:#eaf4ee!important}
+.gh-analysis-page .gray-mask{
+  background:#f5f8f5!important;color:#33483c!important;
+  border:1px solid var(--analysis-border)!important;
+  border-radius:12px!important;box-shadow:none!important;
+  font-family:inherit!important;
+}
 .gh-analysis-page #section_header_pro .text-slate-400,
 .gh-analysis-page #section_header_pro .text-slate-500,
 .gh-analysis-page #section_header_pro .text-slate-600{color:#64766e!important}
