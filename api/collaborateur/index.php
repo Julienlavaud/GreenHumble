@@ -43,7 +43,7 @@ try {
 $page_title = 'Cockpit commercial GreenHumble';
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<main class="mx-auto max-w-7xl px-4 py-10 text-slate-100">
+<main class="gh-workspace mx-auto max-w-7xl px-4 py-10 text-slate-100">
   <section class="rounded-3xl border border-white/10 bg-[#1E1E1E] p-6 sm:p-9">
     <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
       <div>
