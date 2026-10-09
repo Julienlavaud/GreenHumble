@@ -42,13 +42,14 @@ require_once __DIR__ . '/includes/header.php';
     </div>
     <details class="gh-lead">
       <summary>Demander la revue complète de mon diagnostic</summary>
-      <p>Transmettez vos coordonnées pour que l’équipe Climat Local puisse traiter votre demande. L’accord marketing est facultatif.</p>
+      <p>Vos coordonnées servent à traiter le suivi de cette demande et du scan associé. La case ci-dessous est facultative et concerne uniquement les communications commerciales ultérieures.</p>
       <form id="gh-lead-form" class="gh-lead-form">
         <input type="hidden" name="url" id="gh-lead-url">
-        <label>Entreprise<input name="company_name" autocomplete="organization" maxlength="255" required></label>
-        <label>Nom du contact<input name="contact_name" autocomplete="name" maxlength="255" required></label>
-        <label>E-mail professionnel<input type="email" name="email" autocomplete="email" maxlength="254" required></label>
-        <label>Téléphone <span>(facultatif)</span><input type="tel" name="phone" autocomplete="tel" maxlength="80"></label>
+        <input type="hidden" name="audit_ref" id="gh-lead-audit-ref">
+        <label>Entreprise<input name="company_name" autocomplete="organization" maxlength="200" required></label>
+        <label>Nom du contact<input name="contact_name" autocomplete="name" maxlength="150" required></label>
+        <label>E-mail professionnel<input type="email" name="email" autocomplete="email" maxlength="150" required></label>
+        <label>Téléphone <span>(facultatif)</span><input type="tel" name="phone" autocomplete="tel" maxlength="50"></label>
         <label class="gh-consent"><input type="checkbox" name="marketing_opt_in" value="true"><span>J’accepte de recevoir occasionnellement les informations et offres Climat Local. Facultatif.</span></label>
         <button type="submit" id="gh-lead-submit">Envoyer ma demande</button>
       </form>
