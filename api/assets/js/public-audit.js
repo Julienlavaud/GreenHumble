@@ -7,6 +7,7 @@
   const status = document.getElementById('gh-scan-status');
   const result = document.getElementById('gh-scan-result');
   let activeUrl = '';
+  let activeAuditRef = '';
 
   const showMessage = (message, kind) => {
     status.textContent = message;
@@ -65,6 +66,7 @@
           : 'Le pré-diagnostic n’a pas abouti. Vérifiez l’adresse du site puis réessayez.');
         throw new Error(message);
       }
+      activeAuditRef = typeof data.id === 'string' && /^aud_[A-Za-z0-9_-]{8,80}$/.test(data.id) ? data.id : '';
       const rawScore = data.riskScore ?? data.score;
       const score = Number(rawScore);
       if (rawScore === null || rawScore === undefined || rawScore === '' || !Number.isFinite(score) || score < 0 || score > 100) {
@@ -75,6 +77,7 @@
       const summary = data.clientSummary && (data.clientSummary.riskVerdict || data.clientSummary.headline);
       document.getElementById('gh-result-summary').textContent = summary || 'Le scan est terminé. Examinez les signaux avant de tirer une conclusion.';
       document.getElementById('gh-lead-url').value = activeUrl;
+      document.getElementById('gh-lead-audit-ref').value = activeAuditRef;
       const list = document.getElementById('gh-result-claims');
       list.replaceChildren();
       const claims = Array.isArray(data.detectedClaims) ? data.detectedClaims : (Array.isArray(data.claims) ? data.claims : []);
@@ -139,6 +142,7 @@
       if (!response.ok || data.success !== true) throw new Error(data.error || 'Votre demande n’a pas pu être enregistrée.');
       leadForm.reset();
       document.getElementById('gh-lead-url').value = activeUrl;
+      document.getElementById('gh-lead-audit-ref').value = activeAuditRef;
       feedback.textContent = 'Votre demande est enregistrée. L’équipe pourra vous recontacter au sujet de ce diagnostic.';
       feedback.className = 'gh-lead-feedback gh-lead-feedback--success';
     } catch (error) {
