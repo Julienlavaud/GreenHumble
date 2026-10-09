@@ -790,51 +790,37 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
         <?php elseif ($activeTab === 'scanner'): ?>
-            <div class="p-12 space-y-12">
-                <div>
-                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Configuration Moteur IA (Connectivité)</h2>
-                    <p class="text-slate-400 mt-2">Réglages des fournisseurs et instructions globales du scanner (les exceptions et corrections par audit se gèrent directement dans le Diag).</p>
+            <?php
+            $scanVars = is_array($state['scanVars'] ?? null) ? $state['scanVars'] : [];
+            $promptFields = [
+                ['id' => 'ia_prompt', 'label' => 'Rôle et consignes générales', 'key' => 'aiKeywordInstructions', 'fallback' => 'Tu es l’IA GreenHumble, experte en conformité RSE, allégations environnementales et analyse de sites. Réponds en français, avec précision et sans tirer de conclusion au-delà des preuves.', 'rows' => 6, 'hint' => 'Consigne générale appliquée à chaque analyse.'],
+                ['id' => 'ia_scope', 'label' => 'Périmètre d’analyse', 'key' => 'aiAnalysisInstructions', 'fallback' => 'Analyse les pages accessibles du site et relève chaque allégation environnementale distincte dans son contexte. Signale aussi les limites de couverture du scan.', 'rows' => 5, 'hint' => 'Pages, contenus et types de signaux à prendre en compte.'],
+                ['id' => 'ia_evidence', 'label' => 'Preuves et citations attendues', 'key' => 'aiEvidenceInstructions', 'fallback' => 'Pour chaque signal, donne une citation exacte, l’URL de la page source, les éléments justificatifs manquants et les incertitudes à lever. N’invente jamais de citation ni de preuve.', 'rows' => 5, 'hint' => 'Exigences de traçabilité et éléments à demander à l’entreprise.'],
+                ['id' => 'ia_risk', 'label' => 'Évaluation du risque', 'key' => 'aiRiskInstructions', 'fallback' => 'Distingue un signal à vérifier, une preuve insuffisante, un risque plausible et une non-conformité documentée. Explique le niveau de risque sans présenter une suspicion comme une infraction établie.', 'rows' => 5, 'hint' => 'Critères de qualification et de prudence juridique.'],
+                ['id' => 'ia_commercial', 'label' => 'Recommandations commerciales', 'key' => 'aiCommercialInstructions', 'fallback' => 'Propose une prochaine action et une priorité adaptées aux constats vérifiables. Ne recommande qu’une offre active du catalogue et relie chaque argument à une preuve effectivement relevée.', 'rows' => 5, 'hint' => 'Conseils d’accompagnement fondés sur les résultats du scan.'],
+                ['id' => 'ia_banned', 'label' => 'Expressions à vérifier en priorité', 'key' => 'customBannedKeywords', 'fallback' => 'neutre en carbone, éco-responsable, vert, bio, naturel, durable', 'rows' => 4, 'hint' => 'Sépare les expressions par des virgules ou des retours à la ligne. Elles servent de repères, jamais de preuve d’infraction.']
+            ];
+            ?>
+            <section class="p-6 sm:p-9 space-y-7 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                <header class="max-w-3xl">
+                    <p class="text-xs font-bold uppercase tracking-widest text-emerald-700">Intelligence artificielle</p>
+                    <h2 class="mt-2 text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Prompts &amp; règles</h2>
+                    <p class="mt-2 text-sm text-slate-600">Modifiez ici les consignes qui guident l’analyse. Les fournisseurs, modèles et clés API se règlent séparément dans « Fournisseurs IA ».</p>
+                </header>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                    <?php foreach ($promptFields as $field): ?>
+                        <label for="<?= htmlspecialchars($field['id'], ENT_QUOTES, 'UTF-8') ?>" class="block rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                            <span class="block text-sm font-bold text-slate-900"><?= htmlspecialchars($field['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                            <span class="mt-1 block text-xs text-slate-500"><?= htmlspecialchars($field['hint'], ENT_QUOTES, 'UTF-8') ?></span>
+                            <textarea id="<?= htmlspecialchars($field['id'], ENT_QUOTES, 'UTF-8') ?>" rows="<?= (int)$field['rows'] ?>" class="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-800 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"><?= htmlspecialchars((string)($scanVars[$field['key']] ?? $field['fallback']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></textarea>
+                        </label>
+                    <?php endforeach; ?>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-                    <div class="space-y-8">
-                        <div class="p-10 bg-slate-950 rounded-[3.5rem] text-white shadow-2xl space-y-8 border border-slate-800 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 p-8 opacity-10"><svg class="w-24 h-24 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" /></svg></div>
-                            
-                            <h4 class="text-emerald-400 font-black uppercase text-xs tracking-[0.2em] relative z-10">Réglages Connectivité IA</h4><a href="/api/admin/ai_providers.php" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-500">Configurer Gemini · Mistral · Groq →</a>
-                            <div class="space-y-6 relative z-10">
-                                <div class="space-y-2">
-                                    <label class="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest">Fournisseur de Service</label>
-                                    <select id="ia_provider" class="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl font-black text-white focus:ring-4 focus:ring-emerald-500/30 transition-all">
-                                        <option value="gemini" <?php echo ($state['scanVars']['aiProvider'] ?? 'gemini') === 'gemini' ? 'selected' : ''; ?>>Google Gemini (Conseillé)</option>
-                                        <option value="openai" <?php echo ($state['scanVars']['aiProvider'] ?? '') === 'openai' ? 'selected' : ''; ?>>OpenAI (GPT-4o)</option>
-                                        <option value="mistral" <?php echo ($state['scanVars']['aiProvider'] ?? '') === 'mistral' ? 'selected' : ''; ?>>Mistral AI</option>
-                                    </select>
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest">Modèle de Calcul</label>
-                                    <input type="text" id="ia_model" value="<?php echo htmlspecialchars($state['scanVars']['aiModel'] ?? 'gemini-3.8-flash'); ?>" class="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl font-mono text-sm text-emerald-300 focus:ring-4 focus:ring-emerald-500/20 transition-all">
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="text-[10px] font-black text-slate-500 ml-2 uppercase tracking-widest">Clé API (Securisée)</label>
-                                    <input type="password" id="ia_key" value="" autocomplete="new-password" placeholder="<?php echo !empty($state['scanVars']['aiApiKey']) ? 'Clé enregistrée — saisir pour remplacer' : 'Aucune clé configurée'; ?>" class="w-full px-6 py-4 bg-slate-900 border border-slate-800 rounded-2xl font-mono text-sm text-emerald-300 focus:ring-4 focus:ring-emerald-500/20 transition-all">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-8">
-                        <div class="p-8 bg-emerald-50 rounded-[2.5rem] border border-emerald-200 space-y-5">
-                            <div class="flex items-center gap-3 text-emerald-950"><span class="text-2xl">✍️</span><h4 class="font-black text-base uppercase tracking-wider">Instructions du moteur</h4></div>
-                            <label for="ia_prompt" class="block text-xs font-bold text-emerald-900">Prompt système global</label>
-                            <textarea id="ia_prompt" rows="7" class="w-full px-4 py-3 bg-white border border-emerald-200 rounded-xl text-sm text-slate-800" placeholder="Décrivez le rôle et les consignes métier de l’IA."><?php echo htmlspecialchars($state['scanVars']['aiKeywordInstructions'] ?? 'Tu es l’IA GreenHumble, experte en conformité RSE, Green Claims et prospection commerciale.', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></textarea>
-                            <label for="ia_banned" class="block text-xs font-bold text-emerald-900">Expressions à vérifier en priorité</label>
-                            <textarea id="ia_banned" rows="4" class="w-full px-4 py-3 bg-white border border-emerald-200 rounded-xl text-sm text-slate-800" placeholder="Une expression par ligne"><?php echo htmlspecialchars($state['scanVars']['customBannedKeywords'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></textarea>
-                            <p class="text-xs text-emerald-800">Ces expressions servent de repères pour l’analyse et ne constituent pas à elles seules une conclusion juridique.</p>
-                        </div>
-                    </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="button" onclick="saveScanner()" class="px-5 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold">Enregistrer les prompts</button>
+                    <span class="text-xs text-slate-500">Les valeurs déjà enregistrées restent préremplies.</span>
                 </div>
-            </div>
+            </section>
 
         <?php elseif ($activeTab === 'scanner_groups'): ?>
             <?php
@@ -1135,13 +1121,13 @@ function saveLegal() {
 }
 
 function saveScanner() {
-    appState.scanVars.aiProvider = document.getElementById('ia_provider').value;
-    appState.scanVars.aiModel = document.getElementById('ia_model').value;
-    const replacementApiKey = document.getElementById('ia_key').value.trim();
-    if (replacementApiKey !== '') appState.scanVars.aiApiKey = replacementApiKey;
+    if (!appState.scanVars || typeof appState.scanVars !== 'object') appState.scanVars = {};
     appState.scanVars.aiKeywordInstructions = document.getElementById('ia_prompt').value;
+    appState.scanVars.aiAnalysisInstructions = document.getElementById('ia_scope').value;
+    appState.scanVars.aiEvidenceInstructions = document.getElementById('ia_evidence').value;
+    appState.scanVars.aiRiskInstructions = document.getElementById('ia_risk').value;
+    appState.scanVars.aiCommercialInstructions = document.getElementById('ia_commercial').value;
     appState.scanVars.customBannedKeywords = document.getElementById('ia_banned').value;
-
     syncState('scanVars', appState.scanVars);
 }
 
