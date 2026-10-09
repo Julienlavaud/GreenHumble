@@ -2,28 +2,31 @@
 
 ## État
 
-Le moteur de qualification (\`api/includes/commercial_engine.php\`) et le préparateur de dossier (\`api/includes/commercial_dossier.php\`) sont des fonctions PHP isolées. Ils ne sont pas encore branchés aux routes d'audit, à la base de données, ni à l'interface.
+Le moteur de qualification (`api/includes/commercial_engine.php`), le préparateur de dossier (`api/includes/commercial_dossier.php`) et l'adaptateur défensif (`api/includes/commercial_adapter.php`) sont des fonctions PHP isolées. Ils ne sont pas encore branchés aux routes d'audit, à la base de données, ni à l'interface.
+
+L'adaptateur bloque la préparation si l'audit n'est pas explicitement complet et si les signaux n'ont pas été revus. Il n'effectue aucun scraping, accès réseau, envoi de message ou enregistrement. Le booléen de revue doit être défini par un processus de validation réel côté application ; il ne doit jamais être considéré comme une autorisation implicite venant de l'IA.
 
 ## Parcours cible
 
 1. Recevoir une URL et appliquer les protections SSRF existantes avant toute récupération.
 2. Analyser uniquement le contenu effectivement récupéré. En cas d'échec de récupération ou d'analyse IA incomplète, ne pas inventer de signaux.
 3. Construire un registre de preuves. Chaque élément doit avoir un identifiant stable, une URL source, un titre ou extrait, et un statut de vérification.
-4. Transformer les signaux en entrées du moteur. Un signal n'est admissible que si \`verified === true\` et que \`evidence_id\` référence un élément existant.
-5. Appeler \`gh_recommend_services($lead)\`.
-6. Appeler \`gh_build_sales_dossier($lead, $qualification)\` uniquement pour une qualification exploitable.
-7. Afficher la recommandation, les raisons et les sources dans l'interface. L'utilisateur peut corriger ou rejeter le résultat.
-8. Avant tout enregistrement, définir le schéma et la politique de conservation. Avant tout contact, appliquer les règles de prospection et exiger une validation explicite.
+4. Transformer les signaux en entrées du moteur. Un signal n'est admissible que si `verified === true` et que `evidence_id` référence un élément existant.
+5. Après revue humaine effective, appeler `gh_prepare_commercial_result($audit, $lead, true)`.
+6. Afficher la recommandation, les raisons et les sources dans l'interface. L'utilisateur peut corriger ou rejeter le résultat.
+7. Avant tout enregistrement, définir le schéma et la politique de conservation. Avant tout contact, appliquer les règles de prospection et exiger une validation explicite.
 
 ## Contrat minimal d'entrée
 
-- \`company_name\`: nom de l'entreprise si confirmé.
-- \`website\`: URL de l'entreprise, validée par le parcours existant.
-- \`company_size\`: valeur contrôlée (`tpe`, `micro`, `small`, `unknown`).
-- \`evidence\`: tableau indexé par identifiant de preuve; chaque entrée peut inclure \`url\`, \`title\`, \`excerpt\`.
-- \`signals\`: liste d'objets avec \`type\`, \`verified\` et \`evidence_id\`.
+- `audit.analysisComplete`: doit être strictement `true`.
+- `audit.riskScore`: score numérique produit par le parcours d'audit validé.
+- `company_name`: nom de l'entreprise si confirmé.
+- `website`: URL de l'entreprise, validée par le parcours existant.
+- `company_size`: valeur contrôlée (`tpe`, `micro`, `small`, `unknown`).
+- `evidence`: tableau indexé par identifiant de preuve; chaque entrée peut inclure `url`, `title`, `excerpt`.
+- `signals`: liste d'objets avec `type`, `verified` et `evidence_id`.
 
-Les types de signaux doivent venir d'une liste contrôlée : \`environmental_claim\`, \`rse_request\`, \`customer_requirements\`, \`carbon_request\`, \`carbon_data\`, \`general_environmental_need\`.
+Les types de signaux doivent venir d'une liste contrôlée : `environmental_claim`, `rse_request`, `customer_requirements`, `carbon_request`, `carbon_data`, `general_environmental_need`.
 
 ## Contrôles bloquants avant intégration
 
@@ -37,4 +40,4 @@ Les types de signaux doivent venir d'une liste contrôlée : \`environmental_cla
 
 ## Prochaine étape technique
 
-Faire une revue ciblée de la route d'audit et du format de sortie actuel, puis proposer un adaptateur isolé et testé. Ne modifier ni les fichiers de connexion, ni la configuration, ni le schéma SQL dans la même étape.
+Vérifier la compatibilité du format de sortie de `api/audit.php` avec le contrat, puis écrire des tests d'intégration de la route sans connexion réelle à la base ni fournisseur IA. L'adaptateur reste non branché jusqu'à cette vérification.
