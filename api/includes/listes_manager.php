@@ -83,9 +83,20 @@ function save_all_listes($listes) {
 
 function create_liste($nom, $description = '') {
     $listes = load_all_listes();
+    $baseName = trim((string)$nom) ?: 'Nouvelle Liste';
+    $existingNames = [];
+    foreach ($listes as $existing) {
+        $existingNames[mb_strtolower(trim((string)($existing['nom'] ?? '')))] = true;
+    }
+    $uniqueName = $baseName;
+    $version = 2;
+    while (isset($existingNames[mb_strtolower($uniqueName)])) {
+        $suffix = '-V' . $version++;
+        $uniqueName = mb_substr($baseName, 0, max(1, 150 - mb_strlen($suffix))) . $suffix;
+    }
     $newList = [
         'id' => 'lst_' . bin2hex(random_bytes(8)),
-        'nom' => trim($nom) ?: 'Nouvelle Liste',
+        'nom' => $uniqueName,
         'description' => trim($description),
         'items' => []
     ];
