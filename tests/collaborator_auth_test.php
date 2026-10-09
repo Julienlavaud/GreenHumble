@@ -9,6 +9,7 @@ function check($condition, $message) {
 }
 
 $hash = password_hash('mot-de-passe-test', PASSWORD_DEFAULT);
+check(gh_is_password_hash($hash), 'le format du hash généré doit être reconnu');
 check(gh_verify_stored_password('mot-de-passe-test', $hash), 'un hash valide doit être accepté');
 check(!gh_verify_stored_password('mauvais-mot-de-passe', $hash), 'un mauvais mot de passe doit être refusé');
 check(gh_verify_stored_password('ancien-test', 'ancien-test'), 'compatibilité temporaire avec les anciens mots de passe');
