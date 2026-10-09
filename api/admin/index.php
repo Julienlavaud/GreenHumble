@@ -413,14 +413,44 @@ include __DIR__ . '/../includes/header.php';
                     </button>
                 </div>
 
+                <section class="bg-[#1E1E1E] border border-white/10 rounded-2xl p-6 space-y-5">
+                    <div>
+                        <h3 class="text-xl font-bold text-white">Importer un groupe de sites</h3>
+                        <p class="text-sm text-[#AAAAAA] mt-1">Collez une URL par ligne ou importez le modèle CSV. Une nouvelle liste sera créée automatiquement ; aucun scan ne démarre sans votre action.</p>
+                    </div>
+                    <form id="bulkSitesForm" class="grid grid-cols-1 lg:grid-cols-2 gap-4" enctype="multipart/form-data">
+                        <div class="space-y-3">
+                            <label class="block text-sm font-semibold text-white" for="bulkListName">Nom de la liste *</label>
+                            <input id="bulkListName" name="nom" required placeholder="Ex. SCOP du BTP" class="w-full rounded-xl bg-[#121212] border border-white/15 p-3 text-white">
+                            <label class="block text-sm font-semibold text-white" for="bulkListDescription">Description / cible commerciale</label>
+                            <input id="bulkListDescription" name="description" placeholder="Ex. Coopératives du bâtiment à prospecter" class="w-full rounded-xl bg-[#121212] border border-white/15 p-3 text-white">
+                            <label class="block text-sm font-semibold text-white" for="bulkCsv">Fichier CSV (facultatif)</label>
+                            <input id="bulkCsv" name="csv" type="file" accept=".csv,text/csv" class="w-full text-sm text-[#CCCCCC]">
+                            <div class="flex flex-wrap gap-3">
+                                <a href="/api/listes/import_export.php?action=template" class="px-4 py-2 rounded-xl border border-white/20 text-white hover:bg-white/5 text-sm font-semibold">Télécharger le modèle CSV</a>
+                                <a href="/api/listes/import_export.php?action=export" class="px-4 py-2 rounded-xl border border-white/20 text-white hover:bg-white/5 text-sm font-semibold">Exporter toutes les listes</a>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <label class="block text-sm font-semibold text-white" for="bulkUrls">Ou collez les sites (une URL par ligne)</label>
+                            <textarea id="bulkUrls" name="urls" rows="8" placeholder="https://entreprise1.fr&#10;https://entreprise2.fr&#10;entreprise3.fr" class="w-full rounded-xl bg-[#121212] border border-white/15 p-3 text-white font-mono text-sm"></textarea>
+                            <p class="text-xs text-[#AAAAAA]">Jusqu’à 500 URL par import. Les doublons sont ignorés. Le CSV accepte les colonnes liste, description, url, nom.</p>
+                        </div>
+                        <div class="lg:col-span-2 flex flex-wrap items-center gap-4">
+                            <button type="submit" class="px-6 py-3 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white font-bold rounded-xl">Importer et créer la liste</button>
+                            <span id="bulkImportStatus" class="text-sm text-[#AAAAAA]" role="status" aria-live="polite"></span>
+                        </div>
+                    </form>
+                </section>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <?php if (empty($allListes)): ?>
                         <div class="col-span-full p-12 text-center text-[#AAAAAA] bg-[#1E1E1E] rounded-2xl border border-white/10">
                             Aucune liste enregistrée pour le moment.
                         </div>
                     <?php else: ?>
-                        <?php foreach ($allListes as $lst): 
-                            $itemCount = count($lst['items'] ?? []);
+                        <?php foreach ($allListes as $lst):
+                            $itemCount = count($lst['sites'] ?? ($lst['items'] ?? []));
                         ?>
                             <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-white/10 shadow-lg space-y-4 flex flex-col justify-between">
                                 <div class="space-y-3">
@@ -434,6 +464,17 @@ include __DIR__ . '/../includes/header.php';
                                         <h3 class="text-lg font-bold text-white truncate max-w-full"><?php echo htmlspecialchars($lst['nom']); ?></h3>
                                         <p class="text-xs text-[#AAAAAA] mt-1"><?php echo htmlspecialchars($lst['description'] ?: 'Aucune description'); ?></p>
                                     </div>
+                                    <?php if (!empty($lst['sites'])): ?>
+                                        <div class="space-y-2 max-h-48 overflow-y-auto border-t border-white/10 pt-3">
+                                            <?php foreach ($lst['sites'] as $site): ?>
+                                                <div class="flex items-center justify-between gap-2 text-xs">
+                                                    <a class="text-blue-300 hover:underline truncate" target="_blank" rel="noopener noreferrer" href="<?php echo htmlspecialchars($site['url'] ?? '#', ENT_QUOTES); ?>"><?php echo htmlspecialchars($site['nom'] ?: ($site['url'] ?? 'Site')); ?></a>
+                                                    <span class="text-[#AAAAAA] whitespace-nowrap"><?php echo htmlspecialchars($site['statut'] ?? 'à_analyser'); ?></span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <a class="inline-flex justify-center px-4 py-2 rounded-xl border border-white/15 text-white hover:bg-white/5 text-sm" href="/api/listes/import_export.php?action=export&amp;list_id=<?php echo rawurlencode($lst['id']); ?>">Exporter cette liste CSV</a>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -1519,6 +1560,33 @@ async function createDossierPrompt() {
         alert('Erreur réseau.');
     }
 }
+
+// Import en lot : crée une liste de sites sans lancer automatiquement les analyses.
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('bulkSitesForm');
+    if (!form) return;
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const status = document.getElementById('bulkImportStatus');
+        const csv = document.getElementById('bulkCsv');
+        const urls = document.getElementById('bulkUrls').value.trim();
+        if ((!csv.files || !csv.files.length) && !urls) {
+            status.textContent = 'Ajoutez un CSV ou collez au moins une URL.';
+            return;
+        }
+        const data = new FormData(form);
+        status.textContent = 'Import en cours…';
+        try {
+            const response = await fetch('/api/listes/import_export.php', { method: 'POST', body: data, credentials: 'same-origin' });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'Import impossible.');
+            status.textContent = result.imported + ' site(s) ajoutés à « ' + result.list.nom + ' ». Aucun scan lancé.';
+            window.setTimeout(() => window.location.reload(), 1200);
+        } catch (error) {
+            status.textContent = error.message || 'Erreur réseau pendant l’import.';
+        }
+    });
+});
 
 async function createListPrompt() {
     const nom = prompt('Nom de la nouvelle liste :');
