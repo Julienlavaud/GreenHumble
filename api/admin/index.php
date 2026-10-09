@@ -1018,8 +1018,7 @@ include __DIR__ . '/../includes/header.php';
                             </div>
                             <div class="space-y-1 pt-2 border-t border-slate-50">
                                 <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Mot de passe</label>
-                                <input type="text" value="<?php echo htmlspecialchars($state['passwordsMap'][$c['id']] ?? ''); ?>" class="t-pass w-full bg-slate-50 px-3 py-2 rounded-xl text-center text-xs text-emerald-700 font-mono border border-slate-100 focus:ring-2 focus:ring-emerald-500 focus:outline-none" placeholder="Mot de passe">
-                                <button onclick="generatePass(this)" class="text-[9px] font-black text-emerald-500 uppercase hover:text-emerald-700 transition-colors">🪄 Régénérer</button>
+                                <p class="text-xs text-slate-500">Mot de passe non affiché pour des raisons de sécurité.</p>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -1031,7 +1030,8 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-const appState = <?php echo json_encode($state); ?>;
+<?php $clientState = $state; unset($clientState['passwordsMap']); ?>
+const appState = <?php echo json_encode($clientState); ?>;
 
 // --- Unification de la Synchronisation ---
 async function syncState(type, data, isBatch = false) {
@@ -1133,14 +1133,12 @@ function saveScanner() {
 
 function saveTeam() {
     const items = [];
-    const newPasswords = { ...appState.passwordsMap };
-    
+
     document.querySelectorAll('#team-container > .team-card').forEach((c, i) => {
         const id = c.dataset.id || 'collab_' + Date.now() + i;
         const name = c.querySelector('.t-name').value;
         const email = c.querySelector('.t-email').value;
         const role = c.querySelector('.t-role').value;
-        const pass = c.querySelector('.t-pass').value;
 
         items.push({
             id,
@@ -1151,18 +1149,11 @@ function saveTeam() {
             assignedProspectsCount: 0
         });
 
-        if (pass) {
-            newPasswords[id] = pass;
-        }
     });
     
     appState.collaborators = items;
-    appState.passwordsMap = newPasswords;
-
-    // Sync both collaborators and passwordsMap
     syncState('collaborators', appState.collaborators)
-    .then(() => syncState('passwordsMap', appState.passwordsMap))
-    .then(() => alert('Équipe et mots de passe sauvegardés avec succès !'));
+    .then(() => alert('Équipe sauvegardée. La création ou réinitialisation des accès doit être effectuée via un flux sécurisé.'));
 }
 
 function generatePass(btn) {
@@ -1182,16 +1173,11 @@ function addItem(type) {
     } else if (type === 'team') {
         const newId = 'collab_'+Date.now();
         appState.collaborators.unshift({ id: newId, name: 'Nouveau Membre', email: '', role: 'Consultant', avatarColor: 'bg-slate-700' });
-        // Generate initial random password
-        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        let pass = "";
-        for(let i=0; i<8; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
-        appState.passwordsMap[newId] = pass;
     }
     // Simple way to refresh UI without complex JS rendering: reload after push (since we use PHP rendering)
     // Or we could save first then reload. Better: save then reload.
     const p = (type === 'team') 
-        ? syncState('collaborators', appState.collaborators).then(() => syncState('passwordsMap', appState.passwordsMap))
+        ? syncState('collaborators', appState.collaborators)
         : syncState(type === 'missions' ? 'serviceOpps' : 'legalTexts', 
                     type === 'missions' ? appState.serviceOpps : appState.legalTexts);
 
