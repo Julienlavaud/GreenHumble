@@ -1,0 +1,124 @@
+/* GreenHumble — Analyse workspace, aligned with the saved audit report */
+.gh-analysis-page{
+  width:min(100%,1240px)!important;
+  margin:0 auto!important;
+  padding:30px 24px 64px!important;
+  color:#17352c!important;
+  --analysis-border:#dce7df;
+  --analysis-muted:#64766e;
+}
+.gh-analysis-page h1,.gh-analysis-page h2,.gh-analysis-page h3,.gh-analysis-page h4{letter-spacing:-.035em}
+.gh-analysis-page #section_header_pro{
+  padding:30px!important;
+  margin:0 0 22px!important;
+  border:1px solid var(--analysis-border)!important;
+  border-radius:22px!important;
+  background:linear-gradient(125deg,#fff 0%,#f0f7f2 100%)!important;
+  color:#17352c!important;
+  text-align:left!important;
+  box-shadow:0 12px 34px rgba(19,54,37,.07)!important;
+}
+.gh-analysis-page #section_header_pro>div:first-child{display:none!important}
+.gh-analysis-page #section_header_pro h1,
+.gh-analysis-page #section_header_pro .text-white{color:#17352c!important}
+.gh-analysis-page #section_header_pro .text-slate-400,
+.gh-analysis-page #section_header_pro .text-slate-500,
+.gh-analysis-page #section_header_pro .text-slate-600{color:#64766e!important}
+.gh-analysis-page #section_header_pro .backdrop-blur-sm{
+  background:#fff!important;
+  border:1px solid var(--analysis-border)!important;
+}
+.gh-analysis-page #section_scores_pro{border-color:var(--analysis-border)!important}
+.gh-analysis-page #section_scores_pro>div{
+  border:1px solid var(--analysis-border)!important;
+  border-radius:15px!important;
+  background:#fff!important;
+  color:#17352c!important;
+  box-shadow:0 5px 16px rgba(19,54,37,.04);
+}
+.gh-analysis-page #section_scores_pro .text-white{color:#17352c!important}
+.gh-analysis-page #section_scores_pro .text-slate-500,
+.gh-analysis-page #section_scores_pro .text-slate-600{color:#64766e!important}
+.gh-analysis-page>.flex.flex-wrap.gap-2{
+  position:sticky;top:10px;z-index:20;
+  padding:8px!important;margin:0 0 22px!important;
+  border:1px solid var(--analysis-border)!important;
+  border-radius:15px!important;background:rgba(255,255,255,.94)!important;
+  box-shadow:0 8px 24px rgba(19,54,37,.07)!important;
+  backdrop-filter:blur(12px);
+}
+.gh-analysis-page [id^="section_"]{
+  border-radius:18px!important;
+  border-color:var(--analysis-border)!important;
+}
+.gh-analysis-page #section_company_profile,
+.gh-analysis-page #section_synthese,
+.gh-analysis-page #section_sanctions,
+.gh-analysis-page #section_prospecting_insights,
+.gh-analysis-page #section_allegations,
+.gh-analysis-page #section_missions,
+.gh-analysis-page #section_juridique,
+.gh-analysis-page #section_contacts,
+.gh-analysis-page #section_kit_prospection,
+.gh-analysis-page #section_suivi{
+  margin-bottom:18px!important;
+  background:#fff!important;
+  color:#17352c!important;
+  border:1px solid var(--analysis-border)!important;
+  border-radius:18px!important;
+  box-shadow:0 9px 26px rgba(19,54,37,.045)!important;
+}
+.gh-analysis-page #section_sanctions .text-white,
+.gh-analysis-page #section_prospecting_insights .text-white,
+.gh-analysis-page #section_kit_prospection .text-white{color:#17352c!important}
+.gh-analysis-page #section_sanctions [class*="bg-slate-900"],
+.gh-analysis-page #section_sanctions [class*="bg-indigo-900"],
+.gh-analysis-page #section_prospecting_insights [class*="bg-indigo-900"],
+.gh-analysis-page #section_kit_prospection [class*="bg-slate-900"]{
+  background:#f5f8f5!important;
+  border:1px solid var(--analysis-border)!important;
+  color:#17352c!important;
+  box-shadow:none!important;
+}
+.gh-analysis-page #section_sanctions .text-slate-300,
+.gh-analysis-page #section_sanctions .text-slate-400,
+.gh-analysis-page #section_sanctions .text-slate-500,
+.gh-analysis-page #section_prospecting_insights .text-indigo-50,
+.gh-analysis-page #section_prospecting_insights .text-indigo-400,
+.gh-analysis-page #section_kit_prospection .text-slate-300{color:#53685d!important}
+.gh-analysis-page #section_allegations>div,
+.gh-analysis-page #section_missions>div,
+.gh-analysis-page #section_juridique>div,
+.gh-analysis-page #section_contacts>div,
+.gh-analysis-page #section_kit_prospection>div,
+.gh-analysis-page #section_suivi>div{border-color:#e7eee9!important}
+.gh-analysis-page input[type="text"],
+.gh-analysis-page input[type="email"],
+.gh-analysis-page input[type="tel"],
+.gh-analysis-page input[type="url"],
+.gh-analysis-page select,
+.gh-analysis-page textarea{
+  border:1px solid #d4e0d8!important;
+  border-radius:10px!important;
+  background:#fff!important;color:#17352c!important;
+  box-shadow:none!important;
+}
+.gh-analysis-page input:focus,
+.gh-analysis-page select:focus,
+.gh-analysis-page textarea:focus{outline:3px solid rgba(22,118,75,.16)!important}
+.gh-analysis-page .rounded-\[3rem\],
+.gh-analysis-page .rounded-\[2\.5rem\],
+.gh-analysis-page .rounded-\[2rem\]{border-radius:18px!important}
+.gh-analysis-page .shadow-2xl{box-shadow:0 12px 34px rgba(19,54,37,.07)!important}
+.gh-analysis-page .text-slate-400,
+.gh-analysis-page .text-slate-500,
+.gh-analysis-page .text-slate-600{color:#64766e!important}
+@media(max-width:720px){
+  .gh-analysis-page{padding:18px 14px 42px!important}
+  .gh-analysis-page #section_header_pro{padding:20px!important}
+  .gh-analysis-page #section_scores_pro{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+  .gh-analysis-page>.flex.flex-wrap.gap-2{position:relative;top:auto;overflow-x:auto;flex-wrap:nowrap!important}
+  .gh-analysis-page>.flex.flex-wrap.gap-2 a{flex:none;white-space:nowrap}
+  .gh-analysis-page [id^="section_"]{padding:18px!important}
+}
+@media(prefers-reduced-motion:reduce){.gh-analysis-page *{animation:none!important;transition:none!important}}
