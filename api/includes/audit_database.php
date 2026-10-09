@@ -27,13 +27,13 @@ function gh_persist_commercial_audit(array $audit, array $enterpriseData = []): 
             $companyName = ucfirst(explode('.', $domain)[0]);
         }
         $companyName = function_exists('mb_substr') ? mb_substr($companyName, 0, 200) : substr($companyName, 0, 200);
-        $siteUrl = 'https://' . $domain;
+        $siteUrl = strtolower((string)(parse_url($url, PHP_URL_SCHEME) ?: 'https')) . '://' . (string)(parse_url($url, PHP_URL_HOST) ?: $domain);
         $sector = (string)($enterpriseData['entreprise_secteur'] ?? $audit['entreprise_secteur'] ?? '');
         $headcount = (string)($enterpriseData['entreprise_salaries'] ?? $audit['entreprise_salaries'] ?? '');
         $turnover = (string)($enterpriseData['entreprise_ca'] ?? $audit['entreprise_ca'] ?? '');
 
-        $findCompany = $pdo->prepare('SELECT id FROM cl_companies WHERE domain = ? ORDER BY id ASC LIMIT 1');
-        $findCompany->execute([$domain]);
+        $findCompany = $pdo->prepare('SELECT id FROM cl_companies WHERE domain = ? OR clean_url = ? ORDER BY id ASC LIMIT 1');
+        $findCompany->execute([$domain, $domain]);
         $companyId = $findCompany->fetchColumn();
 
         if ($companyId === false) {
