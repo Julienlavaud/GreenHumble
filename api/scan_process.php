@@ -227,6 +227,10 @@ try {
     }
 } catch (Exception $e) {}
 
-// Redirection directe vers le dossier d'analyse complet
-header("Location: /api/analyse.php?id=" . ($auditId ?: 1) . "&tab=diag");
+// Ne jamais ouvrir un audit arbitraire si l'enregistrement a échoué.
+if (!$auditId) {
+    header('Location: /api/scan.php?error=audit_not_saved', true, 303);
+    exit;
+}
+header('Location: /api/analyse.php?id=' . rawurlencode((string)$auditId) . '&tab=diag', true, 303);
 exit;
