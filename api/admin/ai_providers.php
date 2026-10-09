@@ -15,7 +15,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
  header('Content-Type: application/json; charset=utf-8'); $in=json_decode(file_get_contents('php://input'),true);
  if(!is_array($in)){http_response_code(400);echo json_encode(['success'=>false,'error'=>'JSON invalide']);exit;}
  $p=strtolower((string)($in['provider']??''));$action=$in['action']??'save';
- if($action==='default'){if(!isset($defs[$p])){http_response_code(400);echo json_encode(['success'=>false,'error'=>'Fournisseur invalide']);exit;}$state['scanVars']['aiProvider']=$p;save_app_state($state);echo json_encode(['success'=>true,'message'=>'Fournisseur principal enregistré.']);exit;}
+ if($action==='default'){if(!isset($defs[$p])){http_response_code(400);echo json_encode(['success'=>false,'error'=>'Fournisseur invalide']);exit;}$state['scanVars']['aiProvider']=$p;if(!save_app_state($state)){http_response_code(500);echo json_encode(['success'=>false,'error'=>'Sauvegarde impossible']);exit;}echo json_encode(['success'=>true,'message'=>'Fournisseur principal enregistré.']);exit;}
  if(!isset($defs[$p])){http_response_code(400);echo json_encode(['success'=>false,'error'=>'Fournisseur invalide']);exit;}
  if($action==='test'){
   $key=trim((string)($state['scanVars'][$defs[$p]['key']]??''));if($key===''){http_response_code(400);echo json_encode(['success'=>false,'error'=>'Enregistrez d’abord une clé API.']);exit;}
