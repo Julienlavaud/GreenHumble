@@ -18,6 +18,6 @@ gh_schema_assert(strpos($schema, 'CREATE TABLE IF NOT EXISTS cl_texts') !== fals
 gh_schema_assert(!preg_match('/\\b(DROP|TRUNCATE)\\s+(TABLE|DATABASE)\\b/i', $schema), 'aucune instruction destructive DROP/TRUNCATE');
 gh_schema_assert(strpos($schema, 'ALTER TABLE') !== false, 'les tables existantes peuvent recevoir les colonnes manquantes');
 gh_schema_assert(strpos($installer, 'gh_install_database_schema($pdo)') !== false, 'l’assistant exécute le schéma après le test de connexion');
-gh_schema_assert(strpos($installer, '$requestIsHttps') !== false, 'la soumission des identifiants exige HTTPS');
+gh_schema_assert(strpos($installer, 'if (!$installIsHttps)') !== false, 'la soumission des identifiants exige HTTPS');
 
 echo "Tous les tests du schéma d’installation sont passés.\n";
