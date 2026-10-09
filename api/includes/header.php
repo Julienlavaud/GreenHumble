@@ -13,7 +13,7 @@ $activeTab = isset($activeTab) ? (string)$activeTab : '';
 $adminGroups = [
   'ACTIVITÉ' => ['dashboard' => 'Tableau de bord', 'pipeline' => 'Pipeline', 'scans' => 'Scans'],
   'DOSSIERS' => ['listes' => 'Listes'],
-  'ORGANISATION' => ['agency' => 'Organisation'],
+  'ORGANISATION' => ['agency' => 'Identité & agence', 'team' => 'Équipe & accès'],
   'INTELLIGENCE ARTIFICIELLE' => ['ai_providers' => 'Fournisseurs IA', 'scanner' => 'Prompts & règles'],
   'RÉGLAGES' => ['missions' => 'Catalogue métier', 'legal' => 'Références', 'texts' => 'Dictionnaire', 'style' => 'Textes du site']
 ];
