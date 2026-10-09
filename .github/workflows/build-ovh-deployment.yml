@@ -39,7 +39,7 @@ jobs:
           test -f package/api/admin/index.php
           test -f package/api/config/config.php
           test -f package/data/.htaccess
-          if find package -type f \( -name '.env' -o -name '*backup*' \) | grep -q .; then
+          if find package -type f \( -name '.env' -o -path '*/backups/*' -o -name '*.sql.gz' \) | grep -q .; then
             echo "Unexpected secret or backup file in deployment package."
             exit 1
           fi
