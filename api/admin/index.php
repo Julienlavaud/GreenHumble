@@ -16,6 +16,10 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 
 // 2. Data Loading
 $activeTab = $_GET['tab'] ?? 'audits';
+if (in_array($activeTab, ['dossiers', 'scanner_groups'], true)) {
+    header('Location: /api/admin/index.php?tab=listes', true, 303);
+    exit;
+}
 $state = load_app_state();
 $db = get_db_connection();
 
@@ -780,14 +784,13 @@ include __DIR__ . '/../includes/header.php';
                     </div>
 
                     <div class="space-y-8">
-                        <div class="p-10 bg-emerald-50 rounded-[3.5rem] border border-emerald-200 space-y-6">
-                            <div class="flex items-center space-x-3 text-emerald-900">
-                                <span class="text-3xl">💡</span>
-                                <h4 class="font-black text-base uppercase tracking-wider">Réglage IA centralisé dans le Diag</h4>
-                            </div>
-                            <p class="text-xs text-emerald-800 leading-relaxed font-medium">
-                                Les consignes, affinages et exceptions du moteur IA ne se configurent plus ici : ils sont réalisés directement et de manière dynamique dans l'onglet <strong>Diagnostic (Diag)</strong> de chaque audit pour s'adapter précisément au contexte de l'entreprise.
-                            </p>
+                        <div class="p-8 bg-emerald-50 rounded-[2.5rem] border border-emerald-200 space-y-5">
+                            <div class="flex items-center gap-3 text-emerald-950"><span class="text-2xl">✍️</span><h4 class="font-black text-base uppercase tracking-wider">Instructions du moteur</h4></div>
+                            <label for="ia_prompt" class="block text-xs font-bold text-emerald-900">Prompt système global</label>
+                            <textarea id="ia_prompt" rows="7" class="w-full px-4 py-3 bg-white border border-emerald-200 rounded-xl text-sm text-slate-800" placeholder="Décrivez le rôle et les consignes métier de l’IA."><?php echo htmlspecialchars($state['scanVars']['aiKeywordInstructions'] ?? 'Tu es l’IA GreenHumble, experte en conformité RSE, Green Claims et prospection commerciale.', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></textarea>
+                            <label for="ia_banned" class="block text-xs font-bold text-emerald-900">Expressions à vérifier en priorité</label>
+                            <textarea id="ia_banned" rows="4" class="w-full px-4 py-3 bg-white border border-emerald-200 rounded-xl text-sm text-slate-800" placeholder="Une expression par ligne"><?php echo htmlspecialchars($state['scanVars']['customBannedKeywords'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></textarea>
+                            <p class="text-xs text-emerald-800">Ces expressions servent de repères pour l’analyse et ne constituent pas à elles seules une conclusion juridique.</p>
                         </div>
                     </div>
                 </div>
