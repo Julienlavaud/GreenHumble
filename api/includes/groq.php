@@ -34,7 +34,8 @@ function call_groq($payload = [], $apiKey = '') {
         CURLOPT_POSTFIELDS     => json_encode($payload),
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_SSL_VERIFYHOST => 2,
-        CURLOPT_TIMEOUT        => 45,
+        CURLOPT_CONNECTTIMEOUT  => 8,
+            CURLOPT_TIMEOUT        => 25,
         CURLOPT_USERAGENT      => 'GreenHumble-Groq-Client/1.0'
     ]);
 
