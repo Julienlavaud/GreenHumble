@@ -1109,7 +1109,7 @@ function saveScanner() {
     syncState('scanVars', appState.scanVars);
 }
 
-async function setCollaboratorPassword(id) {
+async async function setCollaboratorPassword(id) {
     const password = prompt('Nouveau mot de passe du collaborateur (12 caractères minimum). Il ne sera pas affiché ensuite :');
     if (password === null) return;
     if (password.length < 12) {
