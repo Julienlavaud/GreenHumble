@@ -22,12 +22,16 @@ jobs:
           php -l api/includes/commercial_engine.php
           php -l api/includes/commercial_dossier.php
           php -l api/includes/commercial_adapter.php
+          php -l api/includes/audit_response.php
           php -l tests/commercial_engine_test.php
           php -l tests/commercial_dossier_test.php
           php -l tests/commercial_adapter_test.php
+          php -l tests/audit_response_test.php
       - name: Tester la qualification commerciale
         run: php tests/commercial_engine_test.php
       - name: Tester les dossiers commerciaux
         run: php tests/commercial_dossier_test.php
       - name: Tester l’adaptateur d’intégration sécurisé
         run: php tests/commercial_adapter_test.php
+      - name: Tester la validation des réponses d’audit
+        run: php tests/audit_response_test.php
