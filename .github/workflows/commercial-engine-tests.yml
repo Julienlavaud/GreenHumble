@@ -28,6 +28,8 @@ jobs:
           php -l api/includes/auth.php
           php -l api/config/config.php
           php -l api/install/index.php
+          php -l api/install/schema.php
+          php -l tests/install_schema_test.php
           php -l tests/auth_system_accounts_test.php
           php -l api/audit.php
           php -l api/index.php
@@ -43,6 +45,8 @@ jobs:
           php -l tests/green_claims_rules_test.php
           php -l tests/collaborator_auth_test.php
           php -l tests/public_scan_contract_test.php
+      - name: Tester le schéma d’installation OVH
+        run: php tests/install_schema_test.php
       - name: Tester la qualification commerciale
         run: php tests/commercial_engine_test.php
       - name: Tester les dossiers commerciaux
