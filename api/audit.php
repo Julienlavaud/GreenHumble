@@ -138,43 +138,26 @@ function validateIAResponse($parsed, $domain) {
     $claims = $parsed['detectedClaims'] ?? ($parsed['claims'] ?? []);
     if (!is_array($claims)) $claims = [];
 
-    $clientSummary = $parsed['clientSummary'] ?? [
-        'headline' => "Audit de conformité environnementale : {$domain}",
-        'riskVerdict' => "Score de conformité : {$score}/100. Niveau de risque : {$riskLevel}.",
-        'keyUrgentAction' => "Mettre en conformité les allégations écologiques avec la directive Green Claims.",
-        'immediateRisks' => ["Sanctions DGCCRF potentielles", "Risque d'action pour greenwashing"],
-        'stepsToCompliance' => [
-            ['step' => 1, 'title' => "Audit sémantique", 'description' => "Supprimer les termes génériques non certifiés."],
-            ['step' => 2, 'title' => "Preuves & ACV", 'description' => "Documenter les allégations par des bilans vérifiés."],
-            ['step' => 3, 'title' => "Certification", 'description' => "Engager une démarche Bilan Carbone® ou label tiers."]
-        ]
-    ];
+    // Ne jamais fabriquer de conclusions juridiques ou de recommandations non fournies par l'analyse.
+    $clientSummary = is_array($parsed['clientSummary'] ?? null)
+        ? $parsed['clientSummary']
+        : [
+            'headline' => "Résultat d'analyse à examiner : {$domain}",
+            'riskVerdict' => "Score calculé : {$score}/100. Ce score ne constitue pas, à lui seul, une conclusion juridique.",
+            'keyUrgentAction' => "Vérifier les allégations et leurs justificatifs avant toute conclusion.",
+            'immediateRisks' => [],
+            'stepsToCompliance' => []
+        ];
 
-    $commercialProspectingKit = $parsed['commercialProspectingKit'] ?? ($parsed['prospection'] ?? [
-        'targetPersona' => "Directeur RSE / Direction Générale",
-        'executiveSummary' => "Opportunité d'accompagnement sur la mise en conformité réglementaire.",
-        'phonePitch' => [
-            'hook' => "Bonjour, je vous contacte suite à l'analyse de votre communication environnementale.",
-            'keyFact' => "La directive Green Claims impose des sanctions renforcées sur les termes non prouvés.",
-            'legalWarning' => "Jusqu'à 4% du CA annuel de sanction.",
-            'callToAction' => "Je vous propose un échange de 15 minutes pour vous présenter le diagnostic.",
-            'objectionResponses' => []
-        ],
-        'emailProspecting' => [
-            'legalSecurity' => [
-                'subject' => "Conformité Green Claims & Décret 2022-539 : Audit {$domain}",
-                'body' => "Bonjour,\n\nNous avons audité votre communication environnementale sur {$domain}...\n\nRestons humbles face à l'impact réel,\nJulien Lavaud\nClimat Local"
-            ]
-        ],
-        'climatLocalProposal' => [
-            'recommendedPackage' => "Pack Conformité & Bilan Carbone",
-            'pricingEstimate' => "4 500 € à 9 000 € (éligible subventions Bpifrance)",
-            'subsidies' => "Diag Décarbon'Action Bpifrance",
-            'timeline' => "4 à 6 semaines"
-        ]
-    ]);
+    // Le kit commercial doit provenir explicitement de la réponse validée ou du catalogue approuvé.
+    // Aucun prix, subside, forfait ou argumentaire juridique n'est inventé ici.
+    $commercialProspectingKit = $parsed['commercialProspectingKit'] ?? ($parsed['prospection'] ?? null);
+    if (!is_array($commercialProspectingKit)) {
+        $commercialProspectingKit = null;
+    }
 
     return array_merge($parsed, [
+        'analysisComplete' => true,
         'riskScore' => $score,
         'riskLevel' => $riskLevel,
         'detectedClaims' => $claims,
