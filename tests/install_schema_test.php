@@ -37,5 +37,10 @@ gh_schema_assert(strpos($schema, "'cl_users' => [") !== false && strpos($schema,
 gh_schema_assert(strpos($installer, 'gh_install_database_schema($pdo)') !== false, 'l’assistant exécute le schéma après le test de connexion');
 gh_schema_assert(strpos($installer, 'if (!$installIsHttps)') !== false, 'la soumission des identifiants exige HTTPS');
 gh_schema_assert(strpos($installer, 'GREENHUMBLE_INSTALLATION_COMPLETED=1') !== false, 'l’installation verrouille son assistant après succès');
+gh_schema_assert(strpos($installer, "header('Location: /api/login.php?installed=1'") !== false, 'après installation, redirection vers la connexion GreenHumble');
+gh_schema_assert(strpos($installer, "dirname(__DIR__, 2) . '/data'") !== false, 'le stockage privé est dans la racine dédiée à GreenHumble');
+$guide = file_get_contents(__DIR__ . '/../OVH-INSTALLATION-GUIDE.md');
+gh_schema_assert(strpos($guide, 'www.climatlocal.com') !== false && strpos($guide, 'hors périmètre') !== false, 'le guide exclut explicitement le site principal');
+gh_schema_assert(strpos($guide, 'doo.climatlocal.com') !== false, 'le guide cible explicitement le sous-domaine GreenHumble');
 
 echo "Tous les tests du schéma d’installation sont passés.\n";
