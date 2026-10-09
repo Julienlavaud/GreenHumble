@@ -130,10 +130,16 @@ function renderCommercial(kit) {
   const target = $('commercial-list'); clear(target);
   if (!kit || typeof kit !== 'object') { addText(target,'div','Aucun kit commercial disponible pour cet audit.','empty'); return; }
   const fields = [
+    ['Priorité commerciale', kit.priority],
+    ['Pourquoi cette priorité', kit.priorityRationale],
+    ['Prochaine action', kit.nextAction],
+    ['Offre recommandée', kit.recommendedOffer && (kit.recommendedOffer.serviceTitle || kit.recommendedOffer)],
+    ['Raison du choix de l’offre', kit.recommendedOffer && kit.recommendedOffer.reason],
+    ['Arguments liés aux constats', kit.evidenceBasedReasons],
     ['Profil cible', kit.targetPersona], ['Synthèse commerciale', kit.executiveSummary],
     ['Accroche', kit.phonePitch && kit.phonePitch.hook], ['Fait à vérifier', kit.phonePitch && kit.phonePitch.keyFact],
     ['Appel à l’action', kit.phonePitch && kit.phonePitch.callToAction],
-    ['Offre recommandée', kit.climatLocalProposal && kit.climatLocalProposal.recommendedPackage],
+    ['Offre du catalogue', kit.climatLocalProposal && kit.climatLocalProposal.recommendedPackage],
     ['Calendrier proposé', kit.climatLocalProposal && kit.climatLocalProposal.timeline]
   ];
   fields.forEach(([label,value]) => { if (value !== undefined && value !== null && value !== '') { const wrap=document.createElement('div'); wrap.className='commercial'; addText(wrap,'strong',label); addText(wrap,'p',displayValue(value)); target.appendChild(wrap); } });
