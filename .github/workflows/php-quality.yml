@@ -49,3 +49,4 @@ jobs:
           php tests/auth_system_accounts_test.php
           php tests/collaborator_auth_test.php
           php tests/audit_response_test.php
+          php tests/ai_engine_reference_test.php
