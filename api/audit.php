@@ -94,8 +94,8 @@ function autoDeductEntrepriseData($parsed, $webText, $domain) {
  */
 require_once __DIR__ . '/includes/audit_response.php';
 
-function validateIAResponse($parsed, $domain, $sourceText = '', $sourceUrl = '') {
-    return gh_validate_ia_response($parsed, (string)$domain, (string)$sourceText, (string)$sourceUrl);
+function validateIAResponse($parsed, $domain, $sourceText = '', $sourceUrl = '', $serviceCatalog = []) {
+    return gh_validate_ia_response($parsed, (string)$domain, (string)$sourceText, (string)$sourceUrl, is_array($serviceCatalog) ? $serviceCatalog : []);
 }
 
 
@@ -208,7 +208,12 @@ if ($method === 'POST') {
     $enterpriseData = autoDeductEntrepriseData($resultData, $webContent, $domain);
 
     // 4. Valider la réponse IA
-    $validatedAudit = validateIAResponse($resultData, $domain, $webContent, $url);
+    $appStateForOffers = load_app_state();
+    $serviceCatalog = array_values(array_filter(
+        is_array($appStateForOffers['serviceOpps'] ?? null) ? $appStateForOffers['serviceOpps'] : [],
+        static function ($service) { return is_array($service) && ($service['isActive'] ?? true); }
+    ));
+    $validatedAudit = validateIAResponse($resultData, $domain, $webContent, $url, $serviceCatalog);
 
     // Ne pas enregistrer ni présenter un résultat incomplet comme un audit réussi.
     if (($validatedAudit['status'] ?? '') === 'analysis_incomplete' || $validatedAudit['riskScore'] === null) {
