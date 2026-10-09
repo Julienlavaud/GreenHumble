@@ -42,6 +42,10 @@ function authenticate_user($username, $password) {
     
     foreach ($accounts as $acc) {
         if (strtolower($acc['username']) === $cleanUser && $acc['password'] === $password) {
+            // Prevent session fixation by rotating the session identifier after authentication.
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_regenerate_id(true);
+            }
             $_SESSION['user_id'] = $acc['id'];
             $_SESSION['username'] = $acc['username'];
             $_SESSION['role'] = $acc['role'];
