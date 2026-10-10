@@ -67,7 +67,7 @@ try {
         foreach ($storedAuditsForScan as $storedAudit) {
             if (!is_array($storedAudit) || empty($storedAudit['id']) || empty($storedAudit['url'])) continue;
             $storedHost = parse_url((string)$storedAudit['url'], PHP_URL_HOST);
-            $storedDomain = strtolower(preg_replace('/^www\\\\./i', '', (string)$storedHost));
+            $storedDomain = strtolower(preg_replace('/^www[.]/i', '', (string)$storedHost));
             if ($storedDomain !== '' && !isset($latestAuditIdByDomain[$storedDomain])) $latestAuditIdByDomain[$storedDomain] = (string)$storedAudit['id'];
         }
     }
