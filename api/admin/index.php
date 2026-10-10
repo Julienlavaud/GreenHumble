@@ -231,7 +231,7 @@ include __DIR__ . '/../includes/header.php';
                 </div>
 
                 <!-- Grille des Cartes de Scans -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="scans-container">
+                <div class="grid grid-cols-1 gap-4" id="scans-container">
                     <?php if (empty($allScans)): ?>
                         <div class="col-span-full p-12 text-center text-[#AAAAAA] bg-[#1E1E1E] rounded-2xl border border-white/10">
                             Aucun scan enregistré pour le moment.
@@ -439,7 +439,7 @@ include __DIR__ . '/../includes/header.php';
                                         <p class="text-xs text-[#AAAAAA] mt-1"><?php echo htmlspecialchars($lst['description'] ?: 'Aucune description'); ?></p>
                                     </div>
                                     <?php if (!empty($lst['sites'])): ?>
-                                        <div class="space-y-2 max-h-48 overflow-y-auto border-t border-white/10 pt-3">
+                                        <div class="space-y-2 max-h-72 overflow-y-auto border-t border-white/10 pt-3">
                                             <?php foreach ($lst['sites'] as $site): ?>
                                                 <div class="flex items-center justify-between gap-2 text-xs">
                                                     <a class="text-blue-300 hover:underline truncate" target="_blank" rel="noopener noreferrer" href="<?php echo htmlspecialchars($site['url'] ?? '#', ENT_QUOTES); ?>"><?php echo htmlspecialchars(($site['nom'] ?? '') ?: ($site['url'] ?? 'Site')); ?></a>
@@ -666,9 +666,9 @@ include __DIR__ . '/../includes/header.php';
                         <span>Nouveau Collaborateur</span>
                     </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8" id="team-container">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5" id="team-container">
                     <?php foreach ($state['collaborators'] as $idx => $c): ?>
-                        <div class="team-card bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center space-y-6 group relative overflow-hidden ring-1 ring-slate-100" data-id="<?php echo $c['id']; ?>">
+                        <div class="team-card bg-white p-6 rounded-3xl border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center space-y-6 group relative overflow-hidden ring-1 ring-slate-100" data-id="<?php echo $c['id']; ?>">
                             <button onclick="deleteItem('team', <?php echo $idx; ?>)" class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all">✕</button>
                             <div class="w-28 h-28 <?php echo $c['avatarColor']; ?> text-white rounded-[3rem] flex items-center justify-center text-4xl font-black mx-auto shadow-2xl group-hover:scale-110 transition-transform ring-4 ring-white">
                                 <?php echo substr($c['name'], 0, 1); ?>
@@ -681,7 +681,7 @@ include __DIR__ . '/../includes/header.php';
                             </div>
                             <div class="space-y-1">
                                 <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Email Contact</label>
-                                <input type="text" value="<?php echo htmlspecialchars($c['email']); ?>" class="t-email w-full bg-transparent text-center text-xs text-slate-400 border-none p-0 focus:ring-0 truncate font-medium" placeholder="Email contact">
+                                <input type="text" value="<?php echo htmlspecialchars($c['email']); ?>" type="email" class="t-email w-full min-w-0 bg-slate-50 text-center text-sm text-slate-700 border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-200 font-medium" placeholder="Email contact">
                             </div>
                             <div class="space-y-1 pt-2 border-t border-slate-50">
                                 <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Mot de passe</label>
@@ -1046,11 +1046,13 @@ async function syncState(type, data, isBatch = false) {
     try {
         const response = await fetch('/api/admin/save_state.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify(payload)
         });
-        const res = await response.json();
-        if (res.success) {
+        const res = await response.json().catch(() => ({}));
+        if (!response.ok || !res.success) throw new Error(res.error || 'Le serveur a refusé la sauvegarde (HTTP ' + response.status + ').');
+        {
             btns.forEach(b => { 
                 b.innerHTML = '✨ Mise à jour réussie'; 
                 b.classList.replace('bg-emerald-700', 'bg-indigo-600');
@@ -1065,15 +1067,15 @@ async function syncState(type, data, isBatch = false) {
             return true;
         }
     } catch (e) {
-        alert('CRITICAL ERROR: Data sync failed on server.');
-        btns.forEach(b => b.disabled = false);
+        alert(e.message || 'Échec de la sauvegarde. Vérifiez la connexion puis réessayez.');
+        btns.forEach(b => { b.disabled = false; b.innerHTML = 'Sauvegarder'; });
     }
     return false;
 }
 
 // --- Dispatcher de Sauvegarde par Onglet ---
 function saveTab(tab) {
-    if (tab === 'agency') { saveAgency().then((saved) => { if (saved) saveTeam(false); }); }
+    if (tab === 'agency') { saveAgency().then(async (saved) => { if (saved) await saveTeam(false); }); }
     else if (tab === 'missions') saveMissions();
     else if (tab === 'legal') saveLegal();
     else if (tab === 'scanner') saveScanner();
@@ -1171,8 +1173,8 @@ function saveTeam(showNotice = true) {
             name,
             email,
             role,
-            avatarColor: 'bg-indigo-700',
-            assignedProspectsCount: 0
+            avatarColor: c.dataset.avatarColor || 'bg-indigo-700',
+            assignedProspectsCount: Number(c.dataset.assignedProspectsCount || 0)
         });
 
     });
@@ -1207,7 +1209,7 @@ function addItem(type) {
         : syncState(type === 'missions' ? 'serviceOpps' : 'legalTexts', 
                     type === 'missions' ? appState.serviceOpps : appState.legalTexts);
 
-    p.then(() => window.location.reload());
+    p.then((saved) => { if (saved) window.location.reload(); });
 }
 
 function deleteItem(type, idx) {
@@ -1218,7 +1220,7 @@ function deleteItem(type, idx) {
     
     syncState(type === 'missions' ? 'serviceOpps' : (type === 'legal' ? 'legalTexts' : 'collaborators'), 
               type === 'missions' ? appState.serviceOpps : (type === 'legal' ? appState.legalTexts : appState.collaborators))
-    .then(() => window.location.reload());
+    .then((saved) => { if (saved) window.location.reload(); });
 }
 
 // --- CSV Handlers (Unified) ---
