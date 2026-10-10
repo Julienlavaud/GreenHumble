@@ -134,7 +134,7 @@ if (isset($_GET['download']) && $_GET['download'] === 'audits') {
     $audits = $db->query("SELECT a.id, c.name as company_name, a.url, a.score, a.riskLevel, a.analyzedAt, a.status, a.notes FROM cl_audits a LEFT JOIN cl_companies c ON a.company_id = c.id ORDER BY a.id DESC")->fetchAll();
     
     foreach ($audits as $row) {
-        fputcsv($output, [$row['id'], $row['company_name'] ?: 'N/A', $row['url'], $row['score'], $row['riskLevel'], $row['analyzedAt'], $row['status'], $row['notes']]);
+        fputcsv($output, array_map('gh_export_csv_cell', [$row['id'], $row['company_name'] ?: 'N/A', $row['url'], $row['score'], $row['riskLevel'], $row['analyzedAt'], $row['status'], $row['notes']]));
     }
     fclose($output);
     exit;
@@ -148,7 +148,7 @@ if (isset($_GET['download']) && $_GET['download'] === 'texts') {
     fputcsv($output, ['Key', 'Title', 'Content']);
     $texts = $db->query("SELECT text_key, title, content FROM cl_texts ORDER BY text_key ASC")->fetchAll();
     foreach ($texts as $row) {
-        fputcsv($output, [$row['text_key'], $row['title'], $row['content']]);
+        fputcsv($output, array_map('gh_export_csv_cell', [$row['text_key'], $row['title'], $row['content']]));
     }
     fclose($output);
     exit;
@@ -163,7 +163,7 @@ if (isset($_GET['download']) && $_GET['download'] === 'team') {
     fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
     fputcsv($output, ['ID', 'Name', 'Email', 'Role']);
     foreach (($st['collaborators'] ?? []) as $c) {
-        fputcsv($output, [$c['id'] ?? '', $c['name'] ?? '', $c['email'] ?? '', $c['role'] ?? '']);
+        fputcsv($output, array_map('gh_export_csv_cell', [$c['id'] ?? '', $c['name'] ?? '', $c['email'] ?? '', $c['role'] ?? '']));
     }
     fclose($output);
     exit;
