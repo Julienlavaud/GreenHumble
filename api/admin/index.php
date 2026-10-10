@@ -43,7 +43,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $key = trim($_POST['text_key'] ?? '');
         $title = trim($_POST['title'] ?? '');
         $content = trim($_POST['content'] ?? '');
-        $db->prepare("INSERT INTO cl_texts (text_key, title, content) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE title = VALUES(title), content = VALUES(content)")->execute([$key, $title, $content]);
+        $category = trim($_POST['category'] ?? 'mots_bannis') ?: 'mots_bannis';
+        if ($key === '' || $title === '' || $content === '') {
+            http_response_code(422);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'La clé, le titre et le contenu sont obligatoires.']);
+            exit;
+        }
+        $db->prepare("INSERT INTO cl_texts (text_key, title, content, category) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE title = VALUES(title), content = VALUES(content), category = VALUES(category)")->execute([$key, $title, $content, $category]);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true]);
         exit;
     }
     if (isset($_POST['delete_db_text'])) {
@@ -975,8 +984,8 @@ include __DIR__ . '/../includes/header.php';
             <div class="p-12 space-y-12">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Dictionnaires & Mots Bannis</h2>
-                        <p class="text-slate-400 mt-2">Textes sémantiques stockés en base de données pour le moteur IA.</p>
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Dictionnaire IA</h2>
+                        <p class="text-slate-600 mt-2">Ajoutez et modifiez ici les mots-clés utilisés par le moteur IA. Ces réglages sont partagés entre les audits.</p>
                     </div>
                     <button onclick="addDbText()" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
@@ -986,7 +995,7 @@ include __DIR__ . '/../includes/header.php';
                 
                 <div class="grid grid-cols-1 gap-6" id="db-texts-container">
                     <?php 
-                    $dbTexts = $db->query("SELECT * FROM cl_texts ORDER BY text_key ASC")->fetchAll();
+                    $dbTexts = $db->query("SELECT * FROM cl_texts WHERE category = 'mots_bannis' ORDER BY text_key ASC")->fetchAll();
                     foreach ($dbTexts as $t): ?>
                         <div class="db-text-row p-8 bg-slate-50 rounded-[3rem] border border-slate-200 shadow-sm hover:bg-white hover:shadow-2xl transition-all relative group">
                             <div class="flex flex-col lg:flex-row lg:items-start gap-8">
@@ -1289,9 +1298,12 @@ async function saveDbText(key, btn) {
         fd.append('text_key', key);
         fd.append('title', title);
         fd.append('content', content);
+        fd.append('category', 'mots_bannis');
         
-        await fetch(window.location.href, { method: 'POST', body: fd });
-        btn.innerText = '✨ OK';
+        const response = await fetch(window.location.href, { method: 'POST', body: fd, credentials: 'same-origin' });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.error || 'La sauvegarde du dictionnaire a échoué.');
+        btn.innerText = '✨ Enregistré';
         setTimeout(() => { btn.disabled = false; btn.innerText = 'Enregistrer'; }, 1500);
     } catch (e) {
         alert('Erreur save DB');
@@ -1307,15 +1319,26 @@ async function deleteDbText(key) {
     window.location.reload();
 }
 
-function addDbText() {
-    const key = prompt('Clé unique du texte (ex: banned_words_custom) :');
-    if (!key) return;
+async function addDbText() {
+    const title = prompt('Nom du dictionnaire :');
+    if (!title || !title.trim()) return;
+    const content = prompt('Mots ou expressions à repérer (séparés par des virgules ou retours à la ligne) :');
+    if (!content || !content.trim()) return;
+    const slug = title.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
     const fd = new FormData();
     fd.append('save_db_text', '1');
-    fd.append('text_key', key);
-    fd.append('title', 'Nouveau dictionnaire');
-    fd.append('content', 'mots, séparés, par, virgule');
-    fetch(window.location.href, { method: 'POST', body: fd }).then(() => window.location.reload());
+    fd.append('text_key', 'banned_words_' + (slug || Date.now()));
+    fd.append('title', title.trim());
+    fd.append('content', content.trim());
+    fd.append('category', 'mots_bannis');
+    try {
+        const response = await fetch(window.location.href, { method: 'POST', body: fd, credentials: 'same-origin' });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.error || 'La création du dictionnaire a échoué.');
+        window.location.reload();
+    } catch (error) {
+        alert(error.message || 'Erreur réseau.');
+    }
 }
 
 function importTabCSV(tab, input) {
