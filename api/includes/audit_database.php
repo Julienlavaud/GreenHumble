@@ -5,8 +5,9 @@ declare(strict_types=1);
  * Persiste un audit validé et rattache les domaines à une fiche société canonique.
  * Le SIREN confirmé est prioritaire; la sauvegarde JSON reste le secours MySQL.
  */
-function gh_persist_commercial_audit(array $audit, array $enterpriseData = []): bool
+function gh_persist_commercial_audit(array $audit, array $enterpriseData = [], ?int &$auditRecordId = null): bool
 {
+    $auditRecordId = null;
     if (!defined('DB_HOST') || !defined('DB_NAME') || !defined('DB_USER') || !defined('DB_PASS')) {
         return false;
     }
@@ -163,10 +164,12 @@ function gh_persist_commercial_audit(array $audit, array $enterpriseData = []): 
             is_string($audit['financialImpact'] ?? null) ? $audit['financialImpact'] : null,
             is_string($rawResponse) ? $rawResponse : null, 'scan_public', $mysqlDate, $assignedTo ?: null,
         ]);
+        $auditRecordId = (int)$pdo->lastInsertId();
 
         $pdo->commit();
         return true;
     } catch (Throwable $e) {
+        $auditRecordId = null;
         if ($pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
         error_log('GreenHumble: audit commercial non persisté en base (' . get_class($e) . ').');
         return false;
