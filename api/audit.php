@@ -357,6 +357,37 @@ if ($method === 'POST') {
         'turnoverPeriod' => $enterpriseData['entreprise_ca_periode'] ?? null
     ];
 
+    // Coordonnées générales publiées sur les pages du site, avec la page d'origine.
+    $websiteContacts = [];
+    $contactPages = explode('[SOURCE_URL: ', (string)$webContent);
+    foreach ($contactPages as $contactPage) {
+        $pageUrl = $url;
+        $pageText = $contactPage;
+        $markerEnd = strpos($contactPage, ']');
+        if ($markerEnd !== false) {
+            $candidateUrl = trim(substr($contactPage, 0, $markerEnd));
+            if (filter_var($candidateUrl, FILTER_VALIDATE_URL) && in_array(strtolower((string)parse_url($candidateUrl, PHP_URL_SCHEME)), ['http', 'https'], true)) {
+                $pageUrl = $candidateUrl;
+                $pageText = substr($contactPage, $markerEnd + 1);
+            }
+        }
+        preg_match_all('/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i', $pageText, $emails);
+        foreach (array_unique($emails[0] ?? []) as $email) {
+            $email = strtolower(trim($email, ".,;:()[]{}<>"));
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+            $key = 'email:' . $email;
+            $websiteContacts[$key] = ['type' => 'email', 'value' => $email, 'sourceUrl' => $pageUrl];
+        }
+        preg_match_all('/(?:\+33|0033|0)[ .()\-]*[1-9](?:[ .()\-]*\d){8}/', $pageText, $phones);
+        foreach (array_unique($phones[0] ?? []) as $phone) {
+            $digits = preg_replace('/\D+/', '', $phone);
+            if (strlen((string)$digits) < 9 || strlen((string)$digits) > 14) continue;
+            $key = 'phone:' . $digits;
+            $websiteContacts[$key] = ['type' => 'phone', 'value' => trim($phone), 'sourceUrl' => $pageUrl];
+        }
+    }
+    $validatedAudit['websiteContacts'] = array_values($websiteContacts);
+
     // Ne pas enregistrer ni présenter un résultat incomplet comme un audit réussi.
     if (($validatedAudit['status'] ?? '') === 'analysis_incomplete' || $validatedAudit['riskScore'] === null) {
         http_response_code(503);
