@@ -12,7 +12,7 @@ if (empty($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true
         echo json_encode(['success' => false, 'error' => 'Session administrateur requise.']);
         exit;
     }
-    header('Location: /api/login.php?next=' . rawurlencode('/api/admin/ai_providers.php'), true, 303);
+    header('Location: /api/login.php?next=' . rawurlencode('/admin/ai_providers.php'), true, 303);
     exit;
 }
 $defs = [
