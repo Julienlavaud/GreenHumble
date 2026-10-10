@@ -43,7 +43,7 @@ a{color:var(--green)}.shell{max-width:1240px;margin:auto;padding:24px}.topbar{di
       </section>
       <section class="card" id="second-opinion-card">
         <h2>Seconde lecture IA</h2>
-        <p class="intro">Une autre lecture critique compare les constats et le score enregistrés. Elle peut renforcer la convergence, nuancer ou affaiblir la confiance. Cela déclenche un nouvel appel IA. Le corpus complet du site n’étant pas conservé, l’IA examine les éléments sauvegardés sans revisiter le site.</p>
+        <p class="intro">Une autre lecture critique compare les constats et le score enregistrés. Elle peut renforcer la convergence, nuancer ou affaiblir la confiance. Cela déclenche un nouvel appel avec la configuration IA active (ce n’est pas un avis indépendant). Le corpus complet du site n’étant pas conservé, l’IA examine les éléments sauvegardés sans revisiter le site.</p>
         <button class="btn primary no-print" id="run-second-opinion" type="button">Demander une seconde lecture IA</button>
         <div id="second-opinion-status" class="notice hidden" role="status" aria-live="polite"></div>
         <div id="second-opinion-result" class="hidden">
