@@ -138,9 +138,16 @@ function gh_validate_ia_response($parsed, string $domain, string $sourceText = '
         (($parsed['status'] ?? '') === 'analysis_incomplete') ||
         (($parsed['analysisComplete'] ?? true) === false) || !$hasScore || !is_numeric($rawScore);
 
-    $rawClaims = is_array($parsed)
-        ? (is_array($parsed['detectedClaims'] ?? null) ? $parsed['detectedClaims'] : ($parsed['claims'] ?? []))
-        : [];
+    $rawClaims = [];
+    if (is_array($parsed)) {
+        // Certains fournisseurs renvoient une liste partielle dans detectedClaims
+        // et la liste complète dans claims : conserver les deux, puis dédupliquer.
+        foreach (['detectedClaims', 'claims', 'allegations'] as $claimField) {
+            if (is_array($parsed[$claimField] ?? null)) {
+                $rawClaims = array_merge($rawClaims, $parsed[$claimField]);
+            }
+        }
+    }
     $claims = gh_normalize_claims($rawClaims, $sourceText, $sourceUrl);
 
     if ($isIncomplete) {
