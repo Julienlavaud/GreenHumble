@@ -174,6 +174,7 @@ function record_scan($url, $type_scan = 'diagnostic', $resultat_ia = null, $type
 
     $newScan = [
         'id' => $scanId, 'url' => $url,
+        'company_name' => trim((string)($enterpriseData['company_name'] ?? ($parsedResult['companyName'] ?? ''))) ?: null,
         'type_scan' => in_array($type_scan, ['diagnostic', 'pipeline', 'widget'], true) ? $type_scan : 'diagnostic',
         'projet_id' => $assignedProjetId, 'date_scan' => date('c'),
         'entreprise_secteur' => $enterpriseData['entreprise_secteur'] ?? null,
