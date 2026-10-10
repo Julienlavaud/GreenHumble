@@ -97,8 +97,11 @@ function autoDeductEntrepriseData($parsed, $webText, $domain, $registryData = nu
 
     $headcount = $manualHeadcount !== '' ? $manualHeadcount : $registryHeadcount;
     $turnover = $manualTurnover !== '' ? $manualTurnover : $registryCa;
+    $registrySector = is_array($registryData) ? trim((string)($registryData['libelle_activite_principale'] ?? '')) : '';
+    if ($registrySector !== '') $secteur = $registrySector;
     return [
         'entreprise_secteur' => trim($secteur),
+        'entreprise_secteur_source' => $registrySector !== '' ? 'registre_public_insee' : 'estimation_non_verifiee',
         'entreprise_salaries' => $headcount,
         'entreprise_salaries_source' => $manualHeadcount !== '' ? 'saisie_utilisateur' : ($registryHeadcount !== null ? 'registre_public_insee' : 'non_communique'),
         'entreprise_salaries_annee' => is_array($registryData) ? ($registryData['annee_tranche_effectif_salarie'] ?? null) : null,
@@ -347,6 +350,7 @@ if ($method === 'POST') {
         'provider' => !empty($enterpriseData['company_siren']) ? 'recherche-entreprises.api.gouv.fr' : null,
         'siren' => $enterpriseData['company_siren'] ?? null,
         'naf' => $enterpriseData['company_naf'] ?? null,
+        'sectorSource' => $enterpriseData['entreprise_secteur_source'] ?? 'estimation_non_verifiee',
         'headcountSource' => $enterpriseData['entreprise_salaries_source'] ?? 'non_communique',
         'headcountYear' => $enterpriseData['entreprise_salaries_annee'] ?? null,
         'turnoverSource' => $enterpriseData['entreprise_ca_source'] ?? 'non_communique',
