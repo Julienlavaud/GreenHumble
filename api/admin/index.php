@@ -1138,6 +1138,8 @@ function saveScanner() {
 }
 
 async function setCollaboratorPassword(id) {
+    const member = appState.collaborators?.find(item => String(item.id) === String(id));
+    if (!member?.email) return alert('Enregistrez d’abord une adresse e-mail pour ce collaborateur.');
     const password = prompt('Nouveau mot de passe du collaborateur (12 caractères minimum). Il ne sera pas affiché ensuite :');
     if (password === null) return;
     if (password.length < 12) {
@@ -1180,8 +1182,11 @@ function saveTeam(showNotice = true) {
     });
     
     appState.collaborators = items;
-    syncState('collaborators', appState.collaborators)
-    .then(() => { if (showNotice) alert('Équipe sauvegardée. La création ou réinitialisation des accès doit être effectuée via un flux sécurisé.'); });
+    return syncState('collaborators', appState.collaborators)
+    .then((saved) => {
+        if (saved && showNotice) alert('Équipe enregistrée.');
+        return saved;
+    });
 }
 
 function generatePass(btn) {
