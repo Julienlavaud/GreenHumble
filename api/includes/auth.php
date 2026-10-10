@@ -147,7 +147,7 @@ function is_logged_in() {
 function require_login($required_role = 'admin') {
     $role = get_current_role();
     $requestUri = (string)($_SERVER['REQUEST_URI'] ?? '');
-    $next = (strpos($requestUri, '/api/') === 0) ? $requestUri : '';
+    $next = (strpos($requestUri, '/api/') === 0 || strpos($requestUri, '/admin/') === 0) ? $requestUri : '';
     $loginUrl = '/api/login.php' . ($next !== '' ? '?next=' . rawurlencode($next) : '');
     if ($role === 'public') {
         header('Location: ' . $loginUrl, true, 303);
