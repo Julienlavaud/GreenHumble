@@ -14,45 +14,82 @@ $allGroups = load_scanner_groups();
 $allListes = load_all_listes();
 $allScans = load_all_scans();
 
-// La liste affiche le dernier audit valide par domaine. Les anciens scans restent
-// conservés dans scans.json et leur nombre est indiqué sur la carte.
-$latestScansByDomain = [];
+$companyRows = [];
+try {
+    $companyRows = $db->query("SELECT id, name, siren, website, domain FROM cl_companies ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {}
+$companySirenByDomain = [];
+$companyNameByDomain = [];
+$companyNameBySiren = [];
+foreach ($companyRows as $company) {
+    $siren = preg_match('/^\\d{9}$/', (string)($company['siren'] ?? '')) ? (string)$company['siren'] : '';
+    if ($siren !== '' && !empty($company['name'])) $companyNameBySiren[$siren] = (string)$company['name'];
+    foreach ([$company['domain'] ?? '', $company['website'] ?? ''] as $companyUrl) {
+        $companyHost = parse_url((string)$companyUrl, PHP_URL_HOST) ?: (string)$companyUrl;
+        $companyDomain = strtolower(preg_replace('/^www\\./i', '', trim($companyHost)));
+        if ($companyDomain === '') continue;
+        if ($siren !== '') $companySirenByDomain[$companyDomain] = $siren;
+        if (!empty($company['name'])) $companyNameByDomain[$companyDomain] = (string)$company['name'];
+    }
+}
+try {
+    $aliases = $db->query("SELECT d.domain, c.name, c.siren FROM cl_company_domains d JOIN cl_companies c ON c.id = d.company_id")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($aliases as $alias) {
+        $aliasDomain = strtolower(preg_replace('/^www\\./i', '', trim((string)$alias['domain'])));
+        if ($aliasDomain === '') continue;
+        $aliasSiren = preg_match('/^\\d{9}$/', (string)($alias['siren'] ?? '')) ? (string)$alias['siren'] : '';
+        if ($aliasSiren !== '') {
+            $companySirenByDomain[$aliasDomain] = $aliasSiren;
+            if (!empty($alias['name'])) $companyNameBySiren[$aliasSiren] = (string)$alias['name'];
+        }
+        if (!empty($alias['name'])) $companyNameByDomain[$aliasDomain] = (string)$alias['name'];
+    }
+} catch (Throwable $e) {}
+
+$canonicalCompanies = [];
+try {
+    $canonicalCompanies = $db->query("SELECT c.id, c.name, c.siren, c.website FROM cl_companies c WHERE c.siren IS NULL OR c.siren = '' OR c.id = (SELECT MIN(c2.id) FROM cl_companies c2 WHERE c2.siren = c.siren) ORDER BY c.name ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $canonicalCompanies = $companyRows;
+}
+
+// La liste affiche le dernier audit valide par entreprise (SIREN) ou domaine.
+// Les anciens scans restent conservés et leur nombre est indiqué sur la carte.
+$latestScansByCompany = [];
 $scanHistoryCounts = [];
 foreach ($allScans as $scan) {
     if (!is_array($scan)) continue;
     $host = parse_url((string)($scan['url'] ?? ''), PHP_URL_HOST);
-    $domain = strtolower(preg_replace('/^www\./i', '', trim((string)($host ?: ''))));
+    $domain = strtolower(preg_replace('/^www\\./i', '', trim((string)($host ?: ''))));
     if ($domain === '') continue;
 
-    $scanHistoryCounts[$domain] = ($scanHistoryCounts[$domain] ?? 0) + 1;
     $result = $scan['resultat_ia'] ?? [];
     if (is_string($result)) $result = json_decode($result, true);
-    $score = is_array($result) ? ($result['score'] ?? ($result['riskScore'] ?? null)) : null;
+    if (!is_array($result)) $result = [];
+    $scanSiren = $scan['company_siren'] ?? ($result['companyRegistry']['siren'] ?? ($companySirenByDomain[$domain] ?? ''));
+    $scanSiren = preg_match('/^\\d{9}$/', (string)$scanSiren) ? (string)$scanSiren : '';
+    $companyKey = $scanSiren !== '' ? 'siren:' . $scanSiren : 'domain:' . $domain;
+    $scanHistoryCounts[$companyKey] = ($scanHistoryCounts[$companyKey] ?? 0) + 1;
+
+    $score = $result['score'] ?? ($result['riskScore'] ?? null);
     if (!is_numeric($score) || !is_finite((float)$score) || (float)$score < 0 || (float)$score > 100) continue;
 
     $timestamp = strtotime((string)($scan['date_scan'] ?? '')) ?: 0;
-    if (!isset($latestScansByDomain[$domain]) || $timestamp > $latestScansByDomain[$domain]['_dashboard_timestamp']) {
+    if (!isset($latestScansByCompany[$companyKey]) || $timestamp > $latestScansByCompany[$companyKey]['_dashboard_timestamp']) {
         $scan['_dashboard_timestamp'] = $timestamp;
         $scan['_dashboard_domain'] = $domain;
-        $latestScansByDomain[$domain] = $scan;
+        $scan['_dashboard_company_key'] = $companyKey;
+        $scan['_dashboard_siren'] = $scanSiren;
+        $latestScansByCompany[$companyKey] = $scan;
     }
 }
-$latestScans = array_values($latestScansByDomain);
+$latestScans = array_values($latestScansByCompany);
 usort($latestScans, static function ($a, $b) {
     return ($b['_dashboard_timestamp'] ?? 0) <=> ($a['_dashboard_timestamp'] ?? 0);
 });
 
-// Récupération des clients pour la liste déroulante
-$companies = [];
-try {
-    $companies = $db->query("SELECT id, name, siren, website FROM cl_companies ORDER BY name ASC")->fetchAll();
-} catch (Exception $e) {}
-$companyNameByDomain = [];
-foreach ($companies as $company) {
-    $companyHost = parse_url((string)($company['website'] ?? ''), PHP_URL_HOST);
-    $companyDomain = strtolower(preg_replace('/^www\\./i', '', trim((string)($companyHost ?: ''))));
-    if ($companyDomain !== '' && !empty($company['name'])) $companyNameByDomain[$companyDomain] = (string)$company['name'];
-}
+// Clients disponibles : une seule entrée par SIREN confirmé.
+$companies = $canonicalCompanies;
 
 $page_title = "Scanner d'Allégations RSE & Diagnostic";
 include __DIR__ . '/includes/header.php';
@@ -251,9 +288,9 @@ include __DIR__ . '/includes/header.php';
                 <?php foreach (array_slice($latestScans, 0, 12) as $sc): 
                     $scRes = is_array($sc['resultat_ia'] ?? null) ? $sc['resultat_ia'] : json_decode($sc['resultat_ia'] ?? '{}', true);
                     $scScore = (float)($scRes['score'] ?? $scRes['riskScore']);
-                    $scCompanyName = trim((string)($sc['company_name'] ?? ($scRes['companyName'] ?? ($companyNameByDomain[$sc['_dashboard_domain']] ?? ''))));
+                    $scCompanyName = trim((string)($sc['company_name'] ?? ($scRes['companyName'] ?? ($companyNameBySiren[$sc['_dashboard_siren'] ?? ''] ?? ($companyNameByDomain[$sc['_dashboard_domain']] ?? '')))));
                     if ($scCompanyName === '') $scCompanyName = $sc['_dashboard_domain'];
-                    $historyCount = $scanHistoryCounts[$sc['_dashboard_domain']] ?? 1;
+                    $historyCount = $scanHistoryCounts[$sc['_dashboard_company_key'] ?? ('domain:' . $sc['_dashboard_domain'])] ?? 1;
                     $scType = $sc['type_scan'] ?? 'diagnostic';
                 ?>
                     <div class="bg-[#121212] p-5 rounded-2xl border border-white/10 space-y-4 flex flex-col justify-between">
