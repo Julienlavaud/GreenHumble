@@ -134,5 +134,5 @@ gh_second_opinion_reply(200, [
     'summary' => (string)$review['summary'],
     'claims' => $reviewClaims,
     'aiMetadata' => $review['aiMetadata'] ?? null,
-    'notice' => 'La convergence compare deux lectures des mêmes éléments sauvegardés. Elle ne constitue ni une probabilité de justesse ni une preuve de conformité juridique.'
+    'notice' => 'La convergence compare deux lectures des mêmes éléments sauvegardés avec la configuration IA active ; elle n’est pas indépendante et ne constitue ni une probabilité de justesse ni une preuve de conformité juridique.'
 ]);
