@@ -779,37 +779,6 @@ include __DIR__ . '/includes/header.php';
         </div>
     <?php endif; ?>
 
-    <!-- Référentiels et dictionnaires gérés depuis Réglages > Dictionnaire. -->
-                            </div>
-
-                            <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
-                                <a href="<?php echo $fw['link'] ?? '#'; ?>" target="_blank" class="text-[10px] font-black text-slate-400 hover:text-indigo-600 flex items-center space-x-1.5 transition-colors uppercase">
-                                    <span>Texte Officiel</span>
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                </a>
-                                <button onclick="navigator.clipboard.writeText('Argument Prospection (<?php echo addslashes($fw['title']); ?>) : <?php echo addslashes($fw['description']); ?> - Risque de <?php echo addslashes($fw['sanction']); ?>'); alert('Argument copié !');" class="px-4 py-2 bg-white hover:bg-slate-900 hover:text-white text-slate-900 text-[10px] font-black rounded-xl border border-slate-200 shadow-sm transition-all uppercase tracking-tight">
-                                    Copier l'argument
-                                </button>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
-
-        <script>
-        function filterFrameworks() {
-            const query = document.getElementById('framework_search').value.toLowerCase().trim();
-            const cards = document.querySelectorAll('.framework-card');
-            cards.forEach(card => {
-                const text = card.getAttribute('data-text');
-                if (query === '' || text.includes(query)) card.classList.remove('hidden');
-                else card.classList.add('hidden');
-            });
-        }
-        </script>
-    <?php endif; ?>
-
     <!-- ========================================================================= -->
     <!-- ONGLET 4 : CONTACTS & DÉCIDEURS RSE -->
     <!-- ========================================================================= -->
