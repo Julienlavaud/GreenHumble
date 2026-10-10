@@ -22,9 +22,47 @@ a{color:var(--green)}.shell{max-width:1240px;margin:auto;padding:24px}.topbar{di
 .grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr);gap:18px;align-items:start}.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px;min-width:0}.card h2{font-size:18px;letter-spacing:-.02em;margin:0 0 5px}.card .intro{color:var(--muted);margin:0 0 17px;font-size:13px}.scoreline{display:flex;align-items:center;gap:22px}.score{width:112px;height:112px;flex:0 0 112px;border:8px solid var(--mint);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--green-dark)}.score strong{font-size:30px;line-height:1}.score span{font-size:11px;color:var(--muted)}.scoretext{min-width:0}.scoretext h2{font-size:20px}.muted{color:var(--muted)}.notice{padding:13px 15px;background:#fff8e8;border:1px solid #f1dfb4;border-radius:10px;color:#73520b;margin:14px 0}.empty{padding:18px;border:1px dashed #cbd9d1;border-radius:12px;color:var(--muted);text-align:center}.item{border-top:1px solid var(--line);padding:15px 0}.item:first-of-type{border-top:0}.item h3{font-size:15px;margin:0 0 5px}.item p{margin:5px 0;overflow-wrap:anywhere}.tag{display:inline-block;border-radius:6px;background:#f0f3f1;padding:3px 7px;margin:0 5px 5px 0;font-size:11px;font-weight:750;color:#52645d}.list{padding-left:19px;margin:10px 0}.list li{margin:7px 0}.facts{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fact{background:#f7faf8;border-radius:10px;padding:12px;min-width:0}.fact span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}.fact strong{display:block;margin-top:4px;overflow-wrap:anywhere}.fact small{display:block;margin-top:5px;font-size:11px;color:var(--muted)}.footer{font-size:12px;color:var(--muted);padding:12px 3px 24px}.hidden{display:none!important}.error{color:var(--red)}.commercial{border-left:3px solid var(--green);padding-left:13px;margin:12px 0}.mono{font-variant-numeric:tabular-nums}
 @media(max-width:800px){.shell{padding:14px}.topbar{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.hero,.card{padding:18px}.scoreline{align-items:flex-start;gap:15px}.score{width:92px;height:92px;flex-basis:92px}.lookup{flex-direction:column}.facts{grid-template-columns:1fr 1fr}}
 @media print{body{background:white;font-size:11pt}.shell{max-width:none;padding:0}.topbar .actions,.lookup,.no-print{display:none!important}.hero,.card{break-inside:avoid;border:1px solid #ccc;box-shadow:none;margin-bottom:10px;padding:15px}.grid{grid-template-columns:1.5fr 1fr;gap:10px}.footer{padding-bottom:0}a{color:inherit;text-decoration:none}}
+
+/* Rapport d'audit — finition visuelle */
+.gh-report-page{--green:#087f5b;--green-dark:#145044;--mint:#eaf6f0;--ink:#18332c;--muted:#687b75;--line:#dce7e1;--paper:#fff;--bg:#f4f7f5}
+.gh-report-page .shell{max-width:1320px;padding:30px clamp(16px,3vw,38px) 18px}
+.gh-report-page .hero{position:relative;overflow:hidden;padding:clamp(22px,4vw,40px);border-radius:24px;background:linear-gradient(118deg,#fff 8%,#f2faf5 65%,#e8f5ed);box-shadow:0 14px 38px rgba(25,67,51,.06)}
+.gh-report-page .hero:after{content:"";position:absolute;width:260px;height:260px;border-radius:50%;right:-110px;top:-155px;background:rgba(8,127,91,.08);pointer-events:none}
+.report-toolbar{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.report-toolbar .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid #cfe5d8;border-radius:99px;background:rgba(255,255,255,.8)}
+.report-toolbar .eyebrow:before{content:"";width:7px;height:7px;border-radius:50%;background:#087f5b;box-shadow:0 0 0 3px #dff1e7}
+.gh-report-page h1{max-width:850px;margin:16px 0 10px;font-size:clamp(30px,4.5vw,46px);letter-spacing:-.05em}
+.gh-report-page .subtitle{max-width:800px;font-size:15px;line-height:1.7}
+.gh-report-page .lookup{position:relative;z-index:1;margin-top:24px}
+.gh-report-page .lookup input{min-height:46px;box-shadow:0 2px 8px rgba(24,51,44,.04)}
+.gh-report-page .btn{transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.gh-report-page .btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(24,51,44,.1)}
+.gh-report-page .btn.primary:hover{background:#066d4e}
+.gh-report-page .meta{position:relative;z-index:1;align-items:center;gap:12px;margin-top:20px}
+.gh-report-page .pill{padding:7px 12px}
+.gh-report-page .grid{grid-template-columns:minmax(0,1.72fr) minmax(290px,.92fr);gap:20px}
+.gh-report-page .card{padding:clamp(18px,2.3vw,26px);border-radius:18px;box-shadow:0 8px 26px rgba(25,67,51,.045);transition:border-color .18s ease,box-shadow .18s ease}
+.gh-report-page .card h2{font-size:19px}
+.gh-report-page .card .intro{line-height:1.65}
+.gh-report-page .scoreline{gap:24px}
+.gh-report-page .score{background:radial-gradient(circle at 50% 45%,#fff 0 52%,#f4faf6 53%);border-color:#d9eee2;box-shadow:inset 0 0 0 1px rgba(8,127,91,.04)}
+.gh-report-page #second-opinion-card{background:linear-gradient(145deg,#fff,#f5faf7)}
+.gh-report-page #second-opinion-card .btn{min-height:44px}
+.gh-report-page .item{padding:17px 0}
+.gh-report-page .item h3{font-size:15px;line-height:1.45}
+.gh-report-page .fact{border:1px solid #edf2ee;background:#f8fbf9;padding:13px}
+.gh-report-page .fact span{font-weight:800}
+.gh-report-page .commercial{border-left-width:3px;background:#f8fbf9;border-radius:0 10px 10px 0;padding:12px 14px}
+.gh-report-page .empty{background:#fafcfb}
+.gh-report-page .footer{padding-top:8px}
+@media(max-width:900px){.gh-report-page .grid{grid-template-columns:1fr}.gh-report-page .grid aside{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}.gh-report-page .grid aside .card{margin:0}}
+@media(max-width:600px){.gh-report-page .shell{padding:14px 12px}.report-toolbar{align-items:flex-start}.report-toolbar .btn{padding:8px 10px;font-size:13px}.gh-report-page .hero{border-radius:17px;padding:21px 17px}.gh-report-page .grid aside{display:block}.gh-report-page .grid aside .card{margin-bottom:14px}.gh-report-page .scoreline{gap:14px}.gh-report-page .score{width:82px;height:82px;flex-basis:82px;border-width:6px}.gh-report-page .score strong{font-size:25px}.gh-report-page .facts{gap:8px}.gh-report-page .fact{padding:10px}}
+@media(prefers-reduced-motion:reduce){.gh-report-page .btn,.gh-report-page .card{transition:none}}
+@media print{.report-toolbar .print-report{display:none!important}.gh-report-page .shell{padding:0}.gh-report-page .hero{background:#fff;box-shadow:none}.gh-report-page .card{box-shadow:none}}
+
 </style>
 <main class="gh-report-page"><div class="shell"><section class="hero">
-  <div class="eyebrow">Rapport d’audit</div>
+  <div class="report-toolbar"><div class="eyebrow">Rapport d’audit</div><button class="btn print-report" type="button" onclick="window.print()" aria-label="Imprimer ou enregistrer ce rapport en PDF">Imprimer / PDF</button></div>
   <h1 id="report-title">Rapport de conformité environnementale</h1>
   <p class="subtitle">Synthèse des éléments analysés, des allégations repérées et des pistes d’amélioration. Le rapport restitue les données enregistrées par GreenHumble sans remplacer une validation juridique.</p>
   <form class="lookup" id="lookup-form">
