@@ -368,7 +368,9 @@ function ai_engine_run(
         $aiResponse = gemini_call($prompt, $systemInstruction, $model, $apiKey);
     }
 
-    // Le contrat exige un objet JSON brut, complet et conforme au schéma.\n    $decodedResponse = gh_ai_validate_response($aiResponse);\n    if ($decodedResponse['valid']) {
+    // Le contrat exige un objet JSON brut, complet et conforme au schéma.
+    $decodedResponse = gh_ai_validate_response($aiResponse);
+    if ($decodedResponse['valid']) {
         $result = $decodedResponse['data'];
         $result['aiMetadata'] = $runMetadata;
         return json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
