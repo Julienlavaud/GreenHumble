@@ -109,28 +109,60 @@ function get_stored_audits($file) {
     return is_array($data) ? $data : [];
 }
 
-// Helper d'écriture des audits
-function save_stored_audits($file, $audits) {
+// Toute modification est protégée par un verrou stable et relit le fichier
+// sous verrou pour éviter de perdre les audits écrits par des requêtes concurrentes.
+function mutate_stored_audits($file, callable $mutator) {
     $dir = dirname($file);
-    if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) {
+    if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) return false;
+    if (!is_writable($dir)) return false;
+
+    $lock = @fopen($file . '.lock', 'c');
+    if ($lock === false) return false;
+
+    try {
+        if (!@flock($lock, LOCK_EX)) return false;
+        @chmod($file . '.lock', 0640);
+
+        $audits = [];
+        if (is_file($file)) {
+            $content = @file_get_contents($file);
+            if ($content === false) return false;
+            if (trim($content) !== '') {
+                $decoded = json_decode($content, true);
+                if (!is_array($decoded) || json_last_error() !== JSON_ERROR_NONE) {
+                    error_log('GreenHumble: stored_audits.json invalide; modification interrompue pour préserver les données.');
+                    return false;
+                }
+                $audits = $decoded;
+            }
+        }
+
+        $updatedAudits = $mutator($audits);
+        if (!is_array($updatedAudits)) return false;
+        $json = json_encode(array_values($updatedAudits), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        if (!is_string($json)) return false;
+
+        $tmp = tempnam($dir, '.gh-audit-');
+        if ($tmp === false) return false;
+        $written = @file_put_contents($tmp, $json, LOCK_EX);
+        if ($written !== strlen($json)) {
+            @unlink($tmp);
+            return false;
+        }
+        @chmod($tmp, 0640);
+        if (!@rename($tmp, $file)) {
+            @unlink($tmp);
+            return false;
+        }
+        @chmod($file, 0640);
+        return true;
+    } catch (Throwable $e) {
+        error_log('GreenHumble: échec de mise à jour de stored_audits.json (' . get_class($e) . ').');
         return false;
+    } finally {
+        @flock($lock, LOCK_UN);
+        @fclose($lock);
     }
-    $json = json_encode($audits, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-    if (!is_string($json)) return false;
-    $tmp = tempnam($dir, '.gh-audit-');
-    if ($tmp === false) return false;
-    $written = @file_put_contents($tmp, $json, LOCK_EX);
-    if ($written !== strlen($json)) {
-        @unlink($tmp);
-        return false;
-    }
-    @chmod($tmp, 0640);
-    if (!@rename($tmp, $file)) {
-        @unlink($tmp);
-        return false;
-    }
-    @chmod($file, 0640);
-    return true;
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -232,7 +264,8 @@ if ($method === 'POST') {
         exit;
     }
 
-    $auditId = 'aud_' . date('Ymd_His') . '_' . substr(md5($url), 0, 6);
+    // Identifiant unique même si plusieurs audits de la même URL démarrent la même seconde.
+    $auditId = 'aud_' . gmdate('Ymd_His') . '_' . bin2hex(random_bytes(8));
     $validatedAudit['id'] = $auditId;
     $validatedAudit['url'] = $url;
     $validatedAudit['analyzedAt'] = date('c');
@@ -242,10 +275,11 @@ if ($method === 'POST') {
     $validatedAudit['entreprise_salaries'] = $enterpriseData['entreprise_salaries'];
     $validatedAudit['entreprise_ca'] = $enterpriseData['entreprise_ca'];
 
-    // Sauvegarde dans stored_audits.json
-    $audits = get_stored_audits($storageFile);
-    array_unshift($audits, $validatedAudit);
-    if (!save_stored_audits($storageFile, array_slice($audits, 0, 100))) {
+    // Sauvegarde sérialisée pour ne pas écraser un audit ajouté en parallèle.
+    if (!mutate_stored_audits($storageFile, static function (array $audits) use ($validatedAudit) {
+        array_unshift($audits, $validatedAudit);
+        return array_slice($audits, 0, 100);
+    })) {
         error_log('GreenHumble: audit validé mais stockage principal indisponible.');
         http_response_code(503);
         echo json_encode([
@@ -336,12 +370,15 @@ if ($method === 'DELETE') {
         exit;
     }
 
-    $audits = get_stored_audits($storageFile);
-    $filtered = array_values(array_filter($audits, function($item) use ($idToDelete) {
-        return ($item['id'] ?? '') !== $idToDelete;
-    }));
-
-    save_stored_audits($storageFile, $filtered);
+    if (!mutate_stored_audits($storageFile, static function (array $audits) use ($idToDelete) {
+        return array_values(array_filter($audits, static function ($item) use ($idToDelete) {
+            return ($item['id'] ?? '') !== $idToDelete;
+        }));
+    })) {
+        http_response_code(503);
+        echo json_encode(['error' => 'Impossible de mettre à jour l’historique des audits. Réessayez plus tard.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     echo json_encode(['success' => true, 'message' => "Audit {$idToDelete} supprimé avec succès."], JSON_UNESCAPED_UNICODE);
     exit;
 }
