@@ -72,7 +72,7 @@ if (!defined('DB_PASS')) define('DB_PASS', '');
 // Réglages IA (Priorité State > Constantes > Defaults)
 $stAI = $appState['scanVars'] ?? [];
 if (!defined('AI_PROVIDER')) define('AI_PROVIDER', $stAI['aiProvider'] ?? 'gemini');
-if (!defined('AI_MODEL')) define('AI_MODEL', $stAI['aiModel'] ?? 'gemini-3.8-flash');
+if (!defined('AI_MODEL')) define('AI_MODEL', $stAI['aiModel'] ?? 'gemini-flash-latest');
 if (!defined('AI_API_KEY')) define('AI_API_KEY', $stAI['aiApiKey'] ?? '');
 if (!defined('GEMINI_API_KEY')) define('GEMINI_API_KEY', defined('AI_API_KEY') ? AI_API_KEY : '');
 if (!defined('ADMIN_PASSWORD_HASH')) {
