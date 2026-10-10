@@ -112,6 +112,13 @@ function gh_persist_commercial_audit(array $audit, array $enterpriseData = []): 
             $duplicateRowStmt = $pdo->prepare('SELECT domain, website, clean_url FROM cl_companies WHERE id = ? LIMIT 1');
             $duplicateRowStmt->execute([$duplicateId]);
             $duplicateRow = $duplicateRowStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $mergeMetadata = $pdo->prepare(
+                'UPDATE cl_companies canonical JOIN cl_companies duplicate ON duplicate.id = ? SET
+                    canonical.sector = COALESCE(NULLIF(canonical.sector, \'\'), NULLIF(duplicate.sector, \'\')),
+                    canonical.headcount = COALESCE(NULLIF(canonical.headcount, \'\'), NULLIF(duplicate.headcount, \'\')),
+                    canonical.turnover = COALESCE(NULLIF(canonical.turnover, \'\'), NULLIF(duplicate.turnover, \'\')) WHERE canonical.id = ?'
+            );
+            $mergeMetadata->execute([$duplicateId, $companyId]);
             foreach ([$duplicateRow['domain'] ?? '', $duplicateRow['website'] ?? '', $duplicateRow['clean_url'] ?? ''] as $oldDomainValue) {
                 $oldDomainHost = parse_url((string)$oldDomainValue, PHP_URL_HOST) ?: (string)$oldDomainValue;
                 $oldDomain = strtolower(preg_replace('/^www\\./i', '', trim($oldDomainHost)));
