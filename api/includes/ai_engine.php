@@ -184,15 +184,25 @@ function ai_engine_run(
 
     $provider = strtolower($overrideProvider ?: ($scanVars['aiProvider'] ?? (defined('AI_PROVIDER') ? AI_PROVIDER : 'gemini'))); // gemini, groq ou mistral
     $providerModelKey = $provider . 'Model';
-    $model = $overrideModel ?: ($scanVars[$providerModelKey] ?? ($scanVars['aiModel'] ?? (defined('AI_MODEL') ? AI_MODEL : '')));
-    // Ne pas envoyer par défaut le modèle Gemini à Mistral (ou inversement) lorsque seul le fournisseur a été changé.
-    if (empty($model) ||
-        ($provider === 'mistral' && preg_match('/^(gemini-|llama-|mixtral-)/i', $model)) ||
-        ($provider === 'groq' && preg_match('/^(gemini-|mistral-)/i', $model)) ||
-        ($provider === 'gemini' && preg_match('/^(mistral-|llama-|mixtral-)/i', $model))) {
-        $model = $provider === 'mistral'
-            ? 'mistral-small-latest'
-            : ($provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gemini-2.5-flash');
+    $model = trim((string)($overrideModel ?: ($scanVars[$providerModelKey] ?? ($scanVars['aiModel'] ?? (defined('AI_MODEL') ? AI_MODEL : '')))));
+    // Seuls les modèles actuellement proposés par la console sont utilisés. Cela évite
+    // les appels vers Gemini 2.0 arrêté et les anciens modèles Groq retirés.
+    $providerModelCatalog = [
+        'gemini' => [
+            'default' => 'gemini-flash-latest',
+            'models' => ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-pro-latest'],
+        ],
+        'mistral' => [
+            'default' => 'mistral-large-latest',
+            'models' => ['mistral-large-latest', 'mistral-small-latest'],
+        ],
+        'groq' => [
+            'default' => 'openai/gpt-oss-120b',
+            'models' => ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'],
+        ],
+    ];
+    if (isset($providerModelCatalog[$provider]) && !in_array($model, $providerModelCatalog[$provider]['models'], true)) {
+        $model = $providerModelCatalog[$provider]['default'];
     }
     
     // Priorité : clé explicitement passée, puis clé chiffrée/configurée en console,
