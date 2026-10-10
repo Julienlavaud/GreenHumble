@@ -105,6 +105,7 @@ function autoDeductEntrepriseData($parsed, $webText, $domain, $registryData = nu
         'entreprise_ca' => $turnover,
         'entreprise_ca_source' => $manualTurnover !== '' ? 'saisie_utilisateur' : ($registryCa !== null ? 'registre_public_etat' : 'non_communique'),
         'entreprise_ca_periode' => $registryCaYear,
+        'entreprise_ca_estimation' => null,
         'company_name' => is_array($registryData) ? ($registryData['nom_raison_sociale'] ?? ($registryData['nom_complet'] ?? null)) : null,
         'company_siren' => is_array($registryData) ? ($registryData['siren'] ?? null) : null,
         'company_naf' => is_array($registryData) ? ($registryData['activite_principale'] ?? null) : null
@@ -409,7 +410,8 @@ if ($method === 'POST') {
         'type_audit' => $type_audit,
         'entreprise_secteur' => $enterpriseData['entreprise_secteur'],
         'entreprise_salaries' => $enterpriseData['entreprise_salaries'],
-        'entreprise_ca' => $enterpriseData['entreprise_ca']
+        'entreprise_ca' => $enterpriseData['entreprise_ca'],
+        'companyRegistry' => $validatedAudit['companyRegistry']
     ];
 
     // 6. Enregistrement dans scans.json via appendScanToJson() dans record_scan()
@@ -448,6 +450,7 @@ if ($method === 'POST') {
         'entreprise_secteur' => $enterpriseData['entreprise_secteur'],
         'entreprise_salaries' => $enterpriseData['entreprise_salaries'],
         'entreprise_ca' => $enterpriseData['entreprise_ca'],
+        'companyRegistry' => $validatedAudit['companyRegistry'],
         'projet_id' => $savedScan['projet_id'] ?? null,
         'riskScore' => $validatedAudit['riskScore'],
         'riskLevel' => $validatedAudit['riskLevel'],
