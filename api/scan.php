@@ -16,7 +16,7 @@ $allScans = load_all_scans();
 
 $companyRows = [];
 try {
-    $companyRows = $db->query("SELECT id, name, siren, website, domain FROM cl_companies ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $companyRows = $db->query("SELECT id, name, siren, website, domain, sector, headcount, turnover FROM cl_companies ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {}
 $companySirenByDomain = [];
 $companyNameByDomain = [];
@@ -55,6 +55,20 @@ try {
         $auditDomain = strtolower(preg_replace('/^www\\./i', '', trim((string)($auditHost ?: $cleanValue))));
         if ($auditDomain !== '' && !isset($latestAuditIdByDomain[$auditDomain])) {
             $latestAuditIdByDomain[$auditDomain] = (int)$sqlAudit['id'];
+        }
+    }
+} catch (Throwable $e) {}
+
+// Secours pour les audits JSON qui ne disposent pas de ligne SQL.
+try {
+    $storedAuditsPath = __DIR__ . '/../data/stored_audits.json';
+    $storedAuditsForScan = is_file($storedAuditsPath) ? json_decode((string)@file_get_contents($storedAuditsPath), true) : [];
+    if (is_array($storedAuditsForScan)) {
+        foreach ($storedAuditsForScan as $storedAudit) {
+            if (!is_array($storedAudit) || empty($storedAudit['id']) || empty($storedAudit['url'])) continue;
+            $storedHost = parse_url((string)$storedAudit['url'], PHP_URL_HOST);
+            $storedDomain = strtolower(preg_replace('/^www\\\\./i', '', (string)$storedHost));
+            if ($storedDomain !== '' && !isset($latestAuditIdByDomain[$storedDomain])) $latestAuditIdByDomain[$storedDomain] = (string)$storedAudit['id'];
         }
     }
 } catch (Throwable $e) {}
@@ -155,11 +169,12 @@ include __DIR__ . '/includes/header.php';
                             <select name="company_id" id="audit-company" class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-sm font-medium text-white focus:border-[#2A7AE2]">
                                 <option value="">-- Sélectionner un client --</option>
                                 <?php foreach ($companies as $comp): ?>
-                                    <option value="<?php echo htmlspecialchars((string)$comp['id'], ENT_QUOTES, 'UTF-8'); ?>" data-website="<?php echo htmlspecialchars((string)($comp['website'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
+                                    <option value="<?php echo htmlspecialchars((string)$comp['id'], ENT_QUOTES, 'UTF-8'); ?>" data-website="<?php echo htmlspecialchars((string)($comp['website'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-siren="<?php echo htmlspecialchars((string)($comp['siren'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-sector="<?php echo htmlspecialchars((string)($comp['sector'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-headcount="<?php echo htmlspecialchars((string)($comp['headcount'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" data-turnover="<?php echo htmlspecialchars((string)($comp['turnover'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
                                         <?php echo htmlspecialchars($comp['name']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
+                            <p id="company-registry-hint" class="mt-2 text-[11px] leading-relaxed text-[#AAAAAA]">Le SIREN et les informations disponibles seront associés à l’entreprise sélectionnée.</p>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-[#AAAAAA] uppercase tracking-wider mb-2">Groupe de scanners</label>
@@ -336,8 +351,8 @@ include __DIR__ . '/includes/header.php';
                         <!-- Actions : dossier d’analyse, listes et groupes -->
                         <div class="pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center justify-between">
                             <?php if ($scAuditRef !== null): ?>
-                                <a href="/api/analyse.php?id=<?php echo rawurlencode((string)$scAuditRef); ?>" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg">
-                                    📁 Ouvrir le dossier
+                                <a href="/api/analyse.php?id=<?php echo rawurlencode((string)$scAuditRef); ?>" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg" aria-label="Ouvrir l’analyse de <?php echo htmlspecialchars($scCompanyName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
+                                    📁 Ouvrir l’analyse
                                 </a>
                             <?php else: ?>
                                 <span class="px-3 py-1.5 bg-white/5 text-[#AAAAAA] text-xs rounded-lg" title="Aucune fiche d’analyse SQL ou référence d’audit disponible pour ce scan.">
@@ -566,13 +581,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const company = document.getElementById('audit-company');
     const siteUrl = document.getElementById('audit-site-url');
     if (!company || !siteUrl) return;
+    const headcount = document.querySelector('[name="headcount"]');
+    const turnover = document.querySelector('[name="turnover"]');
+    const sector = document.querySelector('[name="sector"]');
+    const registryHint = document.getElementById('company-registry-hint');
     let lastAutofill = '';
     company.addEventListener('change', () => {
-        const raw = company.selectedOptions[0]?.dataset.website?.trim() || '';
-        if (!raw) return;
-        const normalized = /^https?:\/\//i.test(raw) ? raw : 'https://' + raw;
-        siteUrl.value = normalized;
-        lastAutofill = normalized;
+        const option = company.selectedOptions[0];
+        const raw = option?.dataset.website?.trim() || '';
+        if (raw) {
+            const normalized = /^https?:\/\//i.test(raw) ? raw : 'https://' + raw;
+            siteUrl.value = normalized;
+            lastAutofill = normalized;
+        }
+        if (headcount && option?.dataset.headcount) headcount.value = option.dataset.headcount;
+        if (turnover && option?.dataset.turnover) turnover.value = option.dataset.turnover;
+        if (sector && option?.dataset.sector) {
+            const value = option.dataset.sector;
+            let item = Array.from(sector.options).find(entry => entry.value === value);
+            if (!item) { item = new Option(value, value); sector.add(item); }
+            sector.value = value;
+        }
+        if (registryHint) registryHint.textContent = option?.dataset.siren
+            ? 'SIREN enregistré : ' + option.dataset.siren + ' · actualisation pendant le scan.'
+            : 'Aucun SIREN confirmé enregistré · rapprochement public tenté pendant le scan.';
     });
     siteUrl.addEventListener('input', () => {
         if (siteUrl.value !== lastAutofill) lastAutofill = '';
