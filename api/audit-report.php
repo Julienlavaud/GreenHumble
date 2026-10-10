@@ -105,7 +105,9 @@ a{color:var(--green)}.shell{max-width:1240px;margin:auto;padding:24px}.topbar{di
         <div class="fact"><span>Chiffre d’affaires</span><strong id="company-turnover">—</strong><small id="company-turnover-source">Non communiqué</small></div>
         <div class="fact"><span>Code NAF</span><strong id="company-naf">—</strong><small id="company-naf-source">Non communiqué</small></div>
       </div><div class="item"><h3>Site web</h3><p id="company-url">—</p></div><div class="item"><h3>Identifiant audit</h3><p id="company-id" class="mono">—</p></div></section>
+      <section class="card" id="analysis-quality-card"><h2>Qualité observable de l’analyse</h2><p id="quality-grade" class="scoretext">Évaluation en cours</p><p id="quality-detail" class="muted">Contrôle de la complétude, des citations et des pages sources enregistrées.</p><p id="quality-model" class="intro"></p></section>
       <section class="card"><h2>À retenir</h2><p id="urgent-action">Aucune action prioritaire fournie dans le résultat.</p><div id="immediate-risks"></div></section>
+      <section class="card"><h2>Coordonnées publiques du site</h2><div id="website-contacts" class="facts"></div></section>
       <section class="card"><h2>Limites du rapport</h2><p class="muted">Le score et les constats dépendent des pages accessibles, des éléments fournis et de la qualité de l’analyse automatique. Vérifiez les justificatifs, la portée exacte des allégations et les éventuelles exceptions avant toute décision.</p></section>
     </aside>
   </div>
@@ -145,7 +147,22 @@ function renderGenericList(targetId, values, emptyMessage, titleKeys, detailKeys
       const title = titleKeys.map(k => value[k]).find(v => typeof v === 'string' && v.trim());
       addText(item, 'h3', title || ('Élément ' + (index + 1)));
       detailKeys.forEach(k => { if (value[k] !== undefined && value[k] !== null && value[k] !== '') addText(item, 'p', k.replace(/([A-Z])/g,' $1') + ' : ' + displayValue(value[k])); });
-      const known = new Set([...titleKeys, ...detailKeys]);
+      const sourceUrl = value.sourceUrl || value.source_url || value.pageUrl || value.url;
+      if (typeof sourceUrl === 'string' && /^https?:\/\//i.test(sourceUrl)) {
+        try {
+          const parsedSource = new URL(sourceUrl);
+          if (['http:', 'https:'].includes(parsedSource.protocol)) {
+            const link = document.createElement('a');
+            link.href = parsedSource.href;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.className = 'source-link';
+            link.textContent = 'Voir la page source ↗';
+            item.appendChild(link);
+          }
+        } catch (_) {}
+      }
+      const known = new Set([...titleKeys, ...detailKeys, 'sourceUrl', 'source_url', 'pageUrl', 'url']);
       Object.keys(value).filter(k => !known.has(k)).forEach(k => addText(item, 'p', k + ' : ' + displayValue(value[k])));
     } else addText(item, 'p', displayValue(value));
     target.appendChild(item);
@@ -237,7 +254,29 @@ function renderAudit(a) {
   setText('company-url', a.url);
   setText('company-id', a.id || a.scan_id);
   setText('urgent-action', summary.keyUrgentAction || 'Aucune action prioritaire fournie dans le résultat.');
-  renderGenericList('claims-list', a.detectedClaims || a.claims || a.allegations || (a.resultat_ia && (a.resultat_ia.detectedClaims || a.resultat_ia.claims || a.resultat_ia.allegations)) || [], 'Aucune allégation détectée ou enregistrée dans le résultat.', ['claim','text','claimText','allegation','title','label'], ['evidence','proof','justification','riskLevel','severity','explanation','recommendation','source']);
+  const claims = a.detectedClaims || a.claims || a.allegations || (a.resultat_ia && (a.resultat_ia.detectedClaims || a.resultat_ia.claims || a.resultat_ia.allegations)) || [];
+  renderGenericList('claims-list', claims, 'Aucune allégation détectée ou enregistrée dans le résultat.', ['claim','text','claimText','allegation','title','label'], ['evidence','proof','justification','riskLevel','severity','explanation','recommendation']);
+  const claimRows = Array.isArray(claims) ? claims : [];
+  const sourcedClaims = claimRows.filter(claim => claim && typeof claim === 'object' && typeof (claim.sourceUrl || claim.source_url || claim.pageUrl) === 'string' && /^https?:\/\//i.test(claim.sourceUrl || claim.source_url || claim.pageUrl)).length;
+  const quotedClaims = claimRows.filter(claim => claim && typeof claim === 'object' && String(claim.quoteInText || claim.quote || claim.evidence || '').trim() !== '').length;
+  const qualityGrade = !complete ? 'Analyse incomplète' : (claimRows.length === 0 ? 'Aucun constat à contrôler' : (sourcedClaims === claimRows.length && quotedClaims === claimRows.length ? 'Traçabilité complète' : (sourcedClaims > 0 || quotedClaims > 0 ? 'Traçabilité partielle' : 'Traçabilité à compléter')));
+  setText('quality-grade', qualityGrade);
+  setText('quality-detail', claimRows.length + ' allégation(s) · ' + sourcedClaims + ' page(s) source liée(s) · ' + quotedClaims + ' citation(s) enregistrée(s). Cet indicateur décrit les éléments vérifiables sauvegardés, pas une note de fiabilité absolue du fournisseur IA.');
+  const modelName = a.model || (a.raw && a.raw.model) || (a.resultat_ia && a.resultat_ia.raw && a.resultat_ia.raw.model);
+  setText('quality-model', modelName ? 'Modèle déclaré dans l’audit : ' + modelName : 'Modèle IA non communiqué dans les données de cet audit.');
+  const contactTarget = $('website-contacts'); clear(contactTarget);
+  const websiteContacts = Array.isArray(a.websiteContacts) ? a.websiteContacts : [];
+  if (!websiteContacts.length) addText(contactTarget, 'p', 'Aucune coordonnée publique n’a été enregistrée pour ce scan.', 'muted');
+  websiteContacts.forEach(contact => {
+    if (!contact || !contact.value) return;
+    const wrap = document.createElement('div'); wrap.className = 'fact';
+    addText(wrap, 'span', contact.type === 'email' ? 'E-mail public' : 'Téléphone public');
+    addText(wrap, 'strong', contact.value);
+    if (typeof contact.sourceUrl === 'string' && /^https?:\/\//i.test(contact.sourceUrl)) {
+      try { const url = new URL(contact.sourceUrl); if (['http:', 'https:'].includes(url.protocol)) { const link = document.createElement('a'); link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'Page source ↗'; wrap.appendChild(link); } } catch (_) {}
+    }
+    contactTarget.appendChild(wrap);
+  });
   renderSteps(summary.stepsToCompliance || a.recommendations || (a.resultat_ia && a.resultat_ia.recommendations));
   renderCommercial(a.commercialProspectingKit || (a.resultat_ia && a.resultat_ia.prospection));
   const risks = summary.immediateRisks;
