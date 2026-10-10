@@ -71,8 +71,7 @@ function load_all_scans() {
  * Ajoute un scan sous verrou inter-processus et remplace le JSON atomiquement.
  * Le verrou porte sur un fichier distinct pour rester stable lors du rename.
  */
-function appendScanToJson($newScan) {
-    $path = get_scans_file_path();
+function append_scan_to_json_path($path, $sourcePaths, $newScan) {
     $dir = dirname($path);
     if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) return false;
     if (!is_writable($dir)) return false;
@@ -85,7 +84,7 @@ function appendScanToJson($newScan) {
 
         // Importer aussi l'ancien emplacement avant toute écriture afin de ne
         // jamais abandonner silencieusement les scans qui s'y trouvent.
-        $scans = read_scans_from_paths(get_scan_storage_paths(), true);
+        $scans = read_scans_from_paths($sourcePaths, true);
         if (!is_array($scans)) return false;
 
         array_unshift($scans, $newScan);
@@ -112,6 +111,10 @@ function appendScanToJson($newScan) {
         @flock($lock, LOCK_UN);
         @fclose($lock);
     }
+}
+
+function appendScanToJson($newScan) {
+    return append_scan_to_json_path(get_scans_file_path(), get_scan_storage_paths(), $newScan);
 }
 
 function record_scan($url, $type_scan = 'diagnostic', $resultat_ia = null, $type_audit = 'full', $liste_pre_audit = [], $utilisateur = 'Julien Lavaud', $statut = 'ok', $enterpriseData = []) {
