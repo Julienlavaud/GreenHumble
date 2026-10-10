@@ -94,6 +94,11 @@
 .gh-analysis-page #section_prospecting_insights .text-indigo-50,
 .gh-analysis-page #section_prospecting_insights .text-indigo-400,
 .gh-analysis-page #section_kit_prospection .text-slate-300{color:#53685d!important}
+/* Les sections d’analyse sont claires : neutraliser les anciennes utilitaires blanches. */
+.gh-analysis-page [id^="section_"] .text-white:not(:is(button *,a *)):not([class*="bg-emerald-"]):not([class*="bg-red-"]):not([class*="bg-amber-"]):not([class*="bg-indigo-"]){color:#17352c!important}
+.gh-analysis-page [id^="section_"] [class*="bg-emerald-900"],
+.gh-analysis-page [id^="section_"] [class*="bg-slate-900"],
+.gh-analysis-page [id^="section_"] [class*="bg-indigo-900"]{background:#f5f8f5!important;color:#17352c!important;border-color:var(--analysis-border)!important;box-shadow:none!important}
 .gh-analysis-page #section_allegations>div,
 .gh-analysis-page #section_missions>div,
 .gh-analysis-page #section_juridique>div,
