@@ -138,7 +138,7 @@ include __DIR__ . '/../includes/header.php';
                         </thead>
                         <tbody class="divide-y divide-white/5">
                             <?php 
-                            $audits = $db->query("SELECT a.id, a.url, a.score, a.riskLevel, a.headcount, a.turnover, a.analyzedAt, a.assigned_to, c.name as company_name, c.sector, c.headcount as comp_headcount, c.turnover as comp_turnover FROM cl_audits a LEFT JOIN cl_companies c ON a.company_id = c.id ORDER BY a.id DESC LIMIT 60")->fetchAll();
+                            $audits = $db->query("SELECT a.id, a.url, a.score, a.riskLevel, a.headcount, a.turnover, a.analyzedAt, a.assigned_to, c.name as company_name, c.sector, c.headcount as comp_headcount, c.turnover as comp_turnover, (SELECT COUNT(*) FROM cl_audits history WHERE history.company_id = a.company_id) AS company_audit_count FROM cl_audits a LEFT JOIN cl_companies c ON a.company_id = c.id WHERE a.company_id IS NULL OR a.id = (SELECT latest.id FROM cl_audits latest WHERE latest.company_id = a.company_id ORDER BY latest.analyzedAt DESC, latest.id DESC LIMIT 1) ORDER BY a.analyzedAt DESC, a.id DESC LIMIT 60")->fetchAll();
                             foreach ($audits as $a): 
                                 $isHighRisk = ($a['score'] ?? 100) < 45;
                                 ?>
@@ -161,6 +161,11 @@ include __DIR__ . '/../includes/header.php';
                                                         <span class="text-[10px] text-emerald-400 font-bold">💶 <?php echo htmlspecialchars($to); ?></span>
                                                     <?php endif; ?>
                                                 </div>
+                                                <?php if ((int)($a['company_audit_count'] ?? 0) > 1): ?>
+                                                    <div class="text-[10px] text-[#AAAAAA] mt-1">Score actuel · <?php echo (int)$a['company_audit_count']; ?> audits conservés</div>
+                                                <?php else: ?>
+                                                    <div class="text-[10px] text-[#AAAAAA] mt-1">Score actuel</div>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     </td>
