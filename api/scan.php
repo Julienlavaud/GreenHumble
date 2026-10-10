@@ -49,9 +49,9 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 gap-8">
         <!-- Formulaire de Scan -->
-        <div class="lg:col-span-2">
+        <div>
             <div class="bg-[#1E1E1E] p-6 sm:p-8 rounded-3xl border border-white/10 shadow-lg space-y-6">
                 <div class="flex items-center justify-between border-b border-white/10 pb-4">
                     <h2 class="text-xl font-bold text-white flex items-center gap-2">
@@ -68,10 +68,10 @@ include __DIR__ . '/includes/header.php';
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-[#AAAAAA] uppercase tracking-wider mb-2">Client / Entreprise</label>
-                            <select name="company_id" class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-sm font-medium text-white focus:border-[#2A7AE2]">
+                            <select name="company_id" id="audit-company" class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-sm font-medium text-white focus:border-[#2A7AE2]">
                                 <option value="">-- Sélectionner un client --</option>
                                 <?php foreach ($companies as $comp): ?>
-                                    <option value="<?php echo $comp['id']; ?>">
+                                    <option value="<?php echo htmlspecialchars((string)$comp['id'], ENT_QUOTES, 'UTF-8'); ?>" data-website="<?php echo htmlspecialchars((string)($comp['website'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
                                         <?php echo htmlspecialchars($comp['name']); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -93,7 +93,7 @@ include __DIR__ . '/includes/header.php';
                     <div>
                         <label class="block text-xs font-bold text-[#AAAAAA] uppercase tracking-wider mb-2">URL du site web à auditer *</label>
                         <div class="relative">
-                            <input type="text" name="url" required placeholder="ex: www.entreprise.fr ou marque.com" class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-sm font-medium text-white focus:border-[#2A7AE2] focus:outline-none">
+                            <input id="audit-site-url" type="url" name="url" required placeholder="ex: https://www.entreprise.fr" class="w-full px-4 py-3 bg-[#121212] border border-white/15 rounded-xl text-sm font-medium text-white focus:border-[#2A7AE2] focus:outline-none">
                         </div>
                     </div>
 
@@ -416,6 +416,22 @@ async function scanSiteFromList(button, listId, siteId, url) {
     }
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    const company = document.getElementById('audit-company');
+    const siteUrl = document.getElementById('audit-site-url');
+    if (!company || !siteUrl) return;
+    let lastAutofill = '';
+    company.addEventListener('change', () => {
+        const raw = company.selectedOptions[0]?.dataset.website?.trim() || '';
+        if (!raw) return;
+        const normalized = /^https?:\/\//i.test(raw) ? raw : 'https://' + raw;
+        siteUrl.value = normalized;
+        lastAutofill = normalized;
+    });
+    siteUrl.addEventListener('input', () => {
+        if (siteUrl.value !== lastAutofill) lastAutofill = '';
+    });
+});
 </script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
