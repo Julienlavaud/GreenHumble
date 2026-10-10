@@ -230,7 +230,11 @@ try {
 
 // Détermination de l'audit actif
 $auditId = isset($_GET['id']) ? intval($_GET['id']) : ($allAudits[0]['id'] ?? 1);
-$currentTab = $_GET['tab'] ?? 'diag'; // diag, missio, textes, contact, kit, suivi
+$currentTab = $_GET['tab'] ?? 'diag'; // diag, missio, contact, kit, suivi
+if ($currentTab === 'textes') {
+    header('Location: /admin/index.php?tab=texts', true, 303);
+    exit;
+}
 
 $audit = null;
 if ($auditId) {
@@ -456,7 +460,6 @@ include __DIR__ . '/includes/header.php';
         $navTabs = [
             'diag' => ['label' => 'Diagnostic', 'emoji' => '📊', 'count' => count($claims)],
             'missio' => ['label' => 'Offres & Missions', 'emoji' => '💼', 'count' => '4 Offres'],
-            'textes' => ['label' => 'Cadre Juridique', 'emoji' => '⚖️', 'count' => count($frameworks)],
             'contact' => ['label' => 'Contacts', 'emoji' => '👥', 'count' => count($contacts)],
             'kit' => ['label' => 'Kit Prospection', 'emoji' => '🎯', 'count' => 'Emails'],
             'suivi' => ['label' => 'Checklist', 'emoji' => '📋', 'count' => null]
@@ -776,82 +779,7 @@ include __DIR__ . '/includes/header.php';
         </div>
     <?php endif; ?>
 
-    <!-- ========================================================================= -->
-    <!-- ONGLET 3 : CADRES RÉGLEMENTAIRES & ARGUMENTAIRES LÉGAUX -->
-    <!-- ========================================================================= -->
-    <?php if ($currentTab === 'textes'): ?>
-        <div id="section_juridique" class="space-y-10">
-            <div class="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div class="max-w-2xl">
-                        <h2 class="text-2xl font-black text-slate-900 tracking-tight flex items-center space-x-3">
-                            <span class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl">⚖️</span>
-                            <span>Référentiels & Obligations Opposables</span>
-                        </h2>
-                        <p class="text-sm text-slate-500 mt-2">Base de connaissances juridique utilisée par l'IA pour qualifier les allégations de <strong><?php echo htmlspecialchars($audit['company_name'] ?? ''); ?></strong>.</p>
-                    </div>
-                    
-                    <div class="relative group">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                        </div>
-                        <input type="text" id="framework_search" onkeyup="filterFrameworks()" placeholder="Rechercher une loi (ex: CSRD)..." class="block w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-xs font-bold text-slate-900 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner w-64">
-                    </div>
-                </div>
-
-                <!-- Grille des Cartes Juridiques -->
-                <div id="frameworks_grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <?php 
-                    // 1. Textes Sémantiques & Dictionnaires depuis la DB
-                    $dbTexts = $db->query("SELECT * FROM cl_texts WHERE category = 'mots_bannis' ORDER BY text_key ASC")->fetchAll();
-                    foreach ($dbTexts as $t): ?>
-                        <div class="framework-card p-8 rounded-[2.5rem] border border-emerald-100 bg-emerald-50/20 hover:bg-white hover:border-emerald-400 hover:shadow-2xl transition-all space-y-6 flex flex-col justify-between group"
-                             data-text="<?php echo htmlspecialchars(strtolower($t['title'] . ' ' . $t['content'])); ?>">
-                            <div class="space-y-4">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                        Dictionnaire IA
-                                    </span>
-                                </div>
-                                <h3 class="text-lg font-black text-slate-900 leading-tight group-hover:text-emerald-700 transition-colors"><?php echo htmlspecialchars($t['title'] ?: $t['text_key']); ?></h3>
-                                <p class="text-xs text-slate-600 leading-relaxed italic border-l-2 border-emerald-200 pl-4"><?php echo htmlspecialchars($t['content']); ?></p>
-                            </div>
-                            <div class="pt-6 border-t border-slate-100">
-                                <span class="text-[9px] font-black text-slate-400 uppercase">Moteur sémantique actif</span>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-
-                    <?php 
-                    // 2. Référentiels Juridiques depuis app_state.json
-                    $legalTexts = $st['legalTexts'] ?? [];
-                    foreach ($legalTexts as $idx => $fw): 
-                        if (!($fw['isActive'] ?? true)) continue;
-                    ?>
-                        <div class="framework-card p-8 rounded-[2.5rem] border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-emerald-400 hover:shadow-2xl transition-all space-y-6 flex flex-col justify-between group"
-                             data-text="<?php echo htmlspecialchars(strtolower($fw['title'] . ' ' . ($fw['reference'] ?? '') . ' ' . $fw['description'])); ?>">
-                            
-                            <div class="space-y-4">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
-                                        <?php echo htmlspecialchars($fw['jurisdiction'] ?? 'France'); ?>
-                                    </span>
-                                    <div class="flex items-center space-x-1">
-                                        <span class="text-[9px] font-black text-slate-300 uppercase">Impact</span>
-                                        <span class="text-xs font-black text-emerald-600 bg-emerald-50 w-7 h-7 flex items-center justify-center rounded-lg border border-emerald-100"><?php echo $fw['weight'] ?? 5; ?></span>
-                                    </div>
-                                </div>
-
-                                <h3 class="text-lg font-black text-slate-900 leading-tight group-hover:text-emerald-700 transition-colors"><?php echo htmlspecialchars($fw['title']); ?></h3>
-                                <p class="text-[10px] font-mono text-slate-400 uppercase tracking-tighter"><?php echo htmlspecialchars($fw['reference'] ?? 'Ref Interne'); ?></p>
-                                <p class="text-xs text-slate-600 leading-relaxed italic border-l-2 border-slate-200 pl-4"><?php echo htmlspecialchars($fw['description']); ?></p>
-
-                                <?php if (!empty($fw['sanction'])): ?>
-                                    <div class="p-4 bg-red-50/50 rounded-2xl border border-red-100/50">
-                                        <div class="text-[9px] font-black text-red-800 uppercase tracking-widest mb-1">Sanction Théorique</div>
-                                        <div class="text-xs font-bold text-red-900"><?php echo htmlspecialchars($fw['sanction']); ?></div>
-                                    </div>
-                                <?php endif; ?>
+    <!-- Référentiels et dictionnaires gérés depuis Réglages > Dictionnaire. -->
                             </div>
 
                             <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
