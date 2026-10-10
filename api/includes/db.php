@@ -13,6 +13,12 @@ function ensure_db_schema($pdo) {
             $pdo->exec("ALTER TABLE cl_companies ADD COLUMN turnover VARCHAR(50) NULL AFTER headcount");
         }
 
+        // Legacy and commercial persistence columns required by audit canonicalization.
+        $companyColumns = $pdo->query("SHOW COLUMNS FROM cl_companies")->fetchAll(PDO::FETCH_COLUMN);
+        foreach (['website' => "VARCHAR(255) NULL", 'clean_url' => "VARCHAR(255) NULL", 'siren' => "VARCHAR(20) NULL"] as $column => $definition) {
+            if (!in_array($column, $companyColumns, true)) $pdo->exec("ALTER TABLE cl_companies ADD COLUMN `{$column}` {$definition}");
+        }
+
         // Ensure headcount & turnover in cl_audits
         $colsAudit = $pdo->query("SHOW COLUMNS FROM cl_audits")->fetchAll(PDO::FETCH_COLUMN);
         if (!in_array('headcount', $colsAudit)) {
@@ -20,6 +26,19 @@ function ensure_db_schema($pdo) {
         }
         if (!in_array('turnover', $colsAudit)) {
             $pdo->exec("ALTER TABLE cl_audits ADD COLUMN turnover VARCHAR(50) NULL");
+        }
+
+        // Alias de domaines vers une fiche entreprise canonique (SIREN), sans toucher aux historiques.
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cl_company_domains (
+            domain VARCHAR(255) NOT NULL,
+            company_id BIGINT UNSIGNED NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (domain), KEY idx_cl_company_domains_company (company_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $auditColumns = $pdo->query("SHOW COLUMNS FROM cl_audits")->fetchAll(PDO::FETCH_COLUMN);
+        foreach (['clean_url' => "VARCHAR(255) NULL", 'summary' => "TEXT NULL", 'financial_impact' => "TEXT NULL", 'source' => "VARCHAR(80) NULL"] as $column => $definition) {
+            if (!in_array($column, $auditColumns, true)) $pdo->exec("ALTER TABLE cl_audits ADD COLUMN `{$column}` {$definition}");
         }
 
         // Migrations additives pour relier les scans publics aux prospects sans supprimer les données existantes.

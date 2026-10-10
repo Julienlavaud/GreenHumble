@@ -175,6 +175,10 @@ function record_scan($url, $type_scan = 'diagnostic', $resultat_ia = null, $type
     $newScan = [
         'id' => $scanId, 'url' => $url,
         'company_name' => trim((string)($enterpriseData['company_name'] ?? ($parsedResult['companyName'] ?? ''))) ?: null,
+        'company_siren' => (static function () use ($enterpriseData, $parsedResult) {
+            $siren = $enterpriseData['company_siren'] ?? (is_array($parsedResult) ? ($parsedResult['companyRegistry']['siren'] ?? '') : '');
+            return preg_match('/^\\d{9}$/', (string)$siren) ? (string)$siren : null;
+        })(),
         'type_scan' => in_array($type_scan, ['diagnostic', 'pipeline', 'widget'], true) ? $type_scan : 'diagnostic',
         'projet_id' => $assignedProjetId, 'date_scan' => date('c'),
         'entreprise_secteur' => $enterpriseData['entreprise_secteur'] ?? null,

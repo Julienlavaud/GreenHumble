@@ -12,6 +12,8 @@ function gh_install_database_schema(PDO $pdo): void
         "CREATE TABLE IF NOT EXISTS cl_companies (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             name VARCHAR(255) NOT NULL,
+            website VARCHAR(255) NULL,
+            clean_url VARCHAR(255) NULL,
             domain VARCHAR(255) NULL,
             sector VARCHAR(255) NULL,
             siren VARCHAR(20) NULL,
@@ -35,10 +37,20 @@ function gh_install_database_schema(PDO $pdo): void
             PRIMARY KEY (id), KEY idx_cl_companies_domain (domain), KEY idx_cl_companies_name (name),
             KEY idx_cl_companies_contact_email (contact_email)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS cl_company_domains (
+            domain VARCHAR(255) NOT NULL,
+            company_id BIGINT UNSIGNED NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (domain), KEY idx_cl_company_domains_company (company_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS cl_audits (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             company_id BIGINT UNSIGNED NULL,
             url VARCHAR(2048) NULL,
+            clean_url VARCHAR(255) NULL,
+            summary TEXT NULL,
+            financial_impact TEXT NULL,
+            source VARCHAR(80) NULL,
             score DECIMAL(6,2) NULL,
             riskLevel VARCHAR(80) NULL,
             headcount VARCHAR(50) NULL,
@@ -178,7 +190,7 @@ function gh_install_database_schema(PDO $pdo): void
     // Ajout de colonnes manquantes sur d'anciennes tables, sans effacer les données.
     $requiredColumns = [
         'cl_companies' => [
-            'name' => "VARCHAR(255) NULL", 'domain' => "VARCHAR(255) NULL",
+            'name' => "VARCHAR(255) NULL", 'website' => "VARCHAR(255) NULL", 'clean_url' => "VARCHAR(255) NULL", 'domain' => "VARCHAR(255) NULL",
             'sector' => "VARCHAR(255) NULL", 'siren' => "VARCHAR(20) NULL",
             'siret' => "VARCHAR(20) NULL", 'naf_code' => "VARCHAR(20) NULL",
             'legal_form' => "VARCHAR(120) NULL", 'headcount' => "VARCHAR(50) NULL",
@@ -190,7 +202,8 @@ function gh_install_database_schema(PDO $pdo): void
             'notes' => "TEXT NULL"
         ],
         'cl_audits' => [
-            'company_id' => "BIGINT UNSIGNED NULL", 'url' => "VARCHAR(2048) NULL",
+            'company_id' => "BIGINT UNSIGNED NULL", 'url' => "VARCHAR(2048) NULL", 'clean_url' => "VARCHAR(255) NULL",
+            'summary' => "TEXT NULL", 'financial_impact' => "TEXT NULL", 'source' => "VARCHAR(80) NULL",
             'score' => "DECIMAL(6,2) NULL", 'riskLevel' => "VARCHAR(80) NULL",
             'headcount' => "VARCHAR(50) NULL", 'turnover' => "VARCHAR(50) NULL",
             'analyzedAt' => "DATETIME NULL", 'assigned_to' => "VARCHAR(255) NULL",
