@@ -41,6 +41,19 @@ a{color:var(--green)}.shell{max-width:1240px;margin:auto;padding:24px}.topbar{di
         <div class="scoreline"><div class="score"><strong id="score-value">—</strong><span>/ 100</span></div><div class="scoretext"><span class="eyebrow">Indicateur enregistré</span><h2 id="risk-level">Niveau de risque à évaluer</h2><p id="summary" class="muted">Aucune synthèse disponible.</p></div></div>
         <div id="incomplete-notice" class="notice hidden">Cette analyse est signalée comme incomplète. Aucun score ne doit être interprété comme une conclusion fiable.</div>
       </section>
+      <section class="card" id="second-opinion-card">
+        <h2>Seconde lecture IA</h2>
+        <p class="intro">Une autre lecture critique compare les constats et le score enregistrés. Elle peut renforcer la convergence, nuancer ou affaiblir la confiance. Cela déclenche un nouvel appel IA. Le corpus complet du site n’étant pas conservé, l’IA examine les éléments sauvegardés sans revisiter le site.</p>
+        <button class="btn primary no-print" id="run-second-opinion" type="button">Demander une seconde lecture IA</button>
+        <div id="second-opinion-status" class="notice hidden" role="status" aria-live="polite"></div>
+        <div id="second-opinion-result" class="hidden">
+          <p><strong id="second-opinion-label"></strong></p>
+          <p id="second-opinion-summary" class="muted"></p>
+          <p id="second-opinion-comparison" class="muted"></p>
+          <div id="second-opinion-claims"></div>
+          <p id="second-opinion-notice" class="intro"></p>
+        </div>
+      </section>
       <section class="card"><h2>Allégations détectées</h2><p class="intro">Éléments relevés dans le résultat d’analyse. Une détection constitue un signal à vérifier, pas une preuve automatique de non-conformité.</p><div id="claims-list"></div></section>
       <section class="card"><h2>Actions et recommandations</h2><p class="intro">Pistes présentes dans le résultat sauvegardé, à confirmer au regard des preuves et du contexte.</p><div id="actions-list"></div></section>
       <section class="card"><h2>Opportunités d’accompagnement</h2><p class="intro">Informations commerciales disponibles dans le kit enregistré, si celui-ci a été produit.</p><div id="commercial-list"></div></section>
@@ -63,6 +76,8 @@ a{color:var(--green)}.shell{max-width:1240px;margin:auto;padding:24px}.topbar{di
 </div>
 <script>
 const $ = (id) => document.getElementById(id);
+let currentAuditId = '';
+let secondOpinionPending = false;
 const text = (value, fallback='Non renseigné') => {
   if (value === null || value === undefined || value === '') return fallback;
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
@@ -144,6 +159,11 @@ function provenanceText(source, value, period) {
   return label;
 }
 function renderAudit(a) {
+  currentAuditId = String(a.id || a.scan_id || '').trim();
+  const reviewButton = $('run-second-opinion');
+  if (reviewButton) reviewButton.disabled = !/^aud_[A-Za-z0-9_-]{8,80}$/.test(currentAuditId);
+  $('second-opinion-result').classList.add('hidden');
+  $('second-opinion-status').classList.add('hidden');
   const summary = a.clientSummary || {};
   const complete = a.analysisComplete !== false && a.status !== 'analysis_incomplete' && a.riskScore !== null && a.riskScore !== undefined;
   $('report-content').classList.remove('hidden');
@@ -202,6 +222,49 @@ async function loadAudit(id) {
     $('error-box').classList.remove('hidden');
   }
 }
+function showSecondOpinion(result) {
+  const labels = {
+    convergence: 'Convergence — confiance renforcée',
+    nuance: 'Lecture à nuancer',
+    desaccord: 'Désaccord — confiance affaiblie',
+    prudence: 'Confiance non renforcée'
+  };
+  $('second-opinion-label').textContent = labels[result.agreement] || result.label || 'Seconde lecture';
+  $('second-opinion-summary').textContent = result.summary || 'Aucune synthèse disponible.';
+  $('second-opinion-comparison').textContent = 'Score initial : ' + result.originalScore + '/100 · seconde lecture : ' + result.reviewScore + '/100 · allégations concordantes : ' + result.matchedClaims + ' sur ' + result.originalClaims + ' initialement (' + result.reviewClaims + ' relues).';
+  $('second-opinion-notice').textContent = result.notice || '';
+  renderGenericList('second-opinion-claims', result.claims || [], 'Aucune allégation retenue lors de la seconde lecture.', ['term'], ['quoteInText','riskRationale','evidenceStatus','requiredProof']);
+  $('second-opinion-result').classList.remove('hidden');
+}
+$('run-second-opinion').addEventListener('click', async () => {
+  const button = $('run-second-opinion');
+  const status = $('second-opinion-status');
+  if (secondOpinionPending || !/^aud_[A-Za-z0-9_-]{8,80}$/.test(currentAuditId)) return;
+  secondOpinionPending = true;
+  button.disabled = true;
+  button.textContent = 'Seconde lecture en cours…';
+  status.textContent = 'Appel au fournisseur IA en cours. Le dossier initial ne sera pas modifié.';
+  status.classList.remove('hidden');
+  try {
+    const response = await fetch('/api/audit-second-opinion.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      body: JSON.stringify({id: currentAuditId})
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.success) throw new Error(result.error || 'La seconde lecture n’a pas abouti.');
+    showSecondOpinion(result);
+    status.classList.add('hidden');
+  } catch (error) {
+    status.textContent = error instanceof Error ? error.message : 'La seconde lecture a échoué. Le dossier initial reste inchangé.';
+    status.classList.remove('hidden');
+  } finally {
+    secondOpinionPending = false;
+    button.disabled = !/^aud_[A-Za-z0-9_-]{8,80}$/.test(currentAuditId);
+    button.textContent = 'Demander une seconde lecture IA';
+  }
+});
 $('lookup-form').addEventListener('submit', event => { event.preventDefault(); const id=$('audit-id').value.trim(); const url=new URL(window.location.href); if(id) url.searchParams.set('id',id); else url.searchParams.delete('id'); window.history.replaceState({},'',url); loadAudit(id); });
 if ($('audit-id').value.trim()) loadAudit($('audit-id').value.trim());
 </script>
