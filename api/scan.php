@@ -21,7 +21,7 @@ $scanHistoryCounts = [];
 foreach ($allScans as $scan) {
     if (!is_array($scan)) continue;
     $host = parse_url((string)($scan['url'] ?? ''), PHP_URL_HOST);
-    $domain = strtolower(preg_replace('/^www\\./i', '', trim((string)($host ?: ''))));
+    $domain = strtolower(preg_replace('/^www\./i', '', trim((string)($host ?: ''))));
     if ($domain === '') continue;
 
     $scanHistoryCounts[$domain] = ($scanHistoryCounts[$domain] ?? 0) + 1;
@@ -237,7 +237,7 @@ include __DIR__ . '/includes/header.php';
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <?php if (empty($allScans)): ?>
+            <?php if (empty($latestScans)): ?>
                 <div class="col-span-full p-8 text-center text-[#AAAAAA] bg-[#121212] rounded-2xl">
                     Aucun scan enregistré.
                 </div>
