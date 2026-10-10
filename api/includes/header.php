@@ -14,6 +14,7 @@ if ($activeTab === '') {
   $currentPage = basename((string)($_SERVER['PHP_SELF'] ?? ''));
   $activeTab = [
     'dashboard.php' => 'dashboard',
+    'widget.php' => 'widgets',
     'pipeline.php' => 'pipeline',
     'scan.php' => 'scans',
     'analyse.php' => 'scans',
@@ -25,14 +26,15 @@ $adminGroups = [
   'DOSSIERS' => ['listes' => 'Listes', 'exports' => 'Exports CSV'],
   'ORGANISATION' => ['agency' => 'Organisation'],
   'INTELLIGENCE ARTIFICIELLE' => ['ai_providers' => 'Fournisseurs IA', 'scanner' => 'Prompts & règles'],
-  'RÉGLAGES' => ['missions' => 'Catalogue métier', 'legal' => 'Références', 'texts' => 'Dictionnaire', 'style' => 'Textes du site']
+  'RÉGLAGES' => ['missions' => 'Catalogue métier', 'widgets' => 'Configurer les widgets', 'legal' => 'Références', 'texts' => 'Dictionnaire', 'style' => 'Textes du site']
 ];
 $adminDirectLinks = [
   'dashboard' => '/admin/dashboard.php',
   'pipeline' => '/admin/pipeline.php',
   'scans' => '/admin/scan.php',
   'exports' => '/admin/export.php',
-  'ai_providers' => '/admin/ai_providers.php'
+  'ai_providers' => '/admin/ai_providers.php',
+  'widgets' => '/admin/widget.php'
 ];
 ?>
 <!doctype html>
