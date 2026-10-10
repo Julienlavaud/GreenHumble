@@ -62,3 +62,37 @@ jobs:
           php tests/list_single_scan_status_test.php
           php tests/company_data_provenance_test.php
           php tests/scan_storage_integration_test.php
+  mysql-integration:
+    name: Intégration MySQL 8.0
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: greenhumble_test
+          MYSQL_USER: greenhumble_test
+          MYSQL_PASSWORD: greenhumble_test_password
+          MYSQL_ROOT_PASSWORD: greenhumble_test_root_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v5
+      - name: Installer PHP 8.2 avec PDO MySQL
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql
+          tools: none
+      - name: Tester schéma, déduplication SIREN et stockage SQL
+        env:
+          GH_TEST_DB_HOST: 127.0.0.1
+          GH_TEST_DB_NAME: greenhumble_test
+          GH_TEST_DB_USER: greenhumble_test
+          GH_TEST_DB_PASS: greenhumble_test_password
+        run: php tests/mysql_audit_integration_test.php
