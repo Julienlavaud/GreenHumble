@@ -171,7 +171,7 @@ function gh_validate_ia_response($parsed, string $domain, string $sourceText = '
         'immediateRisks' => [], 'stepsToCompliance' => []
     ];
     $kit = $parsed['commercialProspectingKit'] ?? ($parsed['prospection'] ?? null);
-    if (!is_array($kit)) $kit = null;
+    $kit = gh_normalize_commercial_kit($kit, $claims, $score, $serviceCatalog);
 
     return array_merge($parsed, [
         'analysisComplete' => true, 'riskScore' => $score, 'riskLevel' => $riskLevel,
