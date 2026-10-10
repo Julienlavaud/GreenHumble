@@ -166,7 +166,7 @@ $isAdminUser = !empty($_SESSION['admin_logged_in']) || (isset($_SESSION['role'])
     </script>
     <?php endif; ?>
     <!-- GreenHumble Viewer & Cockpit JS (Auto-versioned) -->
-    <?php if ($isLoggedIn): ?><script src="/api/assets/js/app.js?v=<?php echo floor(time()/60)*60; ?>"></script><?php endif; ?>
+    <?php if ($isAdmin && basename((string)($_SERVER['PHP_SELF'] ?? '')) === 'index.php' && (($_GET['tab'] ?? '') === 'style')): ?><script src="/api/assets/js/app.js?v=<?php echo floor(time()/60)*60; ?>"></script><?php endif; ?>
 </div><!-- .gh-main-column -->
 </div><!-- .gh-shell -->
 </body>
