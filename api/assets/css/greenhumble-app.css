@@ -81,3 +81,10 @@ body[data-gh-role=admin] .gh-content>div[class*="max-w-6xl"] .border-white\/15{b
 .gh-provider-panel{padding:19px}.gh-provider-panel p{padding:9px 0;border-bottom:1px solid #edf2ee}.gh-provider-panel p:last-child{border-bottom:0}
 @media(max-width:860px){.gh-provider-layout{grid-template-columns:1fr}.gh-provider-layout>aside{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}}
 @media(max-width:640px){body[data-gh-role=admin] .gh-content>div[class*="max-w-7xl"],body[data-gh-role=admin] .gh-content>div[class*="max-w-6xl"]{padding:18px 14px 40px!important}.gh-provider-top{flex-direction:column;padding:20px}.gh-provider-fields{grid-template-columns:1fr}.gh-provider-layout>aside{grid-template-columns:1fr}.gh-provider-card{padding:18px}}
+
+/* Harmonisation claire des écrans actifs du cockpit (dashboard, pipeline et scanner). */
+body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) :is([class*="bg-slate-900"],[class*="bg-slate-950"],[class*="bg-gradient-to-br"],[class*="bg-gradient-to-r"]):not(button):not(a){background:#fff!important;color:var(--gh-ink)!important;border-color:var(--gh-line)!important;box-shadow:0 8px 25px rgba(19,54,37,.06)!important;border-radius:16px!important}
+body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) .text-white:not(button):not(a){color:var(--gh-ink)!important}
+body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) :is(.text-slate-100,.text-slate-200,.text-slate-300,.text-slate-400){color:var(--gh-muted)!important}
+body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) :is(button,a).text-white{color:#fff!important}
+body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) [class*="bg-emerald-"] .text-white{color:#fff!important}
