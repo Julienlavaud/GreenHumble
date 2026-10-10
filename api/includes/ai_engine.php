@@ -310,7 +310,8 @@ function ai_engine_run(
             'claims' => $detectedClaims,
             'prospection' => null,
             'financialImpact' => null,
-            'limitations' => ['Analyse IA indisponible', 'Aucune conclusion juridique ni estimation de sanction produite']
+            'limitations' => ['Analyse IA indisponible', 'Aucune conclusion juridique ni estimation de sanction produite'],
+            'aiMetadata' => $runMetadata
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
