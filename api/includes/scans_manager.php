@@ -4,26 +4,66 @@
  * Un seul fichier canonique est utilisé par lecture et écriture.
  */
 
-function get_scans_file_path() {
-    $primary = dirname(__DIR__, 2) . '/data/scans.json';
-    $legacy = __DIR__ . '/../data/scans.json';
+function get_scan_storage_paths() {
+    return [
+        dirname(__DIR__, 2) . '/data/scans.json',
+        __DIR__ . '/../data/scans.json',
+    ];
+}
 
-    if (is_dir(dirname($primary)) && is_writable(dirname($primary))) {
-        return $primary;
+function get_scans_file_path() {
+    $paths = get_scan_storage_paths();
+    foreach ($paths as $path) {
+        if (is_dir(dirname($path)) && is_writable(dirname($path))) return $path;
     }
-    if (is_dir(dirname($legacy)) && is_writable(dirname($legacy))) {
-        return $legacy;
+    return $paths[0];
+}
+
+/**
+ * Lit et fusionne les historiques connus. Le fichier canonique est lu en premier;
+ * les identifiants de scans évitent de compter deux fois les copies historiques.
+ * En mode strict, toute source illisible ou invalide bloque l'écriture.
+ */
+function read_scans_from_paths($paths, $strict = false) {
+    $scans = [];
+    $seen = [];
+
+    foreach ($paths as $path) {
+        if (!is_file($path)) continue;
+        $raw = @file_get_contents($path);
+        if ($raw === false) {
+            if ($strict) return false;
+            error_log('GreenHumble: impossible de lire ' . basename($path) . '.');
+            continue;
+        }
+        if (trim($raw) === '') continue;
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded) || json_last_error() !== JSON_ERROR_NONE) {
+            if ($strict) {
+                error_log('GreenHumble: JSON de scans invalide; écriture interrompue pour préserver les données.');
+                return false;
+            }
+            error_log('GreenHumble: JSON de scans invalide ignoré en lecture.');
+            continue;
+        }
+
+        foreach ($decoded as $scan) {
+            if (!is_array($scan)) continue;
+            $id = trim((string)($scan['id'] ?? ''));
+            $encoded = json_encode($scan, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $key = $id !== '' ? 'id:' . $id : 'record:' . hash('sha256', is_string($encoded) ? $encoded : serialize($scan));
+            if (isset($seen[$key])) continue;
+            $seen[$key] = true;
+            $scans[] = $scan;
+        }
     }
-    // Garder le chemin canonique pour rendre l'échec explicite.
-    return $primary;
+
+    return $scans;
 }
 
 function load_all_scans() {
-    $file = get_scans_file_path();
-    if (!is_file($file)) return [];
-    $raw = @file_get_contents($file);
-    if ($raw === false || trim($raw) === '') return [];
-    $scans = json_decode($raw, true);
+    $scans = read_scans_from_paths(get_scan_storage_paths());
     return is_array($scans) ? $scans : [];
 }
 
@@ -34,29 +74,19 @@ function load_all_scans() {
 function appendScanToJson($newScan) {
     $path = get_scans_file_path();
     $dir = dirname($path);
-    if (!is_dir($dir) || !is_writable($dir)) return false;
+    if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) return false;
+    if (!is_writable($dir)) return false;
 
-    $lockPath = $path . '.lock';
-    $lock = @fopen($lockPath, 'c');
+    $lock = @fopen($path . '.lock', 'c');
     if ($lock === false) return false;
 
-    $success = false;
     try {
         if (!flock($lock, LOCK_EX)) return false;
 
-        $scans = [];
-        if (is_file($path)) {
-            $raw = @file_get_contents($path);
-            if ($raw === false) return false;
-            if (trim($raw) !== '') {
-                $decoded = json_decode($raw, true);
-                if (!is_array($decoded) || json_last_error() !== JSON_ERROR_NONE) {
-                    error_log('GreenHumble: scans.json invalide; écriture interrompue pour préserver les données.');
-                    return false;
-                }
-                $scans = $decoded;
-            }
-        }
+        // Importer aussi l'ancien emplacement avant toute écriture afin de ne
+        // jamais abandonner silencieusement les scans qui s'y trouvent.
+        $scans = read_scans_from_paths(get_scan_storage_paths(), true);
+        if (!is_array($scans)) return false;
 
         array_unshift($scans, $newScan);
         $json = json_encode(array_values($scans), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
@@ -74,16 +104,14 @@ function appendScanToJson($newScan) {
             return false;
         }
         @chmod($path, 0640);
-        $success = true;
+        return true;
     } catch (Throwable $e) {
-        error_log('GreenHumble: échec appendScanToJson: ' . $e->getMessage());
+        error_log('GreenHumble: échec appendScanToJson: ' . get_class($e) . '.');
         return false;
     } finally {
         @flock($lock, LOCK_UN);
         @fclose($lock);
     }
-
-    return $success;
 }
 
 function record_scan($url, $type_scan = 'diagnostic', $resultat_ia = null, $type_audit = 'full', $liste_pre_audit = [], $utilisateur = 'Julien Lavaud', $statut = 'ok', $enterpriseData = []) {
