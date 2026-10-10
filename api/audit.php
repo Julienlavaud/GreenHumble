@@ -79,13 +79,13 @@ function autoDeductEntrepriseData($parsed, $webText, $domain) {
         }
     }
 
-    $salaries = $parsed['entreprise_salaries'] ?? ($parsed['headcount'] ?? '11-50 salariés');
-    $ca = $parsed['entreprise_ca'] ?? ($parsed['turnover'] ?? '2M€ - 10M€');
+    $salaries = $parsed['entreprise_salaries'] ?? ($parsed['headcount'] ?? null);
+    $ca = $parsed['entreprise_ca'] ?? ($parsed['turnover'] ?? null);
 
     return [
         'entreprise_secteur' => trim($secteur),
-        'entreprise_salaries' => trim($salaries),
-        'entreprise_ca' => trim($ca)
+        'entreprise_salaries' => ($salaries !== null && trim((string)$salaries) !== '') ? trim((string)$salaries) : null,
+        'entreprise_ca' => ($ca !== null && trim((string)$ca) !== '') ? trim((string)$ca) : null
     ];
 }
 
@@ -238,6 +238,7 @@ if ($method === 'POST') {
 
     // 3. Auto-déduire secteur, CA, salariés
     $enterpriseData = autoDeductEntrepriseData($resultData, $webContent, $domain);
+    $enterpriseData['company_name'] = trim((string)($resultData['companyName'] ?? '')) ?: ucfirst(explode('.', $domain)[0]);
 
     // 4. Valider la réponse IA
     $appStateForOffers = load_app_state();
@@ -293,6 +294,8 @@ if ($method === 'POST') {
     // 5. Formater resultat_ia pour scans.json
     $formattedResultatIa = [
         'score' => $validatedAudit['riskScore'],
+        'riskLevel' => $validatedAudit['riskLevel'],
+        'companyName' => $validatedAudit['companyName'] ?? $enterpriseData['company_name'],
         'summary' => $validatedAudit['clientSummary']['riskVerdict'] ?? ($validatedAudit['clientSummary']['headline'] ?? 'Audit GreenHumble'),
         'risks' => $validatedAudit['detectedClaims'],
         'prospection' => $validatedAudit['commercialProspectingKit'],
