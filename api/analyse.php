@@ -567,6 +567,28 @@ include __DIR__ . '/includes/header.php';
                     </div>
                 </div>
             </div>
+            <?php
+            $claimCountForQuality = count($claims);
+            $claimQuotesForQuality = 0;
+            $claimSourcesForQuality = 0;
+            foreach ($claims as $qualityClaim) {
+                if (trim((string)($qualityClaim['quoteInText'] ?? '')) !== '') $claimQuotesForQuality++;
+                $qualitySource = trim((string)($qualityClaim['sourceUrl'] ?? $qualityClaim['source_url'] ?? $qualityClaim['pageUrl'] ?? ''));
+                $qualityScheme = strtolower((string)parse_url($qualitySource, PHP_URL_SCHEME));
+                if (filter_var($qualitySource, FILTER_VALIDATE_URL) && in_array($qualityScheme, ['http', 'https'], true)) $claimSourcesForQuality++;
+            }
+            $qualityLabel = $claimCountForQuality === 0 ? 'Aucun constat à contrôler' : ($claimSourcesForQuality === $claimCountForQuality && $claimQuotesForQuality === $claimCountForQuality ? 'Traçabilité complète' : (($claimSourcesForQuality > 0 || $claimQuotesForQuality > 0) ? 'Traçabilité partielle' : 'Traçabilité à compléter'));
+            ?>
+            <section class="rounded-3xl border border-indigo-100 bg-indigo-50 p-6 sm:p-8 shadow-sm">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-indigo-800">Qualité observable de l’analyse IA</span>
+                        <h2 class="mt-1 text-xl font-black text-slate-900"><?php echo htmlspecialchars($qualityLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></h2>
+                        <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-700"><?php echo (int)$claimCountForQuality; ?> allégation(s), <?php echo (int)$claimQuotesForQuality; ?> citation(s) enregistrée(s), <?php echo (int)$claimSourcesForQuality; ?> page(s) source liée(s). Cet indicateur mesure la traçabilité sauvegardée, pas une garantie d’exactitude.</p>
+                    </div>
+                    <?php if ($reportAuditId !== ''): ?><a class="rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-bold text-indigo-900 hover:bg-indigo-100" href="/api/audit-report.php?id=<?php echo rawurlencode($reportAuditId); ?>">Voir le rapport détaillé →</a><?php endif; ?>
+                </div>
+            </section>
             <!-- Synthèse Juridique & Impact Financier -->
             <div id="section_synthese" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
