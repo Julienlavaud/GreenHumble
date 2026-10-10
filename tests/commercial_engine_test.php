@@ -14,8 +14,8 @@ function gh_test_assert(bool $condition, string $message): void
 
 $default = gh_recommend_services(['company_size' => 'tpe']);
 gh_test_assert(
-    ($default['recommendations'][0]['service_id'] ?? null) === 'diagnostic_flash',
-    'Sans preuve spécialisée, la TPE reçoit un diagnostic initial'
+    $default['recommendations'] === [] && $default['qualification_status'] === 'no_suitable_offer',
+    'Sans besoin documenté, le moteur ne force aucune offre'
 );
 
 $claim = gh_recommend_services([
@@ -47,8 +47,8 @@ $unsupported = gh_recommend_services([
     ]],
 ]);
 gh_test_assert(
-    ($unsupported['recommendations'][0]['service_id'] ?? null) === 'diagnostic_flash',
-    'Un signal sans preuve correspondante ne déclenche pas une offre spécialisée'
+    $unsupported['recommendations'] === [],
+    'Un signal sans preuve correspondante ne déclenche aucune offre'
 );
 
 $carbon = gh_recommend_services([
@@ -63,3 +63,19 @@ gh_test_assert(
     ($carbon['recommendations'][0]['service_id'] ?? null) === 'pre_diagnostic_carbone',
     'Un besoin carbone étayé priorise le pré-diagnostic carbone'
 );
+
+$linked = gh_recommend_services([
+ 'signals'=>[['type'=>'environmental_claim','verified'=>true,'evidence_id'=>'src','summary'=>'Allégation publique']],
+ 'evidence'=>['src'=>['url'=>'https://example.org/claim','quote'=>'Neutre en carbone']],
+ 'company_profile'=>['revenue'=>['value'=>120000,'source_type'=>'registry','source_url'=>'https://registry.example/record'],'employees'=>['value'=>8,'source_type'=>'estimate']]
+]);
+$first=$linked['recommendations'][0]??[];
+gh_test_assert(($first['reasons'][0]['evidence_id']??null)==='src' && ($first['reasons'][0]['source_url']??null)==='https://example.org/claim','La recommandation est reliée au constat et à sa source');
+gh_test_assert(($first['qualification']['confidence']??0)>=80 && isset($first['qualification']['urgency']),'Besoin, urgence et confiance sont qualifiés séparément');
+gh_test_assert(($linked['company_profile']['revenue']['provenance']??null)==='registry' && ($linked['company_profile']['employees']['is_estimate']??false)===true,'Chiffre d’affaires sourcé et effectifs estimés sont distingués');
+$disabled=gh_recommend_services([
+ 'service_catalog'=>['revue_allegations'=>['label'=>'Revue','active'=>false,'authorized'=>true]],
+ 'signals'=>[['type'=>'environmental_claim','verified'=>true,'evidence_id'=>'src']],
+ 'evidence'=>['src'=>['url'=>'https://example.org/claim']]
+]);
+gh_test_assert($disabled['recommendations']===[],'Un service inactif ne peut pas être recommandé');
