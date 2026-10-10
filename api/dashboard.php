@@ -110,6 +110,7 @@ try {
                GROUP_CONCAT(DISTINCT a.id SEPARATOR ',') as audit_ids
         FROM cl_claims cl
         JOIN cl_audits a ON cl.audit_id = a.id
+        $scopeWhereSql
         GROUP BY cl.term
         ORDER BY occurrence_count DESC, cl.id DESC
         LIMIT 5
@@ -152,6 +153,7 @@ try {
         FROM cl_audits a
         JOIN cl_companies c ON a.company_id = c.id
         WHERE c.sector IS NOT NULL AND c.sector != ''
+        ' . ($scopeConditions ? 'AND ' . implode(' AND ', $scopeConditions) : '') . '
         GROUP BY c.sector
         ORDER BY audits_count DESC
     ")->fetchAll(PDO::FETCH_ASSOC);
@@ -186,6 +188,10 @@ include __DIR__ . '/includes/header.php';
 ?>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="print-report-brand" aria-label="Climat Local">
+        <span class="print-report-mark">C</span>
+        <span><strong>CLIMAT LOCAL</strong><small>Diagnostic & stratégie climat</small></span>
+    </div>
     <!-- Header PRO (Refined) -->
     <div class="bg-slate-900 rounded-[3rem] p-10 sm:p-14 mb-12 shadow-2xl relative overflow-hidden border border-slate-800 text-center animate-fadeIn no-print">
         <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5 pointer-events-none"></div>
@@ -200,19 +206,25 @@ include __DIR__ . '/includes/header.php';
             <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tighter italic">DASHBOARD <span class="text-emerald-500">PRO</span></h1>
             <p class="text-slate-400 text-sm sm:text-base font-medium max-w-2xl mx-auto">Surveillance des allégations interdites, maturité sectorielle et mesure de l'empreinte carbone plateforme.</p>
             
-            <div class="flex flex-wrap items-center justify-center gap-4 pt-4">
-                <div class="flex items-center space-x-2 bg-white/10 border border-white/15 px-3 py-2 rounded-2xl text-xs font-bold text-white">
+            <div class="flex flex-wrap items-center justify-center gap-4 pt-4 no-print">
+                <label class="flex items-center gap-2 bg-white/10 border border-white/15 px-3 py-2 rounded-2xl text-xs font-bold text-white">
                     <span>📅 Année :</span>
-                    <select onchange="location.href='?year='+this.value" class="bg-slate-900 text-emerald-300 font-black rounded-xl px-2.5 py-1 focus:outline-none border border-slate-700">
+                    <select id="dashboard-year" onchange="applyDashboardFilters()" class="bg-slate-900 text-emerald-300 font-black rounded-xl px-2.5 py-1 focus:outline-none border border-slate-700">
                         <option value="all" <?php echo $filterYear === 'all' ? 'selected' : ''; ?>>Toutes les années</option>
-                        <option value="2026" <?php echo $filterYear == '2026' ? 'selected' : ''; ?>>2026</option>
-                        <option value="2025" <?php echo $filterYear == '2025' ? 'selected' : ''; ?>>2025</option>
-                        <option value="2024" <?php echo $filterYear == '2024' ? 'selected' : ''; ?>>2024</option>
+                        <?php foreach (range((int)date('Y'), 2024) as $year): ?>
+                            <option value="<?php echo $year; ?>" <?php echo $filterYear === (string)$year ? 'selected' : ''; ?>><?php echo $year; ?></option>
+                        <?php endforeach; ?>
                     </select>
-                </div>
-                <a href="/api/admin/widget.php" class="px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-xs font-black text-white hover:bg-white/10 transition-all uppercase tracking-widest">
-                    🧩 Configurer Widgets
-                </a>
+                </label>
+                <label class="flex items-center gap-2 bg-white/10 border border-white/15 px-3 py-2 rounded-2xl text-xs font-bold text-white">
+                    <span>📋 Liste :</span>
+                    <select id="dashboard-list" onchange="applyDashboardFilters()" class="max-w-56 bg-slate-900 text-emerald-300 font-black rounded-xl px-2.5 py-1 focus:outline-none border border-slate-700">
+                        <option value="all">Toutes les listes</option>
+                        <?php foreach ($listOptions as $listOption): ?>
+                            <option value="<?php echo htmlspecialchars((string)($listOption['id'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" <?php echo $filterList === (string)($listOption['id'] ?? '') ? 'selected' : ''; ?>><?php echo htmlspecialchars((string)($listOption['nom'] ?? 'Liste sans nom'), ENT_QUOTES, 'UTF-8'); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
                 <button onclick="window.print()" class="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-emerald-900/20 transition-all flex items-center space-x-2">
                     <span>🖨️ Imprimer Rapport</span>
                 </button>
@@ -253,108 +265,39 @@ include __DIR__ . '/includes/header.php';
         </div>
 
         <div class="bg-gradient-to-br from-slate-900 to-climat-950 text-white p-6 rounded-3xl border border-slate-800 shadow-sm">
-            <span class="text-xs font-bold uppercase text-emerald-400 tracking-wider">Sanctions Potentielles Évitées</span>
-            <div class="text-2xl font-black text-white mt-2">
-                <?php echo number_format($totalAudits * 35000, 0, ',', ' '); ?> €
-            </div>
-            <p class="text-[11px] text-emerald-200/80 mt-2">Risque d'amendes administratives DGCCRF sécurisé</p>
+            <span class="text-xs font-bold uppercase text-emerald-400 tracking-wider">Audits à risque élevé ou critique</span>
+            <div class="text-2xl font-black text-white mt-2"><?php echo $riskCounts['critique'] + $riskCounts['eleve']; ?></div>
+            <p class="text-[11px] text-emerald-200/80 mt-2">Dossiers à examiner dans le périmètre sélectionné</p>
         </div>
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- MODULE ÉCO-INDEX & BILAN CARBONE DE L'OUTIL (tCO2e & Consommation IA) -->
-    <!-- ========================================================================= -->
-    <div class="bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-emerald-500/30 mb-10">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-emerald-800/60">
+    <section class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm mb-10">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-5 border-b border-slate-100">
             <div>
-                <div class="flex items-center space-x-2 mb-1">
-                    <span class="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-sm">🌱</span>
-                    <span class="text-xs font-black uppercase text-emerald-400 tracking-wider">Bilan Carbone Numérique & Éco-Conception</span>
-                </div>
-                <h2 class="text-2xl font-black text-white">Empreinte Carbone & Consommation Énergétique de l'Outil</h2>
-                <p class="text-xs text-emerald-200 mt-1 max-w-2xl">
-                    Mesure en temps réel de l'impact carbone généré par l'infrastructure serveur, les requêtes d'inférence des moteurs d'IA et le scraping sémantique.
-                </p>
+                <p class="text-xs font-black uppercase tracking-wider text-emerald-700">Indicateur calculé</p>
+                <h2 class="mt-1 text-xl font-black text-slate-900">Estimation énergétique des audits</h2>
+                <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">Ce tableau ne mesure pas la consommation réelle du serveur ni des fournisseurs IA. Il applique une hypothèse interne de <?php echo $estimatedKwhPerAudit; ?> kWh par audit et un facteur d’émission de <?php echo $emissionFactorKgPerKwh; ?> kgCO₂e/kWh.</p>
             </div>
-
-            <div class="flex items-center space-x-3 bg-white/10 px-4 py-2.5 rounded-2xl border border-white/15 backdrop-blur-md">
-                <span class="text-2xl">⚡</span>
-                <div>
-                    <div class="text-[10px] text-emerald-300 font-bold uppercase">Méthodologie Certifiée</div>
-                    <div class="text-xs font-black text-white">Base ADEME & GHG Protocol Scope 2-3</div>
-                </div>
+            <span class="shrink-0 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800">Estimation indicative · non mesurée</span>
+        </div>
+        <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Émissions estimées</span>
+                <p class="mt-2 text-2xl font-black text-slate-900"><?php echo $totalEmissionsTCo2e; ?> <span class="text-sm font-bold text-slate-500">tCO₂e</span></p>
+                <p class="mt-1 text-xs text-slate-500"><?php echo $totalEmissionsKgCo2e; ?> kgCO₂e · périmètre sélectionné</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Énergie estimée</span>
+                <p class="mt-2 text-2xl font-black text-slate-900"><?php echo $totalEnergyKwh; ?> <span class="text-sm font-bold text-slate-500">kWh</span></p>
+                <p class="mt-1 text-xs text-slate-500"><?php echo (int)$totalAudits; ?> audit(s) × <?php echo $estimatedKwhPerAudit; ?> kWh</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Émissions estimées par audit</span>
+                <p class="mt-2 text-2xl font-black text-slate-900"><?php echo $gramsCo2PerAudit; ?> <span class="text-sm font-bold text-slate-500">gCO₂e</span></p>
+                <p class="mt-1 text-xs text-slate-500">À remplacer par des mesures d’hébergement et de consommation IA vérifiées.</p>
             </div>
         </div>
-
-        <!-- 4 Indicateurs Clés de l'Empreinte Numérique -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-            <!-- 1. Empreinte Globale en tCO2e -->
-            <div class="p-5 rounded-2xl bg-white/5 border border-emerald-500/20 backdrop-blur-xs space-y-1">
-                <span class="text-[11px] font-bold text-emerald-300 uppercase">Émissions Totales GES</span>
-                <div class="flex items-baseline space-x-1.5 mt-1">
-                    <span class="text-3xl font-black text-white"><?php echo $totalEmissionsTCo2e; ?></span>
-                    <span class="text-xs font-bold text-emerald-400">tCO2e</span>
-                </div>
-                <div class="text-[11px] text-slate-300 font-semibold">Soit <?php echo $totalEmissionsKgCo2e; ?> kg CO2e cumulés</div>
-            </div>
-
-            <!-- 2. Consommation Électrique (kWh) -->
-            <div class="p-5 rounded-2xl bg-white/5 border border-emerald-500/20 backdrop-blur-xs space-y-1">
-                <span class="text-[11px] font-bold text-emerald-300 uppercase">Énergie Consommée (IA + Serveur)</span>
-                <div class="flex items-baseline space-x-1.5 mt-1">
-                    <span class="text-3xl font-black text-amber-300"><?php echo $totalEnergyKwh; ?></span>
-                    <span class="text-xs font-bold text-amber-200">kWh</span>
-                </div>
-                <div class="text-[11px] text-slate-300 font-semibold">GPU Cloud + Inférence LLM + Cache</div>
-            </div>
-
-            <!-- 3. Intensité par Audit Unitaire -->
-            <div class="p-5 rounded-2xl bg-white/5 border border-emerald-500/20 backdrop-blur-xs space-y-1">
-                <span class="text-[11px] font-bold text-emerald-300 uppercase">Intensité Carbone Unitaire</span>
-                <div class="flex items-baseline space-x-1.5 mt-1">
-                    <span class="text-3xl font-black text-emerald-400"><?php echo $gramsCo2PerAudit; ?></span>
-                    <span class="text-xs font-bold text-emerald-300">g CO2e</span>
-                </div>
-                <div class="text-[11px] text-slate-300 font-semibold">Par audit complet (0.0065 kWh / analyse)</div>
-            </div>
-
-            <!-- 4. Contribution & Financement Local -->
-            <div class="p-5 rounded-2xl bg-emerald-900/60 border border-emerald-400/40 space-y-1">
-                <span class="text-[11px] font-bold text-emerald-200 uppercase">Contribution Territoriale</span>
-                <div class="flex items-baseline space-x-1 mt-1">
-                    <span class="text-xl font-black text-emerald-300">Projets Bas-Carbone</span>
-                </div>
-                <div class="text-[11px] text-emerald-100 font-semibold">Financement direct d'agriculteurs et haies bocagères</div>
-            </div>
-        </div>
-
-        <!-- Détail Technique & Vulgarisation Pédagogique -->
-        <div class="mt-6 pt-6 border-t border-emerald-800/60 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            <div class="p-3.5 bg-black/20 rounded-xl border border-white/10 flex items-start space-x-3">
-                <span class="text-xl">🚗</span>
-                <div>
-                    <strong class="text-white block font-bold">Équivalence Véhicule :</strong>
-                    <span class="text-slate-300">Équivalent aux émissions de <strong><?php echo $kmCarEquivalent; ?> km</strong> parcourus en voiture thermique moyenne (120 g CO2/km).</span>
-                </div>
-            </div>
-
-            <div class="p-3.5 bg-black/20 rounded-xl border border-white/10 flex items-start space-x-3">
-                <span class="text-xl">🌳</span>
-                <div>
-                    <strong class="text-white block font-bold">Séquestration Végétale :</strong>
-                    <span class="text-slate-300">Absorbé par l'équivalent de <strong><?php echo max(1, round($treeMonthsAbsorption)); ?> mois</strong> de croissance d'un arbre d'alignement bocager.</span>
-                </div>
-            </div>
-
-            <div class="p-3.5 bg-black/20 rounded-xl border border-white/10 flex items-start space-x-3">
-                <span class="text-xl">🛡️</span>
-                <div>
-                    <strong class="text-white block font-bold">Éco-Conception Numérique :</strong>
-                    <span class="text-slate-300">Code optimisé (cache agressif, payloads JSON compressés, prompts allégés) pour minimiser les cycles GPU.</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    </section>
 
     <!-- Section Principale : TOP 5 DES TERMES INTERDITS & ENTREPRISES CONCERNÉES -->
     <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm mb-10">
@@ -525,7 +468,26 @@ include __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<style>
+.print-report-brand{display:none}
+@media print{
+    .print-report-brand{display:flex!important;align-items:center;gap:12px;margin-bottom:22px;color:#124b37;font-family:Arial,sans-serif}
+    .print-report-brand strong{display:block;font-size:18px;letter-spacing:.12em}
+    .print-report-brand small{display:block;margin-top:3px;color:#52655c;font-size:10px}
+    .print-report-mark{display:flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:12px;background:#176b4c;color:#fff;font-size:22px;font-weight:900}
+    .no-print,#cl_cms_toolbar,#cl_cms_toast,.gh-footer,.gh-sidebar,.gh-topbar{display:none!important}
+}
+</style>
 <script>
+function applyDashboardFilters() {
+    const params = new URLSearchParams();
+    const year = document.getElementById('dashboard-year')?.value || 'all';
+    const list = document.getElementById('dashboard-list')?.value || 'all';
+    if (year !== 'all') params.set('year', year);
+    if (list !== 'all') params.set('list', list);
+    window.location.search = params.toString();
+}
+
 function toggleCompanyDrilldown(elementId) {
     const el = document.getElementById(elementId);
     if (el) {
