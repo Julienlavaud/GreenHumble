@@ -40,7 +40,7 @@ jobs:
           done
           exit "$failed"
 
-      - name: Tests de contrat du scan public et des espaces protégés
+      - name: Tests unitaires, de régression et d’intégration hors ligne
         shell: bash
         run: |
           set -euo pipefail
@@ -52,6 +52,13 @@ jobs:
           php tests/ai_engine_reference_test.php
           php tests/ai_contract_test.php
           php tests/risk_scoring_test.php
+          php tests/green_claims_rules_test.php
           php tests/commercial_engine_test.php
           php tests/commercial_adapter_test.php
           php tests/commercial_dossier_test.php
+          php tests/audit_database_test.php
+          php tests/install_schema_test.php
+          php tests/list_import_export_test.php
+          php tests/list_single_scan_status_test.php
+          php tests/company_data_provenance_test.php
+          php tests/scan_storage_integration_test.php
