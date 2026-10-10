@@ -9,7 +9,8 @@ function response_assert(bool $ok, string $message): void {
 
 $valid = gh_validate_ia_response(['score' => 72, 'claims' => []], 'example.org');
 response_assert($valid['analysisComplete'] === true, 'une réponse valide porte le marqueur explicite de complétude');
-response_assert($valid['riskScore'] === 72, 'le score numérique est normalisé');
+response_assert($valid['riskScore'] === null && $valid['riskLevel'] === 'a_evaluer', 'aucun signal ne produit un score de conformité');
+response_assert($valid['score'] === null, 'la note libre du fournisseur est ignorée');
 response_assert($valid['commercialProspectingKit'] === null, 'aucun kit commercial ni prix n’est inventé par défaut');
 
 $explicitKit = gh_validate_ia_response([
