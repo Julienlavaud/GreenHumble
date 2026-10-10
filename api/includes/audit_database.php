@@ -92,15 +92,42 @@ function gh_persist_commercial_audit(array $audit, array $enterpriseData = []): 
             $updateCompany->execute([$companyName, $siren, $sector, $headcount, $turnover, $companyId]);
         }
 
-        // Rebrancher les historiques d'une ancienne fiche du même SIREN vers le canonical company_id.
-        if ($duplicateCompanyId !== null) {
-            $relatedTables = ['cl_audits', 'cl_business_opportunities', 'cl_prospecting_kits', 'cl_commercial_checklist', 'cl_company_contacts'];
+        // Rebrancher tous les historiques existants du même SIREN et l'éventuelle fiche de domaine.
+        $duplicateCompanyIds = [];
+        if ($siren !== null) {
+            $duplicatesStmt = $pdo->prepare('SELECT id FROM cl_companies WHERE siren = ? AND id <> ?');
+            $duplicatesStmt->execute([$siren, $companyId]);
+            $duplicateCompanyIds = array_map('intval', $duplicatesStmt->fetchAll(PDO::FETCH_COLUMN));
+        }
+        if ($duplicateCompanyId !== null && $duplicateCompanyId !== $companyId) {
+            $duplicateCompanyIds[] = $duplicateCompanyId;
+        }
+        $duplicateCompanyIds = array_values(array_unique(array_filter($duplicateCompanyIds, static function ($id) use ($companyId) {
+            return (int)$id > 0 && (int)$id !== (int)$companyId;
+        })));
+
+        $relatedTables = ['cl_audits', 'cl_business_opportunities', 'cl_prospecting_kits', 'cl_commercial_checklist', 'cl_company_contacts'];
+        $tableExists = $pdo->prepare('SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? LIMIT 1');
+        foreach ($duplicateCompanyIds as $duplicateId) {
+            $duplicateRowStmt = $pdo->prepare('SELECT domain, website, clean_url FROM cl_companies WHERE id = ? LIMIT 1');
+            $duplicateRowStmt->execute([$duplicateId]);
+            $duplicateRow = $duplicateRowStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            foreach ([$duplicateRow['domain'] ?? '', $duplicateRow['website'] ?? '', $duplicateRow['clean_url'] ?? ''] as $oldDomainValue) {
+                $oldDomainHost = parse_url((string)$oldDomainValue, PHP_URL_HOST) ?: (string)$oldDomainValue;
+                $oldDomain = strtolower(preg_replace('/^www\\./i', '', trim($oldDomainHost)));
+                if ($oldDomain !== '') {
+                    $mapOldDomain = $pdo->prepare('INSERT INTO cl_company_domains (domain, company_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE company_id = VALUES(company_id)');
+                    $mapOldDomain->execute([$oldDomain, $companyId]);
+                }
+            }
+            $mapExistingAliases = $pdo->prepare('UPDATE cl_company_domains SET company_id = ? WHERE company_id = ?');
+            $mapExistingAliases->execute([$companyId, $duplicateId]);
+
             foreach ($relatedTables as $table) {
-                $exists = $pdo->prepare('SHOW TABLES LIKE ?');
-                $exists->execute([$table]);
-                if ($exists->fetchColumn() !== false) {
+                $tableExists->execute([$table]);
+                if ($tableExists->fetchColumn()) {
                     $move = $pdo->prepare("UPDATE `{$table}` SET company_id = ? WHERE company_id = ?");
-                    $move->execute([$companyId, $duplicateCompanyId]);
+                    $move->execute([$companyId, $duplicateId]);
                 }
             }
         }
