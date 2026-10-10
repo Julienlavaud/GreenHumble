@@ -13,8 +13,9 @@ if (($_SESSION['admin_logged_in'] ?? false) !== true || ($_SESSION['role'] ?? ''
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     gh_require_same_origin_mutation();
+    header('Content-Type: application/json; charset=utf-8');
     $input = json_decode(file_get_contents('php://input'), true);
-    if ($input) {
+    if (is_array($input) && (isset($input['batch']) || (isset($input['type']) && array_key_exists('data', $input)))) {
         $type = $input['type'] ?? '';
         $data = $input['data'] ?? [];
 
@@ -32,8 +33,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $state = update_state_by_type($state, $type, $data);
         }
 
-        save_app_state($state);
-        header('Content-Type: application/json');
+        if (save_app_state($state) === false) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'Écriture impossible dans le stockage des réglages. Vérifiez les droits du dossier /data.']);
+            exit;
+        }
         echo json_encode(['success' => true]);
         exit;
     }
@@ -66,5 +70,6 @@ function update_state_by_type($state, $type, $data) {
     return $state;
 }
 
-header('Content-Type: application/json');
-echo json_encode(['success' => false, 'error' => 'Méthode non autorisée']);
+http_response_code($_SERVER['REQUEST_METHOD'] === 'POST' ? 400 : 405);
+header('Content-Type: application/json; charset=utf-8');
+echo json_encode(['success' => false, 'error' => 'Requête de sauvegarde invalide.']);
