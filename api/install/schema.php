@@ -35,6 +35,12 @@ function gh_install_database_schema(PDO $pdo): void
             PRIMARY KEY (id), KEY idx_cl_companies_domain (domain), KEY idx_cl_companies_name (name),
             KEY idx_cl_companies_contact_email (contact_email)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS cl_company_domains (
+            domain VARCHAR(255) NOT NULL,
+            company_id BIGINT UNSIGNED NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (domain), KEY idx_cl_company_domains_company (company_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS cl_audits (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             company_id BIGINT UNSIGNED NULL,
