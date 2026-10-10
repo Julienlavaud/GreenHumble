@@ -16,9 +16,35 @@ if (empty($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true
     exit;
 }
 $defs = [
-    'gemini' => ['label' => 'Google Gemini', 'model' => 'gemini-2.5-flash', 'models' => ['gemini-2.5-flash', 'gemini-2.0-flash'], 'key' => 'geminiApiKey'],
-    'mistral' => ['label' => 'Mistral AI', 'model' => 'mistral-small-latest', 'models' => ['mistral-small-latest', 'mistral-large-latest'], 'key' => 'mistralApiKey'],
-    'groq' => ['label' => 'Groq', 'model' => 'llama-3.3-70b-versatile', 'models' => ['llama-3.3-70b-versatile', 'openai/gpt-oss-20b'], 'key' => 'groqApiKey'],
+    'gemini' => [
+        'label' => 'Google Gemini',
+        'model' => 'gemini-flash-latest',
+        'models' => [
+            'gemini-flash-latest' => 'Gemini Flash — dernière version',
+            'gemini-flash-lite-latest' => 'Gemini Flash-Lite — rapide et économique',
+            'gemini-pro-latest' => 'Gemini Pro — raisonnement avancé',
+        ],
+        'key' => 'geminiApiKey'
+    ],
+    'mistral' => [
+        'label' => 'Mistral AI',
+        'model' => 'mistral-large-latest',
+        'models' => [
+            'mistral-large-latest' => 'Mistral Large — dernière version',
+            'mistral-small-latest' => 'Mistral Small — rapide et économique',
+        ],
+        'key' => 'mistralApiKey'
+    ],
+    'groq' => [
+        'label' => 'Groq',
+        'model' => 'openai/gpt-oss-120b',
+        'models' => [
+            'openai/gpt-oss-120b' => 'GPT-OSS 120B — qualité maximale',
+            'openai/gpt-oss-20b' => 'GPT-OSS 20B — rapide et économique',
+            'qwen/qwen3.8-27b' => 'Qwen 3.8 27B',
+        ],
+        'key' => 'groqApiKey'
+    ],
 ];
 $state = load_app_state();
 if (!isset($state['scanVars']) || !is_array($state['scanVars'])) $state['scanVars'] = [];
@@ -38,7 +64,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if ($action === 'test') {
         $key = trim((string)($state['scanVars'][$defs[$provider]['key']] ?? ''));
         if ($key === '') { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Enregistrez d’abord une clé API.']); exit; }
-        $model = $state['scanVars'][$provider . 'Model'] ?? $defs[$provider]['model'];
+        $model = trim((string)($in['model'] ?? ($state['scanVars'][$provider . 'Model'] ?? $defs[$provider]['model'])));
+        if (!array_key_exists($model, $defs[$provider]['models'])) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Modèle non disponible. Choisis un modèle proposé et réessaie.']);
+            exit;
+        }
         if ($provider === 'gemini') $reply = call_gemini($model, ['contents' => [['parts' => [['text' => 'Réponds uniquement OK']]]], 'generationConfig' => ['temperature' => 0]], $key);
         elseif ($provider === 'mistral') $reply = call_mistral(['model' => $model, 'messages' => [['role' => 'user', 'content' => 'Réponds uniquement OK']], 'temperature' => 0], $key);
         else $reply = call_groq(['model' => $model, 'messages' => [['role' => 'user', 'content' => 'Réponds uniquement OK']], 'temperature' => 0], $key);
@@ -80,7 +111,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         exit;
     }
     $model = trim((string)($in['model'] ?? $defs[$provider]['model']));
-    if (!in_array($model, $defs[$provider]['models'], true)) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Modèle non autorisé']); exit; }
+    if (!array_key_exists($model, $defs[$provider]['models'])) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Modèle non autorisé']); exit; }
     $newKey = trim((string)($in['apiKey'] ?? ''));
     $state['scanVars'][$provider . 'Model'] = $model;
     if ($newKey !== '') $state['scanVars'][$defs[$provider]['key']] = $newKey;
@@ -100,7 +131,7 @@ require_once __DIR__ . '/../includes/header.php';
     <?php foreach ($defs as $p => $d): $configured = !empty($vars[$d['key']]); ?>
     <article class="gh-provider-card"><div class="gh-provider-card__head"><div><h2><?= htmlspecialchars($d['label'], ENT_QUOTES, 'UTF-8') ?></h2><p><?= htmlspecialchars($p === 'gemini' ? 'Analyse Google' : ($p === 'mistral' ? 'Modèles Mistral AI' : 'Inférence Groq'), ENT_QUOTES, 'UTF-8') ?></p></div><span class="gh-provider-status <?= $configured ? 'is-configured' : '' ?>"><?= $configured ? 'Clé configurée' : 'À configurer' ?></span></div>
       <div class="gh-provider-fields"><div class="gh-provider-field"><label for="key-<?= $p ?>">Clé API</label><input id="key-<?= $p ?>" type="password" autocomplete="new-password" placeholder="<?= $configured ? 'Clé enregistrée — saisir pour remplacer' : 'Collez votre clé API' ?>"><small>La clé enregistrée n’est jamais affichée.</small></div>
-      <div class="gh-provider-field"><label for="model-<?= $p ?>">Modèle</label><select id="model-<?= $p ?>"><?php foreach ($d['models'] as $m): ?><option value="<?= htmlspecialchars($m, ENT_QUOTES, 'UTF-8') ?>" <?= ($vars[$p . 'Model'] ?? $d['model']) === $m ? 'selected' : '' ?>><?= htmlspecialchars($m, ENT_QUOTES, 'UTF-8') ?></option><?php endforeach; ?></select></div></div>
+      <div class="gh-provider-field"><label for="model-<?= $p ?>">Modèle</label><?php $configuredModel = (string)($vars[$p . 'Model'] ?? ''); $modelOutdated = $configuredModel !== '' && !array_key_exists($configuredModel, $d['models']); $selectedModel = $modelOutdated ? $d['model'] : ($configuredModel ?: $d['model']); ?><select id="model-<?= $p ?>"><?php foreach ($d['models'] as $modelId => $modelLabel): ?><option value="<?= htmlspecialchars($modelId, ENT_QUOTES, 'UTF-8') ?>" <?= $selectedModel === $modelId ? 'selected' : '' ?>><?= htmlspecialchars($modelLabel, ENT_QUOTES, 'UTF-8') ?></option><?php endforeach; ?></select><?php if ($modelOutdated): ?><small class="text-amber-700">Le modèle enregistré (<?= htmlspecialchars($configuredModel, ENT_QUOTES, 'UTF-8') ?>) n’est plus proposé. Le modèle actuel sera utilisé après enregistrement.</small><?php endif; ?></div></div>
       <div class="gh-provider-actions"><button class="gh-button gh-button--primary" onclick="saveProvider('<?= $p ?>')">Enregistrer</button><button class="gh-button gh-button--secondary" onclick="testProvider('<?= $p ?>')">Tester la connexion</button></div><div class="gh-provider-result" id="result-<?= $p ?>" role="status" aria-live="polite"></div>
     </article><?php endforeach; ?>
     <article class="gh-provider-card"><h2>Fournisseur utilisé par défaut</h2><p>Ce fournisseur sera utilisé pour les nouveaux audits.</p><div class="gh-provider-field"><label for="active-provider">Fournisseur principal</label><select id="active-provider"><?php foreach ($defs as $p => $d): ?><option value="<?= $p ?>" <?= $active === $p ? 'selected' : '' ?>><?= htmlspecialchars($d['label'], ENT_QUOTES, 'UTF-8') ?></option><?php endforeach; ?></select></div><div class="gh-provider-actions"><button class="gh-button gh-button--primary" onclick="saveDefault()">Enregistrer le fournisseur principal</button></div><div class="gh-provider-result" id="result-default" role="status" aria-live="polite"></div></article>
@@ -123,7 +154,7 @@ async function saveProvider(provider) {
 }
 async function testProvider(provider) {
   const el = document.getElementById('result-' + provider); el.textContent = 'Test en cours…';
-  try { const data = await api({action:'test',provider}); el.textContent = data.message; el.dataset.state = data.success ? 'success' : 'error'; }
+  try { const data = await api({action:'test',provider,model:document.getElementById('model-' + provider).value}); el.textContent = data.message; el.dataset.state = data.success ? 'success' : 'error'; }
   catch (error) { el.textContent = error.message; el.dataset.state = 'error'; }
 }
 async function saveDefault() {
