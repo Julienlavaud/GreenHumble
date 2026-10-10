@@ -47,6 +47,12 @@ $companies = [];
 try {
     $companies = $db->query("SELECT id, name, siren, website FROM cl_companies ORDER BY name ASC")->fetchAll();
 } catch (Exception $e) {}
+$companyNameByDomain = [];
+foreach ($companies as $company) {
+    $companyHost = parse_url((string)($company['website'] ?? ''), PHP_URL_HOST);
+    $companyDomain = strtolower(preg_replace('/^www\\./i', '', trim((string)($companyHost ?: ''))));
+    if ($companyDomain !== '' && !empty($company['name'])) $companyNameByDomain[$companyDomain] = (string)$company['name'];
+}
 
 $page_title = "Scanner d'Allégations RSE & Diagnostic";
 include __DIR__ . '/includes/header.php';
@@ -245,6 +251,8 @@ include __DIR__ . '/includes/header.php';
                 <?php foreach (array_slice($latestScans, 0, 12) as $sc): 
                     $scRes = is_array($sc['resultat_ia'] ?? null) ? $sc['resultat_ia'] : json_decode($sc['resultat_ia'] ?? '{}', true);
                     $scScore = (float)($scRes['score'] ?? $scRes['riskScore']);
+                    $scCompanyName = trim((string)($sc['company_name'] ?? ($scRes['companyName'] ?? ($companyNameByDomain[$sc['_dashboard_domain']] ?? ''))));
+                    if ($scCompanyName === '') $scCompanyName = $sc['_dashboard_domain'];
                     $historyCount = $scanHistoryCounts[$sc['_dashboard_domain']] ?? 1;
                     $scType = $sc['type_scan'] ?? 'diagnostic';
                 ?>
@@ -254,16 +262,16 @@ include __DIR__ . '/includes/header.php';
                                 <span class="px-2.5 py-1 bg-[#2A7AE2]/20 text-[#2A7AE2] rounded-md text-[11px] font-bold uppercase">
                                     <?php echo htmlspecialchars($scType); ?>
                                 </span>
-                                <span class="text-xs font-bold <?php echo $scScore >= 75 ? 'text-emerald-400' : ($scScore >= 50 ? 'text-amber-400' : 'text-rose-400'); ?>">
+                                <span class="text-xs font-bold <?php echo $scScore >= 70 ? 'text-rose-400' : ($scScore >= 45 ? 'text-amber-400' : 'text-emerald-400'); ?>">
                                     <?php echo rtrim(rtrim(number_format($scScore, 1, '.', ''), '0'), '.'); ?> / 100
                                 </span>
                             </div>
 
                             <div>
-                                <h3 class="text-base font-bold text-white truncate max-w-full" title="<?php echo htmlspecialchars($sc['url']); ?>">
-                                    <?php echo htmlspecialchars($sc['url']); ?>
+                                <h3 class="text-base font-bold text-white truncate max-w-full" title="<?php echo htmlspecialchars($scCompanyName, ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo htmlspecialchars($scCompanyName, ENT_QUOTES, 'UTF-8'); ?>
                                 </h3>
-                                <p class="text-[10px] text-[#AAAAAA] mt-1"><?php echo (int)$historyCount; ?> audit(s) conservé(s)</p>
+                                <p class="text-[10px] text-[#AAAAAA] mt-1"><?php echo htmlspecialchars($sc['_dashboard_domain'], ENT_QUOTES, 'UTF-8'); ?> · <?php echo (int)$historyCount; ?> audit(s) conservé(s)</p>
                                 <p class="text-xs text-[#AAAAAA] line-clamp-2 mt-1">
                                     <?php echo htmlspecialchars($scRes['summary'] ?? 'Analyse effectuée'); ?>
                                 </p>

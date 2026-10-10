@@ -140,7 +140,9 @@ include __DIR__ . '/../includes/header.php';
                             <?php 
                             $audits = $db->query("SELECT a.id, a.url, a.score, a.riskLevel, a.headcount, a.turnover, a.analyzedAt, a.assigned_to, c.name as company_name, c.sector, c.headcount as comp_headcount, c.turnover as comp_turnover, CASE WHEN a.company_id IS NULL THEN 1 ELSE (SELECT COUNT(*) FROM cl_audits history WHERE history.company_id = a.company_id) END AS company_audit_count FROM cl_audits a LEFT JOIN cl_companies c ON a.company_id = c.id WHERE a.company_id IS NULL OR a.id = (SELECT latest.id FROM cl_audits latest WHERE latest.company_id = a.company_id ORDER BY latest.analyzedAt DESC, latest.id DESC LIMIT 1) ORDER BY a.analyzedAt DESC, a.id DESC LIMIT 60")->fetchAll();
                             foreach ($audits as $a): 
-                                $isHighRisk = ($a['score'] ?? 100) < 45;
+                                $auditScore = is_numeric($a['score'] ?? null) ? (float)$a['score'] : null;
+                                $isHighRisk = $auditScore !== null && $auditScore >= 70;
+                                $isModerateRisk = $auditScore !== null && $auditScore >= 45 && $auditScore < 70;
                                 ?>
                                 <tr class="hover:bg-white/5 transition-colors" id="audit-row-<?php echo $a['id']; ?>">
                                     <td class="px-6 py-4">
@@ -171,10 +173,10 @@ include __DIR__ . '/../includes/header.php';
                                     </td>
                                     <td class="px-6 py-4 text-center">
                                         <div class="inline-flex flex-col items-center">
-                                            <span class="px-3 py-1 rounded-full text-xs font-bold <?php echo $isHighRisk ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'; ?>">
-                                                <?php echo $a['score'] ?? 0; ?>/100
+                                            <span class="px-3 py-1 rounded-full text-xs font-bold <?php echo $isHighRisk ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : ($isModerateRisk ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'); ?>">
+                                                <?php echo $auditScore !== null ? htmlspecialchars((string)$a['score']) . '/100' : 'À évaluer'; ?>
                                             </span>
-                                            <span class="text-[10px] font-bold <?php echo $isHighRisk ? 'text-rose-400' : 'text-emerald-400'; ?> mt-1 uppercase"><?php echo htmlspecialchars($a['riskLevel']); ?></span>
+                                            <span class="text-[10px] font-bold <?php echo $isHighRisk ? 'text-rose-400' : ($isModerateRisk ? 'text-amber-400' : 'text-emerald-400'); ?> mt-1 uppercase"><?php echo htmlspecialchars($a['riskLevel']); ?></span>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 text-xs">
@@ -254,8 +256,11 @@ include __DIR__ . '/../includes/header.php';
                         <?php foreach ($allScans as $sc): 
                             $scType = $sc['type_scan'] ?? 'diagnostic';
                             $scRes = is_array($sc['resultat_ia'] ?? null) ? $sc['resultat_ia'] : json_decode($sc['resultat_ia'] ?? '{}', true);
-                            $scScore = $scRes['score'] ?? $scRes['riskScore'] ?? 50;
-                            $scRisk = $scRes['riskLevel'] ?? ($scScore < 40 ? 'critique' : ($scScore < 60 ? 'eleve' : ($scScore < 75 ? 'modere' : 'faible')));
+                            $scScore = is_numeric($scRes['score'] ?? ($scRes['riskScore'] ?? null)) ? (float)($scRes['score'] ?? $scRes['riskScore']) : null;
+                            $scRisk = $scRes['riskLevel'] ?? ($scScore === null ? 'a_evaluer' : ($scScore >= 70 ? 'eleve' : ($scScore >= 45 ? 'modere' : 'faible')));
+                            $scHost = parse_url((string)($sc['url'] ?? ''), PHP_URL_HOST);
+                            $scCompanyName = trim((string)($sc['company_name'] ?? ($scRes['companyName'] ?? '')));
+                            if ($scCompanyName === '') $scCompanyName = strtolower(preg_replace('/^www\\./i', '', (string)($scHost ?: 'Scan sans URL')));
                             $scGrp = array_filter($allGroups, fn($g) => $g['id'] === ($sc['group_id'] ?? 'grp_widget_default'));
                             $scGrpObj = reset($scGrp);
                             $grpName = $scGrpObj['nom'] ?? 'scanner widget';
@@ -280,9 +285,10 @@ include __DIR__ . '/../includes/header.php';
                                     </div>
 
                                     <div>
-                                        <h3 class="text-lg font-bold text-white truncate max-w-full" title="<?php echo htmlspecialchars($sc['url'] ?? ''); ?>">
-                                            <?php echo htmlspecialchars($sc['url'] ?? 'Scan sans URL'); ?>
+                                        <h3 class="text-lg font-bold text-white truncate max-w-full" title="<?php echo htmlspecialchars($scCompanyName, ENT_QUOTES, 'UTF-8'); ?>">
+                                            <?php echo htmlspecialchars($scCompanyName, ENT_QUOTES, 'UTF-8'); ?>
                                         </h3>
+                                        <p class="text-xs text-[#AAAAAA] mt-1"><?php echo htmlspecialchars((string)($sc['url'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></p>
                                         <p class="text-xs text-[#AAAAAA] mt-1">
                                             Demandeur : <strong class="text-white"><?php echo htmlspecialchars($sc['utilisateur'] ?? 'visiteur'); ?></strong> • Status : <span class="text-emerald-400 font-semibold"><?php echo htmlspecialchars($sc['statut'] ?? 'termine'); ?></span>
                                         </p>
@@ -290,9 +296,9 @@ include __DIR__ . '/../includes/header.php';
 
                                     <div class="p-3 bg-[#121212] rounded-xl border border-white/5 space-y-2">
                                         <div class="flex items-center justify-between">
-                                            <span class="text-xs text-[#AAAAAA]">Score RSE / Conformité :</span>
-                                            <span class="text-lg font-bold <?php echo $scScore >= 75 ? 'text-emerald-400' : ($scScore >= 50 ? 'text-amber-400' : 'text-rose-400'); ?>">
-                                                <?php echo $scScore; ?> / 100
+                                            <span class="text-xs text-[#AAAAAA]">Risque observé :</span>
+                                            <span class="text-lg font-bold <?php echo $scScore === null ? 'text-slate-400' : ($scScore >= 70 ? 'text-rose-400' : ($scScore >= 45 ? 'text-amber-400' : 'text-emerald-400')); ?>">
+                                                <?php echo $scScore !== null ? htmlspecialchars(rtrim(rtrim(number_format($scScore, 1, '.', ''), '0'), '.')) . ' / 100' : 'À évaluer'; ?>
                                             </span>
                                         </div>
                                         <p class="text-xs text-[#E0E0E0] line-clamp-2 leading-relaxed">

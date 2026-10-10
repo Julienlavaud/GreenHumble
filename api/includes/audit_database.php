@@ -31,6 +31,7 @@ function gh_persist_commercial_audit(array $audit, array $enterpriseData = []): 
         $sector = (string)($enterpriseData['entreprise_secteur'] ?? $audit['entreprise_secteur'] ?? '');
         $headcount = (string)($enterpriseData['entreprise_salaries'] ?? $audit['entreprise_salaries'] ?? '');
         $turnover = (string)($enterpriseData['entreprise_ca'] ?? $audit['entreprise_ca'] ?? '');
+        $siren = preg_match('/^\\d{9}$/', (string)($enterpriseData['company_siren'] ?? '')) ? (string)$enterpriseData['company_siren'] : null;
 
         $findCompany = $pdo->prepare('SELECT id FROM cl_companies WHERE domain = ? OR clean_url = ? ORDER BY id ASC LIMIT 1');
         $findCompany->execute([$domain, $domain]);
@@ -38,15 +39,15 @@ function gh_persist_commercial_audit(array $audit, array $enterpriseData = []): 
 
         if ($companyId === false) {
             $insertCompany = $pdo->prepare(
-                'INSERT INTO cl_companies (name, domain, website, clean_url, sector, headcount, turnover) VALUES (?, ?, ?, ?, ?, ?, ?)'
+                'INSERT INTO cl_companies (name, siren, domain, website, clean_url, sector, headcount, turnover) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
             );
-            $insertCompany->execute([$companyName, $domain, $url ?: $siteUrl, $domain, $sector ?: null, $headcount ?: null, $turnover ?: null]);
+            $insertCompany->execute([$companyName, $siren, $domain, $url ?: $siteUrl, $domain, $sector ?: null, $headcount ?: null, $turnover ?: null]);
             $companyId = (int)$pdo->lastInsertId();
         } else {
             $updateCompany = $pdo->prepare(
-                'UPDATE cl_companies SET name = ?, domain = ?, website = COALESCE(NULLIF(website, \'\'), ?), clean_url = ?, sector = COALESCE(NULLIF(?, \'\'), sector), headcount = COALESCE(NULLIF(?, \'\'), headcount), turnover = COALESCE(NULLIF(?, \'\'), turnover) WHERE id = ?'
+                'UPDATE cl_companies SET name = ?, siren = COALESCE(NULLIF(?, \'\'), siren), domain = ?, website = COALESCE(NULLIF(website, \'\'), ?), clean_url = ?, sector = COALESCE(NULLIF(?, \'\'), sector), headcount = COALESCE(NULLIF(?, \'\'), headcount), turnover = COALESCE(NULLIF(?, \'\'), turnover) WHERE id = ?'
             );
-            $updateCompany->execute([$companyName, $domain, $url ?: $siteUrl, $domain, $sector, $headcount, $turnover, (int)$companyId]);
+            $updateCompany->execute([$companyName, $siren, $domain, $url ?: $siteUrl, $domain, $sector, $headcount, $turnover, (int)$companyId]);
         }
 
         $analyzedAt = (string)($audit['analyzedAt'] ?? date('c'));

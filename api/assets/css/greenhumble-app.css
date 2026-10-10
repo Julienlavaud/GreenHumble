@@ -88,3 +88,7 @@ body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-
 body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) :is(.text-slate-100,.text-slate-200,.text-slate-300,.text-slate-400){color:var(--gh-muted)!important}
 body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) :is(button,a).text-white{color:#fff!important}
 body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) [class*="bg-emerald-"] .text-white{color:#fff!important}
+
+/* Preserve readable white labels on colored controls after light-theme overrides. */
+body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) :is(button,a,[class*="bg-[#2A7AE2]"],[class*="bg-emerald-"],[class*="bg-rose-"],[class*="bg-indigo-"],[class*="bg-blue-"]).text-white,
+body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) :is(button,a,[class*="bg-[#2A7AE2]"],[class*="bg-emerald-"],[class*="bg-rose-"],[class*="bg-indigo-"],[class*="bg-blue-"]).text-white *{color:#fff!important}
