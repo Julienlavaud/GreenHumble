@@ -12,6 +12,7 @@ RewriteEngine On
 </IfModule>
 
 # 2. Routage officiel REST
+RewriteRule ^user-style/?$ admin/user_style.php [L,QSA]
 RewriteRule ^state$ state.php [L,QSA]
 RewriteRule ^audits/sync$ audits_sync.php [L,QSA]
 RewriteRule ^audit$ audit.php [L,QSA]
