@@ -2,113 +2,130 @@
 declare(strict_types=1);
 
 /**
- * GreenHumble — qualification commerciale TPE (prototype isolé).
- * Entrée structurée issue d'une analyse revue. Aucun scraping, e-mail,
- * prix ou écriture en base dans cette fonction.
+ * Qualification commerciale pure : aucune collecte, écriture ou prise de contact.
+ * Les constats techniques restent séparés des besoins et recommandations commerciales.
  */
 function gh_recommend_services(array $lead): array
 {
-    $catalog = [
-        'diagnostic_flash' => [
-            'label' => 'Diagnostic environnemental initial',
-            'purpose' => 'Prioriser les actions et clarifier la situation de départ.',
-            'trigger' => 'Besoin général, maturité inconnue ou preuves insuffisantes.',
-            'next_step' => 'Proposer un échange de cadrage court.',
-        ],
-        'revue_allegations' => [
-            'label' => 'Revue des allégations environnementales',
-            'purpose' => 'Examiner la précision, la portée et les justificatifs des allégations.',
-            'trigger' => 'Allégation environnementale publique et source disponible.',
-            'next_step' => 'Demander les justificatifs avant toute conclusion.',
-        ],
-        'structuration_rse' => [
-            'label' => 'Structuration RSE pragmatique',
-            'purpose' => 'Organiser actions, responsabilités, indicateurs et preuves.',
-            'trigger' => 'Exigences clients/RSE ou démarche à structurer, documentées.',
-            'next_step' => 'Proposer un atelier de cadrage des priorités.',
-        ],
-        'pre_diagnostic_carbone' => [
-            'label' => 'Pré-diagnostic carbone et environnement',
-            'purpose' => 'Cartographier les données disponibles et préparer la suite.',
-            'trigger' => 'Besoin carbone explicite ou données carbone disponibles.',
-            'next_step' => 'Vérifier le périmètre, les données et les compétences avant devis.',
-        ],
+    $defaults = [
+        'diagnostic_flash' => ['label'=>'Diagnostic environnemental initial','purpose'=>'Clarifier les priorités et les informations manquantes.','allowed'=>true],
+        'revue_allegations' => ['label'=>'Revue des allégations environnementales','purpose'=>'Examiner formulation, portée et justificatifs.','allowed'=>true],
+        'structuration_rse' => ['label'=>'Structuration RSE pragmatique','purpose'=>'Organiser actions, responsabilités et preuves.','allowed'=>true],
+        'pre_diagnostic_carbone' => ['label'=>'Pré-diagnostic carbone et environnement','purpose'=>'Qualifier le périmètre et les données disponibles.','allowed'=>true],
     ];
+    $configured = is_array($lead['service_catalog'] ?? null) ? $lead['service_catalog'] : null;
+    $catalog = [];
+    foreach (($configured ?? $defaults) as $id => $service) {
+        if (!is_array($service) || ($service['active'] ?? true) !== true || ($service['authorized'] ?? $service['allowed'] ?? true) !== true) continue;
+        $catalog[(string)$id] = [
+            'label' => trim((string)($service['label'] ?? '')),
+            'purpose' => trim((string)($service['purpose'] ?? '')),
+        ];
+        if ($catalog[(string)$id]['label'] === '') unset($catalog[(string)$id]);
+    }
 
     $signals = is_array($lead['signals'] ?? null) ? $lead['signals'] : [];
     $evidence = is_array($lead['evidence'] ?? null) ? $lead['evidence'] : [];
-    $size = strtolower(trim((string)($lead['company_size'] ?? 'unknown')));
-    $scores = array_fill_keys(array_keys($catalog), 0);
-    $reasons = [];
+    $technicalFindings = [];
     $verified = [];
-
     foreach ($signals as $signal) {
-        if (!is_array($signal)) continue;
-        $type = (string)($signal['type'] ?? '');
-        $evidenceId = (string)($signal['evidence_id'] ?? '');
-        if (($signal['verified'] ?? false) === true
-            && $evidenceId !== ''
-            && isset($evidence[$evidenceId])
-            && is_array($evidence[$evidenceId])) {
-            $verified[$type] = $signal;
+        if (!is_array($signal) || ($signal['verified'] ?? false) !== true) continue;
+        $id = trim((string)($signal['evidence_id'] ?? ''));
+        $source = $evidence[$id] ?? null;
+        if ($id === '' || !is_array($source)) continue;
+        $url = trim((string)($source['url'] ?? ''));
+        $quote = trim((string)($source['quote'] ?? $source['excerpt'] ?? ''));
+        if ((!preg_match('~^https?://~i', $url)) && $quote === '') continue;
+        $type = trim((string)($signal['type'] ?? ''));
+        if ($type === '') continue;
+        $finding = [
+            'finding_id' => trim((string)($signal['finding_id'] ?? $id)),
+            'type' => $type,
+            'summary' => trim((string)($signal['summary'] ?? $signal['term'] ?? $type)),
+            'evidence_id' => $id,
+            'source_url' => $url !== '' ? $url : null,
+            'quote' => $quote !== '' ? $quote : null,
+        ];
+        $technicalFindings[] = $finding;
+        $verified[$type][] = $finding;
+    }
+
+    $mapping = [
+        'environmental_claim' => ['revue_allegations', 5, 'Vérifier les justificatifs et le périmètre de l’allégation.'],
+        'rse_request' => ['structuration_rse', 4, 'Cadrer les attentes, les échéances et les preuves disponibles.'],
+        'customer_requirements' => ['structuration_rse', 4, 'Clarifier les exigences clients et leurs échéances.'],
+        'carbon_request' => ['pre_diagnostic_carbone', 5, 'Qualifier périmètre, données et échéance du besoin carbone.'],
+        'carbon_data' => ['pre_diagnostic_carbone', 4, 'Vérifier la couverture et la qualité des données carbone.'],
+        'general_environmental_need' => ['diagnostic_flash', 3, 'Préciser le sujet prioritaire avant de proposer une prestation.'],
+    ];
+    $qualification = [];
+    foreach ($mapping as $type => [$serviceId, $relevance, $action]) {
+        if (empty($verified[$type]) || !isset($catalog[$serviceId])) continue;
+        $urgency = 0;
+        foreach ($verified[$type] as $finding) {
+            $signal = $signals[array_search($finding['evidence_id'], array_column($signals, 'evidence_id'), true)] ?? [];
+            if (!empty($signal['deadline']) || !empty($signal['urgent'])) $urgency = 2;
         }
-    }
-
-    if (isset($verified['environmental_claim'])) {
-        $scores['revue_allegations'] += 5;
-        $reasons['revue_allegations'][] = 'Allégation publique associée à une source référencée.';
-    }
-    if (isset($verified['rse_request']) || isset($verified['customer_requirements'])) {
-        $scores['structuration_rse'] += 4;
-        $reasons['structuration_rse'][] = 'Besoin RSE ou exigences clients documentés.';
-    }
-    if (isset($verified['carbon_request']) || isset($verified['carbon_data'])) {
-        $scores['pre_diagnostic_carbone'] += 5;
-        $reasons['pre_diagnostic_carbone'][] = 'Besoin carbone explicite ou données carbone signalés.';
-    }
-    if (isset($verified['general_environmental_need'])) {
-        $scores['diagnostic_flash'] += 4;
-        $reasons['diagnostic_flash'][] = 'Besoin environnemental général documenté.';
-    }
-    if (in_array($size, ['tpe', 'micro', 'small', 'petite_entreprise'], true)) {
-        $scores['diagnostic_flash'] += 2;
-        $reasons['diagnostic_flash'][] = 'Point d’entrée proportionné à une petite structure.';
-    }
-
-    $specializedScore = $scores['revue_allegations']
-        + $scores['structuration_rse'] + $scores['pre_diagnostic_carbone'];
-    if ($specializedScore === 0) {
-        $scores['diagnostic_flash'] += 3;
-        $reasons['diagnostic_flash'][] = 'Aucun besoin spécialisé suffisamment étayé à ce stade.';
-    }
-
-    arsort($scores);
-    $recommendations = [];
-    foreach ($scores as $id => $score) {
-        if ($score <= 0) continue;
-        $recommendations[] = [
-            'service_id' => $id,
-            'label' => $catalog[$id]['label'],
-            'score' => min(100, $score * 10),
-            'purpose' => $catalog[$id]['purpose'],
-            'trigger' => $catalog[$id]['trigger'],
-            'next_step' => $catalog[$id]['next_step'],
-            'reasons' => $reasons[$id] ?? [],
-            'requires_human_review' => true,
+        $confidence = 70;
+        if (count(array_filter($verified[$type], static fn($f) => $f['quote'] !== null)) > 0) $confidence = 85;
+        $qualification[$serviceId] = [
+            'need' => $type,
+            'urgency' => $urgency,
+            'relevance' => $relevance,
+            'confidence' => $confidence,
+            'action' => $action,
+            'findings' => $verified[$type],
         ];
     }
 
+    $recommendations = [];
+    foreach ($qualification as $serviceId => $item) {
+        $recommendations[] = [
+            'service_id' => $serviceId,
+            'label' => $catalog[$serviceId]['label'],
+            'purpose' => $catalog[$serviceId]['purpose'],
+            'qualification' => ['need'=>$item['need'],'urgency'=>$item['urgency'],'relevance'=>$item['relevance'],'confidence'=>$item['confidence']],
+            'next_step' => $item['action'],
+            'reasons' => array_map(static fn($f) => ['finding_id'=>$f['finding_id'],'evidence_id'=>$f['evidence_id'],'summary'=>$f['summary'],'source_url'=>$f['source_url'],'quote'=>$f['quote']], $item['findings']),
+            'requires_human_review' => true,
+        ];
+    }
+    usort($recommendations, static function ($a, $b) {
+        $aScore = $a['qualification']['urgency'] * 10 + $a['qualification']['relevance'];
+        $bScore = $b['qualification']['urgency'] * 10 + $b['qualification']['relevance'];
+        return $bScore <=> $aScore;
+    });
+
+    $profile = [];
+    foreach (['revenue'=>'chiffre_affaires','employees'=>'effectifs','sector'=>'secteur'] as $key => $label) {
+        $field = $lead['company_profile'][$key] ?? null;
+        if (!is_array($field)) {
+            $profile[$key] = ['label'=>$label,'value'=>null,'provenance'=>'unknown','is_estimate'=>false];
+            continue;
+        }
+        $sourceType = (string)($field['source_type'] ?? 'unknown');
+        $profile[$key] = [
+            'label'=>$label,
+            'value'=>$field['value'] ?? null,
+            'provenance'=>in_array($sourceType,['registry','company_provided','public_source','estimate'],true)?$sourceType:'unknown',
+            'source_url'=>filter_var($field['source_url'] ?? '', FILTER_VALIDATE_URL) ? $field['source_url'] : null,
+            'is_estimate'=>$sourceType==='estimate',
+        ];
+    }
+    $size = strtolower(trim((string)($lead['company_size'] ?? 'unknown')));
     return [
-        'engine_version' => '0.1.0',
-        'qualification_status' => count($recommendations) ? 'qualified_for_review' : 'insufficient_evidence',
-        'company_name' => trim((string)($lead['company_name'] ?? '')),
-        'website' => trim((string)($lead['website'] ?? '')),
-        'company_size' => $size,
-        'recommendations' => $recommendations,
-        'evidence_count' => count($evidence),
-        'sales_message_draft' => null,
-        'pricing' => null,
-        'auto_send' => false,
-        'disclaimer' => 'Recommandations indicatives fondées sur les signaux vérifiés fournis. Validation humaine requise.',
+        'engine_version'=>'1.0.0',
+        'qualification_status'=>$recommendations ? 'qualified_for_review' : 'no_suitable_offer',
+        'company_name'=>trim((string)($lead['company_name'] ?? '')),
+        'website'=>trim((string)($lead['website'] ?? '')),
+        'company_size'=>$size,
+        'technical_findings'=>$technicalFindings,
+        'company_profile'=>$profile,
+        'recommendations'=>$recommendations,
+        'evidence_count'=>count($technicalFindings),
+        'sales_message_draft'=>null,
+        'pricing'=>null,
+        'auto_send'=>false,
+        'disclaimer'=>'La qualification commerciale est distincte des constats techniques. Toute proposition requiert une validation humaine.',
     ];
 }
