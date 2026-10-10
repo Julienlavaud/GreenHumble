@@ -413,12 +413,25 @@ function ai_engine_run(
         }
     }
 
+    $failureCode = 'response_not_json';
+    if (is_string($aiResponse) && stripos(trim($aiResponse), 'Erreur Moteur IA') === 0) {
+        $failureCode = 'provider_request_failed';
+    } elseif (is_array($decodedResponse)) {
+        $failureCode = 'response_missing_score';
+    }
+    $failureSummary = $failureCode === 'provider_request_failed'
+        ? "Le fournisseur IA n’a pas pu traiter la demande. Vérifiez le modèle, les quotas et les journaux serveur."
+        : ($failureCode === 'response_missing_score'
+            ? "Le fournisseur IA a répondu, mais sans score exploitable. Aucune conclusion de conformité n’a été établie."
+            : "La réponse du fournisseur IA n’a pas pu être lue comme un JSON d’audit. Aucune conclusion de conformité n’a été établie.");
+
     return json_encode([
         'status' => 'analysis_incomplete',
         'analysisComplete' => false,
+        'diagnosticCode' => $failureCode,
         'score' => null,
         'riskLevel' => 'a_evaluer',
-        'summary' => "Analyse incomplète : le fournisseur IA n’a pas renvoyé un JSON exploitable. Aucune conclusion de conformité n’a été établie.",
+        'summary' => $failureSummary,
         'claims' => [],
         'prospection' => null,
         'financialImpact' => null,
