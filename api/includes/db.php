@@ -22,6 +22,14 @@ function ensure_db_schema($pdo) {
             $pdo->exec("ALTER TABLE cl_audits ADD COLUMN turnover VARCHAR(50) NULL");
         }
 
+        // Alias de domaines vers une fiche entreprise canonique (SIREN), sans toucher aux historiques.
+        $pdo->exec("CREATE TABLE IF NOT EXISTS cl_company_domains (
+            domain VARCHAR(255) NOT NULL,
+            company_id BIGINT UNSIGNED NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (domain), KEY idx_cl_company_domains_company (company_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
         // Migrations additives pour relier les scans publics aux prospects sans supprimer les données existantes.
         if (!in_array('domain', $cols, true)) {
             $pdo->exec("ALTER TABLE cl_companies ADD COLUMN domain VARCHAR(255) NULL AFTER website");
