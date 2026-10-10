@@ -307,7 +307,10 @@ function ai_engine_run(
         'aiAnalysisInstructions' => 'PÉRIMÈTRE D’ANALYSE',
         'aiEvidenceInstructions' => 'PREUVES ET CITATIONS',
         'aiRiskInstructions' => 'ÉVALUATION DU RISQUE',
-        'aiCommercialInstructions' => 'RECOMMANDATIONS COMMERCIALES'
+        'aiCommercialInstructions' => 'RECOMMANDATIONS COMMERCIALES',
+        'aiLegalFramework' => 'CADRE JURIDIQUE À VÉRIFIER',
+        'aiCorrectiveActions' => 'ACTIONS CORRECTIVES',
+        'aiClaimsDictionary' => 'DICTIONNAIRE DE SIGNAUX'
     ] as $ruleKey => $ruleLabel) {
         $ruleText = trim((string)($scanVars[$ruleKey] ?? ''));
         if ($ruleText !== '') $editablePromptRules[] = $ruleLabel . ":\n" . $ruleText;
@@ -326,7 +329,8 @@ function ai_engine_run(
         . ($webContent ?: "[Impossible de scraper le contenu direct, utilise tes connaissances si le domaine est connu ou demande des preuves]")
         . "\n\n";
 
-    $prompt = ($custom_prompt ?: "Effectue un audit complet de conformité environnementale et de potentiel de prospection pour : $url")
+    $configuredUserPrompt = trim((string)($scanVars['aiUserPrompt'] ?? ''));
+    $prompt = ($custom_prompt ?: (($configuredUserPrompt !== '' ? $configuredUserPrompt : "Effectue un audit complet de conformité environnementale et de potentiel de prospection") . " pour : $url"))
         . $scrapedPart;
 
     if (!$custom_prompt) {
