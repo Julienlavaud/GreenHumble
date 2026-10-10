@@ -232,7 +232,8 @@ if ($method === 'POST') {
         exit;
     }
 
-    $auditId = 'aud_' . date('Ymd_His') . '_' . substr(md5($url), 0, 6);
+    // Identifiant unique même si plusieurs audits de la même URL démarrent la même seconde.
+    $auditId = 'aud_' . gmdate('Ymd_His') . '_' . bin2hex(random_bytes(8));
     $validatedAudit['id'] = $auditId;
     $validatedAudit['url'] = $url;
     $validatedAudit['analyzedAt'] = date('c');
