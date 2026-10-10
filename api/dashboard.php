@@ -232,7 +232,7 @@ include __DIR__ . '/includes/header.php';
         <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Risque observé moyen</span>
             <div class="flex items-baseline space-x-2 mt-2">
-                <span class="text-4xl font-black text-emerald-800"><?php echo $avgScore; ?></span>
+                <span class="text-4xl font-black <?php echo $avgScore >= 70 ? 'text-rose-700' : ($avgScore >= 45 ? 'text-amber-700' : 'text-emerald-800'); ?>"><?php echo $avgScore; ?></span>
                 <span class="text-sm text-slate-400">/100</span>
             </div>
             <div class="mt-3 w-full bg-slate-100 h-2 rounded-full overflow-hidden">
