@@ -29,6 +29,10 @@ jobs:
           cp -a index.php .htaccess api OVH-INSTALLATION-GUIDE.md package/
           cp data/.htaccess package/data/.htaccess
 
+          # Compile the Tailwind utility classes locally for production (no CDN/runtime warning).
+          npm exec --yes --package=tailwindcss@3.4.17 -- tailwindcss -c tailwind.config.cjs -i api/assets/css/tailwind-input.css -o package/api/assets/css/tailwind-compiled.css --minify
+          test -s package/api/assets/css/tailwind-compiled.css
+
           # Never ship live settings, users, leads, scans, audit history or credentials.
           find package/data -type f -name '*.json' -delete
           if [ -d package/api/data ]; then
@@ -41,6 +45,11 @@ jobs:
           test -f package/api/login.php
           test -f package/api/admin/index.php
           test -f package/api/config/config.php
+          test -f package/api/assets/css/tailwind-compiled.css
+          if grep -R -n "cdn.tailwindcss.com" package/api; then
+            echo "Production package still references the Tailwind CDN."
+            exit 1
+          fi
           test -f package/data/.htaccess
           if find package -type f \( -name '.env' -o -path '*/backups/*' -o -name '*.sql.gz' \) | grep -q .; then
             echo "Unexpected secret or backup file in deployment package."
