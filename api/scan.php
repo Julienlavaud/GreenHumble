@@ -14,6 +14,34 @@ $allGroups = load_scanner_groups();
 $allListes = load_all_listes();
 $allScans = load_all_scans();
 
+// La liste affiche le dernier audit valide par domaine. Les anciens scans restent
+// conservés dans scans.json et leur nombre est indiqué sur la carte.
+$latestScansByDomain = [];
+$scanHistoryCounts = [];
+foreach ($allScans as $scan) {
+    if (!is_array($scan)) continue;
+    $host = parse_url((string)($scan['url'] ?? ''), PHP_URL_HOST);
+    $domain = strtolower(preg_replace('/^www\./i', '', trim((string)($host ?: ''))));
+    if ($domain === '') continue;
+
+    $scanHistoryCounts[$domain] = ($scanHistoryCounts[$domain] ?? 0) + 1;
+    $result = $scan['resultat_ia'] ?? [];
+    if (is_string($result)) $result = json_decode($result, true);
+    $score = is_array($result) ? ($result['score'] ?? ($result['riskScore'] ?? null)) : null;
+    if (!is_numeric($score) || !is_finite((float)$score) || (float)$score < 0 || (float)$score > 100) continue;
+
+    $timestamp = strtotime((string)($scan['date_scan'] ?? '')) ?: 0;
+    if (!isset($latestScansByDomain[$domain]) || $timestamp > $latestScansByDomain[$domain]['_dashboard_timestamp']) {
+        $scan['_dashboard_timestamp'] = $timestamp;
+        $scan['_dashboard_domain'] = $domain;
+        $latestScansByDomain[$domain] = $scan;
+    }
+}
+$latestScans = array_values($latestScansByDomain);
+usort($latestScans, static function ($a, $b) {
+    return ($b['_dashboard_timestamp'] ?? 0) <=> ($a['_dashboard_timestamp'] ?? 0);
+});
+
 // Récupération des clients pour la liste déroulante
 $companies = [];
 try {
@@ -198,8 +226,8 @@ include __DIR__ . '/includes/header.php';
     <div class="bg-[#1E1E1E] rounded-3xl border border-white/10 shadow-lg p-6 sm:p-8 space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
             <div>
-                <h2 class="text-xl font-bold text-white">Scans & Audits Récents (<?php echo count($allScans); ?>)</h2>
-                <p class="text-xs text-[#AAAAAA]">Chaque scan est enregistré dans la base unifiée avec son dossier et groupe associé.</p>
+                <h2 class="text-xl font-bold text-white">Derniers scores par site (<?php echo count($latestScans); ?>)</h2>
+                <p class="text-xs text-[#AAAAAA]">Les anciens audits restent conservés dans l’historique.</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <button onclick="openCreateListModal()" class="px-4 py-2 bg-[#2A7AE2] text-white text-xs font-bold rounded-xl border-none cursor-pointer">
@@ -209,14 +237,15 @@ include __DIR__ . '/includes/header.php';
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <?php if (empty($allScans)): ?>
+            <?php if (empty($latestScans)): ?>
                 <div class="col-span-full p-8 text-center text-[#AAAAAA] bg-[#121212] rounded-2xl">
                     Aucun scan enregistré.
                 </div>
             <?php else: ?>
-                <?php foreach (array_slice($allScans, 0, 12) as $sc): 
+                <?php foreach (array_slice($latestScans, 0, 12) as $sc): 
                     $scRes = is_array($sc['resultat_ia'] ?? null) ? $sc['resultat_ia'] : json_decode($sc['resultat_ia'] ?? '{}', true);
-                    $scScore = $scRes['score'] ?? $scRes['riskScore'] ?? 50;
+                    $scScore = (float)($scRes['score'] ?? $scRes['riskScore']);
+                    $historyCount = $scanHistoryCounts[$sc['_dashboard_domain']] ?? 1;
                     $scType = $sc['type_scan'] ?? 'diagnostic';
                 ?>
                     <div class="bg-[#121212] p-5 rounded-2xl border border-white/10 space-y-4 flex flex-col justify-between">
@@ -226,7 +255,7 @@ include __DIR__ . '/includes/header.php';
                                     <?php echo htmlspecialchars($scType); ?>
                                 </span>
                                 <span class="text-xs font-bold <?php echo $scScore >= 75 ? 'text-emerald-400' : ($scScore >= 50 ? 'text-amber-400' : 'text-rose-400'); ?>">
-                                    <?php echo $scScore; ?> / 100
+                                    <?php echo rtrim(rtrim(number_format($scScore, 1, '.', ''), '0'), '.'); ?> / 100
                                 </span>
                             </div>
 
@@ -234,6 +263,7 @@ include __DIR__ . '/includes/header.php';
                                 <h3 class="text-base font-bold text-white truncate max-w-full" title="<?php echo htmlspecialchars($sc['url']); ?>">
                                     <?php echo htmlspecialchars($sc['url']); ?>
                                 </h3>
+                                <p class="text-[10px] text-[#AAAAAA] mt-1"><?php echo (int)$historyCount; ?> audit(s) conservé(s)</p>
                                 <p class="text-xs text-[#AAAAAA] line-clamp-2 mt-1">
                                     <?php echo htmlspecialchars($scRes['summary'] ?? 'Analyse effectuée'); ?>
                                 </p>
