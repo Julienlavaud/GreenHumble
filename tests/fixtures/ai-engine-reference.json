@@ -29,7 +29,7 @@
       ],
       "expectedMisses": 0,
       "expectedFalsePositives": 0,
-      "expectedRiskLevel": "eleve"
+      "expectedRiskLevel": "modere"
     },
     {
       "name": "allégation ambiguë à citation absente",
@@ -48,7 +48,7 @@
       ],
       "expectedMisses": 0,
       "expectedFalsePositives": 0,
-      "expectedRiskLevel": "modere"
+      "expectedRiskLevel": "faible"
     },
     {
       "name": "citation trompeuse/non retrouvée",
@@ -78,7 +78,7 @@
       ],
       "expectedMisses": 1,
       "expectedFalsePositives": 0,
-      "expectedRiskLevel": "modere"
+      "expectedRiskLevel": "a_evaluer"
     }
   ]
 }

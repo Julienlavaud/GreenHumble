@@ -36,12 +36,9 @@ foreach ($data['cases'] as $case) {
 ref_assert($results['substantiated']['detectedClaims'][0]['evidenceVerified'] === true, 'citation exacte vérifiée');
 ref_assert($results['substantiated']['detectedClaims'][0]['sourceUrl'] === 'https://example.org/', 'citation rattachée à sa page source');
 ref_assert($results['substantiated']['detectedClaims'][1]['sourceUrl'] === 'https://example.org/engagements', 'citation multi-page rattachée à la bonne URL');
-$previous = 101;
-foreach ([100, 75, 55, 35, 0] as $score) {
-    $audit = gh_validate_ia_response(['score' => $score, 'claims' => []], 'example.org');
-    ref_assert($audit['riskScore'] <= $previous, 'normalisation monotone des scores');
-    $previous = $audit['riskScore'];
-}
+$scoreA = gh_validate_ia_response(['score' => 3, 'claims' => [['term' => 'écologique']]], 'example.org')['riskScore'];
+$scoreB = gh_validate_ia_response(['score' => 98, 'claims' => [['term' => 'écologique']]], 'example.org')['riskScore'];
+ref_assert($scoreA === $scoreB, 'le score libre du fournisseur est ignoré');
 $bad = gh_validate_ia_response(['claims' => [['term' => 'allégation']]], 'example.org');
 ref_assert($bad['analysisComplete'] === false && $bad['riskScore'] === null, 'absence de score = analyse incomplète');
 
