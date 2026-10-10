@@ -716,31 +716,45 @@ include __DIR__ . '/../includes/header.php';
                     </button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="missions-container">
-                    <?php foreach ($state['serviceOpps'] as $idx => $m): ?>
-                        <div class="mission-card bg-slate-50 p-8 rounded-[3rem] border border-slate-200 shadow-sm hover:shadow-xl hover:bg-white transition-all space-y-6 relative group" data-id="<?php echo $m['id']; ?>">
-                            <button onclick="deleteItem('missions', <?php echo $idx; ?>)" class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-600 transition-all">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                            <div class="flex items-center justify-between">
-                                <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-slate-100">💼</div>
-                                <input type="checkbox" <?php echo $m['isActive'] ? 'checked' : ''; ?> class="m-active w-8 h-8 text-emerald-600 rounded-[1rem] border-slate-300 focus:ring-8 focus:ring-emerald-500/10 cursor-pointer transition-all">
-                            </div>
-                            <div class="space-y-4">
-                                <input type="text" value="<?php echo htmlspecialchars($m['serviceTitle']); ?>" class="m-title w-full bg-transparent font-black text-slate-900 text-lg border-none p-0 focus:ring-0 placeholder-slate-300" placeholder="Titre de la mission">
-                                <textarea class="m-desc w-full bg-transparent text-xs text-slate-500 leading-relaxed border-none p-0 focus:ring-0 h-24 resize-none italic placeholder-slate-300" placeholder="Description de l'accompagnement..."><?php echo htmlspecialchars($m['description']); ?></textarea>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4 pt-6 border-t border-slate-100">
-                                <div class="p-4 bg-white rounded-2xl shadow-inner italic">
-                                    <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Budget Moyen</label>
-                                    <input type="text" value="<?php echo htmlspecialchars($m['defaultBudget']); ?>" class="m-budget w-full bg-transparent font-black text-slate-800 border-none p-0 text-sm focus:ring-0">
+                <div class="grid grid-cols-1 gap-3" id="missions-container">
+                    <?php foreach (($state['serviceOpps'] ?? []) as $idx => $m):
+                        $missionTitle = trim((string)($m['serviceTitle'] ?? ''));
+                        $missionId = (string)($m['id'] ?? ('mission_' . $idx));
+                    ?>
+                        <details class="mission-card group rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-emerald-300 hover:shadow-md" data-id="<?php echo htmlspecialchars($missionId, ENT_QUOTES, 'UTF-8'); ?>" data-service-key="<?php echo htmlspecialchars((string)($m['serviceKey'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
+                            <summary class="flex cursor-pointer list-none items-center gap-4 px-5 py-4 sm:px-6">
+                                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-xl">💼</span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="m-summary-title block truncate text-base font-bold text-slate-900"><?php echo htmlspecialchars($missionTitle ?: 'Métier sans titre', ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <span class="m-summary-desc mt-1 block truncate text-sm text-slate-500"><?php echo htmlspecialchars(trim((string)($m['description'] ?? '')) ?: 'Cliquez pour compléter la description, le budget et les aides.', ENT_QUOTES, 'UTF-8'); ?></span>
+                                </span>
+                                <span class="hidden shrink-0 rounded-full px-3 py-1 text-xs font-semibold sm:inline-flex <?php echo !empty($m['isActive']) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'; ?>"><?php echo !empty($m['isActive']) ? 'Actif' : 'Inactif'; ?></span>
+                                <span class="mission-chevron shrink-0 text-slate-400 transition-transform" aria-hidden="true">⌄</span>
+                            </summary>
+                            <div class="mission-editor border-t border-slate-100 px-5 py-5 sm:px-6">
+                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <label class="block text-sm font-semibold text-slate-700 md:col-span-2">Nom du métier
+                                        <input type="text" value="<?php echo htmlspecialchars($missionTitle, ENT_QUOTES, 'UTF-8'); ?>" class="m-title mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" placeholder="Titre de la mission">
+                                    </label>
+                                    <label class="block text-sm font-semibold text-slate-700 md:col-span-2">Description
+                                        <textarea class="m-desc mt-1.5 min-h-28 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed text-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" placeholder="Description de l’accompagnement"><?php echo htmlspecialchars((string)($m['description'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></textarea>
+                                    </label>
+                                    <label class="block text-sm font-semibold text-slate-700">Budget moyen
+                                        <input type="text" value="<?php echo htmlspecialchars((string)($m['defaultBudget'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" class="m-budget mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100">
+                                    </label>
+                                    <label class="block text-sm font-semibold text-slate-700">Aide / subvention
+                                        <input type="text" value="<?php echo htmlspecialchars((string)($m['subsidyAmount'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" class="m-sub mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100">
+                                    </label>
+                                    <label class="inline-flex items-center gap-3 text-sm font-semibold text-slate-700 md:col-span-2">
+                                        <input type="checkbox" <?php echo !empty($m['isActive']) ? 'checked' : ''; ?> class="m-active h-5 w-5 rounded border-slate-300 text-emerald-700 focus:ring-emerald-500">
+                                        Proposer ce métier dans les recommandations
+                                    </label>
                                 </div>
-                                <div class="p-4 bg-emerald-50/50 rounded-2xl shadow-inner">
-                                    <label class="block text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">Aide / Subv</label>
-                                    <input type="text" value="<?php echo htmlspecialchars($m['subsidyAmount']); ?>" class="m-sub w-full bg-transparent font-black text-emerald-700 border-none p-0 text-sm focus:ring-0">
+                                <div class="mt-5 flex justify-end border-t border-slate-100 pt-4">
+                                    <button type="button" onclick="deleteItem('missions', <?php echo (int)$idx; ?>)" class="rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50">Supprimer ce métier</button>
                                 </div>
                             </div>
-                        </div>
+                        </details>
                     <?php endforeach; ?>
                 </div>
             </div>
