@@ -412,8 +412,8 @@ function ai_engine_run(
     $failureCode = 'response_not_json';
     if (is_string($aiResponse) && stripos(trim($aiResponse), 'Erreur') === 0) {
         $failureCode = 'provider_request_failed';
-    } elseif (is_array($decodedResponse)) {
-        $failureCode = 'response_missing_score';
+    } elseif (in_array(($decodedResponse['code'] ?? ''), ['schema_invalid', 'analysis_incomplete'], true)) {
+        $failureCode = $decodedResponse['code'];
     }
     $failureSummary = $failureCode === 'provider_request_failed'
         ? "Le fournisseur IA n’a pas pu traiter la demande. Vérifiez le modèle, les quotas et les journaux serveur."
@@ -431,6 +431,7 @@ function ai_engine_run(
         'claims' => [],
         'prospection' => null,
         'financialImpact' => null,
-        'limitations' => ['Réponse IA absente, invalide ou non structurée en JSON'],\n        'aiMetadata' => $runMetadata
+        'limitations' => ['Réponse IA absente, invalide ou non structurée en JSON'],
+        'aiMetadata' => $runMetadata
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 }
