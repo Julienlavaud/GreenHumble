@@ -7,7 +7,7 @@ on:
       - release/ovh-deployment-clean
     paths:
       - .github/workflows/build-ovh-deployment.yml
-    # Keep this push trigger restricted to workflow maintenance commits; verify scan diagnostics, prompt settings, and clean package. (2026-10-10 final test pass
+    # Keep this push trigger restricted to workflow maintenance commits; verify scan diagnostics, prompt settings, local Tailwind build, and clean package. (2026-10-10)
 
 permissions:
   contents: read
