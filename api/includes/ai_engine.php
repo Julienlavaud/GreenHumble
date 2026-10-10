@@ -230,7 +230,7 @@ function ai_engine_run(
         : ((strpos($url, 'https://') === 0 || strpos($url, 'http://') === 0) ? ai_engine_scrape_website_content($url) : '');
 
     $canonicalUrl = gh_ai_canonical_url((string)$url) ?? (string)$url;
-    $corpus = gh_ai_corpus_metadata($canonicalUrl, [['url' => $canonicalUrl, 'text' => (string)$webContent]]);
+    $corpus = gh_ai_corpus_pages_from_text($canonicalUrl, (string)$webContent);
     $runMetadata = ['promptVersion' => GH_AI_PROMPT_VERSION, 'schemaVersion' => GH_AI_SCHEMA_VERSION, 'generationVersion' => GH_AI_GENERATION_VERSION, 'provider' => $provider, 'model' => $model, 'generation' => ['temperature' => 0.2], 'corpus' => ['canonicalUrl' => $corpus['canonicalUrl'], 'pageCount' => $corpus['pageCount'], 'fingerprint' => $corpus['corpusFingerprint']]];
 
     // 3. Règles métier / exceptions
