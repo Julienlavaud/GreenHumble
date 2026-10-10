@@ -729,52 +729,119 @@ include __DIR__ . '/includes/header.php';
     <!-- ONGLET 2 : MISSIONS & OPPORTUNITÉS DE VALORISATION -->
     <!-- ========================================================================= -->
     <?php if ($currentTab === 'missio'): ?>
-        <div id="section_missions" class="space-y-10">
-            <div class="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
-                <div class="max-w-3xl">
-                    <h2 class="text-2xl font-black text-slate-900 tracking-tight flex items-center space-x-3">
-                        <span class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">💼</span>
-                        <span>Catalogue des Missions d'Accompagnement</span>
-                    </h2>
-                    <p class="text-sm text-slate-500 mt-2">Solutions de mise en conformité et de valorisation environnementale adaptées au profil de <strong><?php echo htmlspecialchars($audit['company_name'] ?? ''); ?></strong>.</p>
+        <div id="section_missions" class="space-y-6">
+            <?php
+            $missions = [];
+            $kitForMissions = json_decode((string)($audit['kit_json'] ?? ''), true);
+            $kitOffer = is_array($kitForMissions['recommendedOffer'] ?? null) ? $kitForMissions['recommendedOffer'] : [];
+            $kitOfferKey = trim((string)($kitOffer['serviceKey'] ?? ''));
+            $kitOfferTitle = trim((string)($kitOffer['serviceTitle'] ?? ''));
+            $scanSignalText = '';
+            foreach ($claims as $claim) {
+                $status = (string)($claim['consultantValidationStatus'] ?? '');
+                if (in_array($status, ['non_fonde', 'justifie_par_preuve'], true)) continue;
+                foreach (['term', 'quoteInText', 'requiredProof', 'legalRisk'] as $field) {
+                    if (!empty($claim[$field])) $scanSignalText .= ' ' . (string)$claim[$field];
+                }
+            }
+            $missionRules = [
+                ['triggers' => ['carbone', 'émission', 'emission', 'ges', 'scope', 'neutralité', 'neutralite', 'compensation', 'climat'], 'services' => ['carbone', 'climat', 'bilan ges', 'scope', 'émission', 'emission']],
+                ['triggers' => ['acv', 'fdes', 'epd', 'recycl', 'biodégrad', 'biodegrad', 'matériau', 'materiau', 'durable', 'preuve'], 'services' => ['acv', 'fdes', 'epd', 'matériau', 'materiau', 'recycl', 'écoconception', 'ecoconception', 'conformité', 'conformite']],
+                ['triggers' => ['écologique', 'ecologique', 'éco-responsable', 'eco-responsable', 'vert', 'greenwashing', 'allégation', 'allegation', 'rse', 'esg', 'reporting'], 'services' => ['rse', 'esg', 'conformité', 'conformite', 'reporting', 'stratégie', 'strategie']]
+            ];
+            $containsText = static function ($haystack, $needle) {
+                return function_exists('mb_stripos')
+                    ? mb_stripos((string)$haystack, (string)$needle, 0, 'UTF-8') !== false
+                    : stripos((string)$haystack, (string)$needle) !== false;
+            };
+            foreach (($st['serviceOpps'] ?? []) as $idx => $mission) {
+                if (!is_array($mission) || !($mission['isActive'] ?? true)) continue;
+                $missionTitle = trim((string)($mission['serviceTitle'] ?? ''));
+                if ($missionTitle === '') continue;
+                $missionText = $missionTitle . ' ' . (string)($mission['description'] ?? '');
+                $missionKey = (string)($mission['serviceKey'] ?? $mission['id'] ?? '');
+                $recommended = ($kitOfferKey !== '' && $kitOfferKey === $missionKey)
+                    || ($kitOfferTitle !== '' && mb_strtolower($kitOfferTitle, 'UTF-8') === mb_strtolower($missionTitle, 'UTF-8'));
+                if (!$recommended && $scanSignalText !== '') {
+                    foreach ($missionRules as $rule) {
+                        $triggered = false;
+                        foreach ($rule['triggers'] as $trigger) {
+                            if ($containsText($scanSignalText, $trigger)) { $triggered = true; break; }
+                        }
+                        if (!$triggered) continue;
+                        foreach ($rule['services'] as $serviceKeyword) {
+                            if ($containsText($missionText, $serviceKeyword)) { $recommended = true; break 2; }
+                        }
+                    }
+                }
+                $mission['_recommended'] = $recommended;
+                $mission['_id'] = (string)($mission['id'] ?? ('mission_' . $idx));
+                $missions[] = $mission;
+            }
+            $recommendedCount = count(array_filter($missions, static fn($mission) => !empty($mission['_recommended'])));
+            $showAllInitially = $recommendedCount === 0;
+            ?>
+            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                <div class="flex flex-col gap-5 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <div class="mb-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800">
+                            <span aria-hidden="true">💼</span><span><?php echo count($missions); ?> accompagnement(s) actif(s)</span>
+                        </div>
+                        <h2 class="text-xl font-black tracking-tight text-slate-900 sm:text-2xl">Missions recommandées</h2>
+                        <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">Sélection basée sur les constats encore à vérifier dans ce dossier. Une recommandation ne signifie pas qu’une infraction est établie.</p>
+                    </div>
+                    <div class="flex shrink-0 flex-wrap gap-2" role="group" aria-label="Filtrer les missions">
+                        <?php if ($recommendedCount > 0): ?>
+                            <button type="button" class="mission-filter-btn rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white" data-filter="recommended" aria-pressed="true">Recommandées (<?php echo $recommendedCount; ?>)</button>
+                            <button type="button" class="mission-filter-btn rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50" data-filter="all" aria-pressed="false">Toutes (<?php echo count($missions); ?>)</button>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <?php 
-                    $missions = $st['serviceOpps'] ?? [];
-                    foreach ($missions as $idx => $m): 
-                        if (!($m['isActive'] ?? true)) continue;
-                    ?>
-                        <div class="mission-pro-card p-8 rounded-[2.5rem] border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-emerald-400 hover:shadow-2xl transition-all space-y-6 flex flex-col justify-between group">
-                            <div class="space-y-4">
-                                <div class="flex items-center justify-between">
-                                    <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-xl shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">💼</div>
-                                    <span class="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Actif</span>
-                                </div>
-                                <h3 class="text-lg font-black text-slate-900 leading-tight"><?php echo htmlspecialchars($m['serviceTitle']); ?></h3>
-                                <p class="text-xs text-slate-500 leading-relaxed italic line-clamp-3"><?php echo htmlspecialchars($m['description']); ?></p>
+                <?php if ($recommendedCount === 0): ?>
+                    <p class="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-relaxed text-blue-900">Aucune mission ne correspond directement aux constats non écartés du scan. Voici le catalogue complet pour garder le choix au consultant.</p>
+                <?php else: ?>
+                    <p id="mission-filter-status" class="mt-4 text-xs font-medium text-slate-500" role="status"><?php echo $recommendedCount; ?> mission(s) mise(s) en avant à partir des résultats du scan.</p>
+                <?php endif; ?>
+
+                <div id="mission-catalogue" class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <?php foreach ($missions as $mission): ?>
+                        <article class="mission-pro-card flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-emerald-300 hover:bg-white hover:shadow-md"
+                                 data-recommended="<?php echo !empty($mission['_recommended']) ? '1' : '0'; ?>"
+                                 <?php echo (!$showAllInitially && empty($mission['_recommended'])) ? 'hidden' : ''; ?>>
+                            <div class="flex items-start justify-between gap-3">
+                                <h3 class="min-w-0 flex-1 break-words text-base font-extrabold leading-snug text-slate-900"><?php echo htmlspecialchars($mission['serviceTitle'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></h3>
+                                <?php if (!empty($mission['_recommended'])): ?>
+                                    <span class="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-800">Liée au scan</span>
+                                <?php endif; ?>
                             </div>
-                            
-                            <div class="pt-6 border-t border-slate-100 space-y-4">
-                                <div class="flex justify-between items-center text-[11px]">
-                                    <span class="text-slate-400 font-bold uppercase tracking-tighter">Budget Estimé</span>
-                                    <span class="font-black text-slate-900 bg-white px-3 py-1 rounded-lg border border-slate-100 shadow-inner"><?php echo htmlspecialchars($m['defaultBudget']); ?></span>
-                                </div>
-                                <?php if (!empty($m['subsidyAmount']) && $m['subsidyAmount'] !== '0 €'): ?>
-                                    <div class="flex justify-between items-center text-[11px]">
-                                        <span class="text-emerald-600 font-bold uppercase tracking-tighter">Aide / Subvention</span>
-                                        <span class="font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100"><?php echo htmlspecialchars($m['subsidyAmount']); ?></span>
+                            <p class="mt-3 flex-1 whitespace-pre-line break-words text-sm leading-relaxed text-slate-600"><?php echo htmlspecialchars(trim((string)($mission['description'] ?? '')) ?: 'Description à compléter dans le catalogue métier.', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></p>
+                            <div class="mt-5 space-y-2 border-t border-slate-200 pt-4">
+                                <?php if (trim((string)($mission['defaultBudget'] ?? '')) !== ''): ?>
+                                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                        <span class="font-semibold text-slate-500">Budget indicatif</span>
+                                        <span class="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 font-bold text-slate-800"><?php echo htmlspecialchars((string)$mission['defaultBudget'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
                                     </div>
                                 <?php endif; ?>
-                                
-                                <button onclick="navigator.clipboard.writeText('Offre ClimatLocal : <?php echo addslashes($m['serviceTitle']); ?> - Budget : <?php echo addslashes($m['defaultBudget']); ?>. <?php echo addslashes($m['description']); ?>'); alert('Détails de l\'offre copiés !');" class="w-full py-3 bg-slate-900 hover:bg-emerald-700 text-white text-[10px] font-black rounded-xl transition-all uppercase tracking-widest flex items-center justify-center space-x-2">
-                                    <span>Ajouter au devis</span>
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg>
-                                </button>
+                                <?php if (!empty($mission['subsidyAmount']) && $mission['subsidyAmount'] !== '0 €'): ?>
+                                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                        <span class="font-semibold text-emerald-700">Aide / subvention</span>
+                                        <span class="rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 font-bold text-emerald-800"><?php echo htmlspecialchars((string)$mission['subsidyAmount'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></span>
+                                    </div>
+                                <?php endif; ?>
                             </div>
-                        </div>
+                            <?php
+                            $copyText = 'Offre Climat Local : ' . $missionTitle . ' — Budget indicatif : ' . (string)($mission['defaultBudget'] ?? '') . '. ' . (string)($mission['description'] ?? '');
+                            ?>
+                            <button type="button" class="mission-copy-btn mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-xs font-bold text-white transition hover:bg-emerald-800" data-copy="<?php echo htmlspecialchars($copyText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
+                                <span>Copier dans le devis</span><span aria-hidden="true">↗</span>
+                            </button>
+                        </article>
                     <?php endforeach; ?>
                 </div>
+                <?php if (empty($missions)): ?>
+                    <p class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-600">Aucun accompagnement actif. Activez les offres à proposer dans le catalogue métier de l’administration.</p>
+                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>
@@ -1356,6 +1423,41 @@ include __DIR__ . '/includes/header.php';
 </style>
 
 <script>
+document.addEventListener('click', async (event) => {
+    const filterButton = event.target.closest('.mission-filter-btn');
+    if (filterButton) {
+        const mode = filterButton.dataset.filter;
+        document.querySelectorAll('#mission-catalogue .mission-pro-card').forEach(card => {
+            card.hidden = mode === 'recommended' && card.dataset.recommended !== '1';
+        });
+        document.querySelectorAll('.mission-filter-btn').forEach(button => {
+            const selected = button === filterButton;
+            button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            button.classList.toggle('bg-emerald-800', selected);
+            button.classList.toggle('text-white', selected);
+            button.classList.toggle('border', !selected);
+            button.classList.toggle('border-slate-200', !selected);
+            button.classList.toggle('bg-white', !selected);
+            button.classList.toggle('text-slate-700', !selected);
+        });
+        const count = mode === 'all'
+            ? document.querySelectorAll('#mission-catalogue .mission-pro-card').length
+            : document.querySelectorAll('#mission-catalogue .mission-pro-card[data-recommended="1"]').length;
+        const status = document.getElementById('mission-filter-status');
+        if (status) status.textContent = mode === 'all' ? count + ' mission(s) dans le catalogue.' : count + ' mission(s) mise(s) en avant à partir des résultats du scan.';
+        return;
+    }
+    const copyButton = event.target.closest('.mission-copy-btn');
+    if (copyButton) {
+        try {
+            await navigator.clipboard.writeText(copyButton.dataset.copy || '');
+            copyButton.innerHTML = '<span>Copié pour le devis</span><span aria-hidden="true">✓</span>';
+        } catch (error) {
+            window.prompt('Copiez le texte de l’offre :', copyButton.dataset.copy || '');
+        }
+    }
+});
+</script>
 function openClaimCorrectionModal(claim) {
     document.getElementById('modal_claim_id').value = claim.id;
     document.getElementById('modal_claim_term').value = claim.term;
