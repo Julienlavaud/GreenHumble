@@ -5,15 +5,73 @@ require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/cms.php';
+require_once __DIR__ . '/includes/listes_manager.php';
+require_once __DIR__ . '/includes/scans_manager.php';
 require_login();
 
 $db = get_db_connection();
 
-$filterYear = $_GET['year'] ?? 'all';
-$yearWhere = "";
-if ($filterYear !== 'all' && is_numeric($filterYear)) {
-    $yearWhere = " WHERE YEAR(analyzedAt) = " . intval($filterYear);
+$filterYear = (string)($_GET['year'] ?? 'all');
+if ($filterYear !== 'all' && !preg_match('/^20[0-9]{2}$/', $filterYear)) $filterYear = 'all';
+$filterList = trim((string)($_GET['list'] ?? 'all'));
+$listOptions = load_all_listes();
+$selectedList = null;
+foreach ($listOptions as $candidateList) {
+    if (($candidateList['id'] ?? '') === $filterList) { $selectedList = $candidateList; break; }
 }
+if ($filterList !== 'all' && $selectedList === null) $filterList = 'all';
+
+function gh_dashboard_domain($value) {
+    $value = trim((string)$value);
+    if ($value === '') return '';
+    if (!preg_match('~^https?://~i', $value)) $value = 'https://' . $value;
+    $host = strtolower((string)(parse_url($value, PHP_URL_HOST) ?: ''));
+    return preg_replace('/^www\\./', '', $host);
+}
+
+$selectedDomains = [];
+if ($selectedList !== null) {
+    $allScans = load_all_scans();
+    $scansById = [];
+    foreach ($allScans as $scan) {
+        if (!empty($scan['id'])) $scansById[(string)$scan['id']] = $scan;
+    }
+    foreach (($selectedList['sites'] ?? []) as $site) {
+        $domain = gh_dashboard_domain($site['url'] ?? $site['domaine'] ?? '');
+        if ($domain !== '') $selectedDomains[$domain] = true;
+        $scanId = (string)($site['scan_id'] ?? '');
+        if ($scanId !== '' && isset($scansById[$scanId])) {
+            $scanDomain = gh_dashboard_domain($scansById[$scanId]['url'] ?? '');
+            if ($scanDomain !== '') $selectedDomains[$scanDomain] = true;
+        }
+    }
+    foreach (($selectedList['items'] ?? []) as $itemId) {
+        $itemId = (string)$itemId;
+        if (isset($scansById[$itemId])) {
+            $scanDomain = gh_dashboard_domain($scansById[$itemId]['url'] ?? '');
+            if ($scanDomain !== '') $selectedDomains[$scanDomain] = true;
+        } else {
+            $itemDomain = gh_dashboard_domain($itemId);
+            if ($itemDomain !== '') $selectedDomains[$itemDomain] = true;
+        }
+    }
+}
+
+$db = get_db_connection();
+$scopeConditions = [];
+if ($filterYear !== 'all') $scopeConditions[] = 'YEAR(a.analyzedAt) = ' . (int)$filterYear;
+$scopedAuditIds = [];
+if ($selectedList !== null) {
+    $auditCandidates = $db->query('SELECT id, url FROM cl_audits')->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($auditCandidates as $candidate) {
+        if (isset($selectedDomains[gh_dashboard_domain($candidate['url'] ?? '')])) {
+            $scopedAuditIds[] = (int)$candidate['id'];
+        }
+    }
+    $scopedAuditIds = array_values(array_unique($scopedAuditIds));
+    $scopeConditions[] = 'a.id IN (' . ($scopedAuditIds ? implode(',', $scopedAuditIds) : '0') . ')';
+}
+$scopeWhereSql = $scopeConditions ? ' WHERE ' . implode(' AND ', $scopeConditions) : '';
 
 $totalAudits = 0;
 $avgScore = 0;
@@ -21,43 +79,28 @@ $riskCounts = ['faible' => 0, 'modere' => 0, 'eleve' => 0, 'critique' => 0];
 $totalCompanies = 0;
 
 try {
-    $totalAudits = $db->query("SELECT COUNT(*) FROM cl_audits" . $yearWhere)->fetchColumn() ?: 0;
-    $avgScore = $totalAudits > 0 ? round($db->query("SELECT AVG(score) FROM cl_audits" . $yearWhere)->fetchColumn(), 1) : 0;
-    
-    $riskSql = "SELECT riskLevel, COUNT(*) as count FROM cl_audits";
-    if ($yearWhere) $riskSql .= $yearWhere;
-    $riskSql .= " GROUP BY riskLevel";
-    $risks = $db->query($riskSql)->fetchAll();
-    foreach ($risks as $r) {
-        $k = strtolower($r['riskLevel']);
-        if (isset($riskCounts[$k])) $riskCounts[$k] = $r['count'];
+    $auditStats = $db->query('SELECT COUNT(*) AS total, AVG(a.score) AS average FROM cl_audits a' . $scopeWhereSql)->fetch(PDO::FETCH_ASSOC) ?: [];
+    $totalAudits = (int)($auditStats['total'] ?? 0);
+    $avgScore = $totalAudits > 0 ? round((float)($auditStats['average'] ?? 0), 1) : 0;
+
+    $riskRows = $db->query('SELECT a.riskLevel, COUNT(*) AS count FROM cl_audits a' . $scopeWhereSql . ' GROUP BY a.riskLevel')->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($riskRows as $riskRow) {
+        $key = strtolower((string)$riskRow['riskLevel']);
+        if (isset($riskCounts[$key])) $riskCounts[$key] = (int)$riskRow['count'];
     }
+    $companySql = 'SELECT COUNT(DISTINCT a.company_id) FROM cl_audits a' . ($scopeWhereSql ? $scopeWhereSql . ' AND' : ' WHERE') . ' a.company_id IS NOT NULL';
+    $totalCompanies = (int)$db->query($companySql)->fetchColumn();
+} catch (Throwable $e) {
+    error_log('GreenHumble dashboard: unable to load scoped audit statistics.');
+}
 
-    $totalCompanies = $db->query("SELECT COUNT(*) FROM cl_companies")->fetchColumn() ?: 0;
-} catch (Exception $e) {}
-
-// Base minimum d'audits pour un affichage significatif des indicateurs (uniquement si des audits existent)
-$effectiveAuditsCount = $totalAudits;
-
-// ==============================================================================
-// MODÈLE DE CALCUL DE L'EMPREINTE CARBONE (tCO2e) & CONSOMMATION ÉNERGÉTIQUE IA
-// Méthodologie conforme Base Empreinte® ADEME & GHG Protocol Numérique (Scope 2 & 3)
-// ==============================================================================
-$kwhPerAudit = 0.0065;
-$baselineMonthlyServerKwh = $totalAudits > 0 ? 14.2 : 0; 
-$totalEnergyKwh = $totalAudits > 0 ? round(($effectiveAuditsCount * $kwhPerAudit) + $baselineMonthlyServerKwh, 2) : 0;
-
-// Facteur d'émission électrique Data Center Européen (AIE / ADEME) : 0.230 kg CO2e / kWh
-$emissionFactorKgPerKwh = 0.230; 
-$totalEmissionsKgCo2e = $totalAudits > 0 ? round($totalEnergyKwh * $emissionFactorKgPerKwh, 3) : 0;
-$totalEmissionsTCo2e = $totalAudits > 0 ? round($totalEmissionsKgCo2e / 1000, 5) : 0;
-
-// Émissions moyennes par audit individuel en grammes de CO2e
-$gramsCo2PerAudit = $totalAudits > 0 ? round(($kwhPerAudit * $emissionFactorKgPerKwh) * 1000, 1) : 0;
-
-// Équivalences concrètes pour vulgarisation
-$kmCarEquivalent = $totalAudits > 0 ? round($totalEmissionsKgCo2e / 0.120, 1) : 0;
-$treeMonthsAbsorption = $totalAudits > 0 ? round($totalEmissionsKgCo2e / (25 / 12), 1) : 0;
+// Estimation indicative uniquement : ce modèle ne mesure pas en temps réel la consommation électrique.
+$estimatedKwhPerAudit = 0.0065;
+$emissionFactorKgPerKwh = 0.230;
+$totalEnergyKwh = round($totalAudits * $estimatedKwhPerAudit, 3);
+$totalEmissionsKgCo2e = round($totalEnergyKwh * $emissionFactorKgPerKwh, 4);
+$totalEmissionsTCo2e = round($totalEmissionsKgCo2e / 1000, 6);
+$gramsCo2PerAudit = round($estimatedKwhPerAudit * $emissionFactorKgPerKwh * 1000, 2);
 
 // Top 5 des Termes / Mots Bannis les plus Fréquents avec les Entreprises Associées (uniquement de la base)
 $topClaims = [];
