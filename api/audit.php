@@ -89,7 +89,7 @@ function autoDeductEntrepriseData($parsed, $webText, $domain, $registryData = nu
             $amount = is_array($finance) ? ($finance['ca'] ?? null) : null;
             if (is_numeric($amount) && (float)$amount > 0) {
                 $registryCa = number_format((float)$amount, 0, ',', ' ') . ' €';
-                $registryCaYear = is_string($period) ? $period : null;
+                $registryCaYear = null; // L'API ne fournit pas toujours l'année d'exercice.
                 break;
             }
         }
@@ -136,8 +136,9 @@ function gh_lookup_public_company_registry($query, $expectedSiren = null) {
         if (!is_array($item) || !preg_match('/^\\d{9}$/', (string)($item['siren'] ?? ''))) return false;
         if ($expectedSiren !== null && $expectedSiren !== '') return (string)$item['siren'] === (string)$expectedSiren;
         $normalize = static function ($value) {
-            $value = function_exists('iconv') ? iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string)$value) : (string)$value;
-            return strtolower(preg_replace('/[^a-z0-9]/', '', $value));
+            $ascii = function_exists('iconv') ? @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', (string)$value) : (string)$value;
+            if (!is_string($ascii)) $ascii = (string)$value;
+            return strtolower(preg_replace('/[^a-z0-9]/', '', $ascii));
         };
         $officialName = $item['nom_raison_sociale'] ?? ($item['nom_complet'] ?? '');
         return $normalize($officialName) !== '' && $normalize($officialName) === $normalize($query);
