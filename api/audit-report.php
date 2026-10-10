@@ -19,7 +19,7 @@ require_once __DIR__ . '/includes/header.php';
 a{color:var(--green)}.shell{max-width:1240px;margin:auto;padding:24px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:26px}.brand{font-weight:850;font-size:21px;letter-spacing:-.04em;color:var(--green-dark)}.brand small{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:750}
 .actions{display:flex;gap:9px;flex-wrap:wrap}.btn{appearance:none;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink);padding:10px 14px;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}.btn.primary{background:var(--green);border-color:var(--green);color:white}.btn:focus-visible,input:focus-visible{outline:3px solid #75c9a8;outline-offset:2px}
 .hero{background:linear-gradient(120deg,#fff 0%,#f0f8f4 100%);border:1px solid var(--line);border-radius:20px;padding:28px;margin-bottom:18px}.eyebrow{font-size:11px;font-weight:850;letter-spacing:.15em;text-transform:uppercase;color:var(--green)}h1{font-size:clamp(27px,4vw,40px);line-height:1.12;letter-spacing:-.045em;margin:7px 0 8px}.subtitle{margin:0;color:var(--muted);max-width:760px}.lookup{display:flex;gap:9px;margin-top:20px;max-width:620px}.lookup input{flex:1;min-width:0;border:1px solid #ccdcd3;border-radius:10px;padding:12px;font:inherit;background:white}.meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;color:var(--muted);font-size:13px}.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--mint);border-radius:99px;color:var(--green-dark);font-size:12px;font-weight:800}
-.grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr);gap:18px;align-items:start}.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px;min-width:0}.card h2{font-size:18px;letter-spacing:-.02em;margin:0 0 5px}.card .intro{color:var(--muted);margin:0 0 17px;font-size:13px}.scoreline{display:flex;align-items:center;gap:22px}.score{width:112px;height:112px;flex:0 0 112px;border:8px solid var(--mint);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--green-dark)}.score strong{font-size:30px;line-height:1}.score span{font-size:11px;color:var(--muted)}.scoretext{min-width:0}.scoretext h2{font-size:20px}.muted{color:var(--muted)}.notice{padding:13px 15px;background:#fff8e8;border:1px solid #f1dfb4;border-radius:10px;color:#73520b;margin:14px 0}.empty{padding:18px;border:1px dashed #cbd9d1;border-radius:12px;color:var(--muted);text-align:center}.item{border-top:1px solid var(--line);padding:15px 0}.item:first-of-type{border-top:0}.item h3{font-size:15px;margin:0 0 5px}.item p{margin:5px 0;overflow-wrap:anywhere}.tag{display:inline-block;border-radius:6px;background:#f0f3f1;padding:3px 7px;margin:0 5px 5px 0;font-size:11px;font-weight:750;color:#52645d}.list{padding-left:19px;margin:10px 0}.list li{margin:7px 0}.facts{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fact{background:#f7faf8;border-radius:10px;padding:12px;min-width:0}.fact span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}.fact strong{display:block;margin-top:4px;overflow-wrap:anywhere}.footer{font-size:12px;color:var(--muted);padding:12px 3px 24px}.hidden{display:none!important}.error{color:var(--red)}.commercial{border-left:3px solid var(--green);padding-left:13px;margin:12px 0}.mono{font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr);gap:18px;align-items:start}.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px;min-width:0}.card h2{font-size:18px;letter-spacing:-.02em;margin:0 0 5px}.card .intro{color:var(--muted);margin:0 0 17px;font-size:13px}.scoreline{display:flex;align-items:center;gap:22px}.score{width:112px;height:112px;flex:0 0 112px;border:8px solid var(--mint);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--green-dark)}.score strong{font-size:30px;line-height:1}.score span{font-size:11px;color:var(--muted)}.scoretext{min-width:0}.scoretext h2{font-size:20px}.muted{color:var(--muted)}.notice{padding:13px 15px;background:#fff8e8;border:1px solid #f1dfb4;border-radius:10px;color:#73520b;margin:14px 0}.empty{padding:18px;border:1px dashed #cbd9d1;border-radius:12px;color:var(--muted);text-align:center}.item{border-top:1px solid var(--line);padding:15px 0}.item:first-of-type{border-top:0}.item h3{font-size:15px;margin:0 0 5px}.item p{margin:5px 0;overflow-wrap:anywhere}.tag{display:inline-block;border-radius:6px;background:#f0f3f1;padding:3px 7px;margin:0 5px 5px 0;font-size:11px;font-weight:750;color:#52645d}.list{padding-left:19px;margin:10px 0}.list li{margin:7px 0}.facts{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fact{background:#f7faf8;border-radius:10px;padding:12px;min-width:0}.fact span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}.fact strong{display:block;margin-top:4px;overflow-wrap:anywhere}.fact small{display:block;margin-top:5px;font-size:11px;color:var(--muted)}.footer{font-size:12px;color:var(--muted);padding:12px 3px 24px}.hidden{display:none!important}.error{color:var(--red)}.commercial{border-left:3px solid var(--green);padding-left:13px;margin:12px 0}.mono{font-variant-numeric:tabular-nums}
 @media(max-width:800px){.shell{padding:14px}.topbar{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.hero,.card{padding:18px}.scoreline{align-items:flex-start;gap:15px}.score{width:92px;height:92px;flex-basis:92px}.lookup{flex-direction:column}.facts{grid-template-columns:1fr 1fr}}
 @media print{body{background:white;font-size:11pt}.shell{max-width:none;padding:0}.topbar .actions,.lookup,.no-print{display:none!important}.hero,.card{break-inside:avoid;border:1px solid #ccc;box-shadow:none;margin-bottom:10px;padding:15px}.grid{grid-template-columns:1.5fr 1fr;gap:10px}.footer{padding-bottom:0}a{color:inherit;text-decoration:none}}
 </style>
@@ -47,10 +47,12 @@ a{color:var(--green)}.shell{max-width:1240px;margin:auto;padding:24px}.topbar{di
     </main>
     <aside>
       <section class="card"><h2>Entreprise analysée</h2><p class="intro">Informations associées à cet audit</p><div class="facts">
-        <div class="fact"><span>Entreprise</span><strong id="company-name">—</strong></div>
-        <div class="fact"><span>Secteur</span><strong id="company-sector">—</strong></div>
-        <div class="fact"><span>Effectif déclaré/estimé</span><strong id="company-headcount">—</strong></div>
-        <div class="fact"><span>Chiffre d’affaires</span><strong id="company-turnover">—</strong></div>
+        <div class="fact"><span>Entreprise</span><strong id="company-name">—</strong><small id="company-name-source">Source non renseignée</small></div>
+        <div class="fact"><span>SIREN</span><strong id="company-siren">—</strong><small id="company-siren-source">Non communiqué</small></div>
+        <div class="fact"><span>Secteur</span><strong id="company-sector">—</strong><small id="company-sector-source">Non communiqué</small></div>
+        <div class="fact"><span>Effectif</span><strong id="company-headcount">—</strong><small id="company-headcount-source">Non communiqué</small></div>
+        <div class="fact"><span>Chiffre d’affaires</span><strong id="company-turnover">—</strong><small id="company-turnover-source">Non communiqué</small></div>
+        <div class="fact"><span>Code NAF</span><strong id="company-naf">—</strong><small id="company-naf-source">Non communiqué</small></div>
       </div><div class="item"><h3>Site web</h3><p id="company-url">—</p></div><div class="item"><h3>Identifiant audit</h3><p id="company-id" class="mono">—</p></div></section>
       <section class="card"><h2>À retenir</h2><p id="urgent-action">Aucune action prioritaire fournie dans le résultat.</p><div id="immediate-risks"></div></section>
       <section class="card"><h2>Limites du rapport</h2><p class="muted">Le score et les constats dépendent des pages accessibles, des éléments fournis et de la qualité de l’analyse automatique. Vérifiez les justificatifs, la portée exacte des allégations et les éventuelles exceptions avant toute décision.</p></section>
@@ -127,6 +129,20 @@ function renderCommercial(kit) {
   if (email && typeof email === 'object') { const wrap=document.createElement('div'); wrap.className='commercial'; addText(wrap,'strong',email.subject || 'Courriel de prospection'); if(email.body) addText(wrap,'p',email.body); target.appendChild(wrap); }
   if (!target.childNodes.length) addText(target,'div','Le kit existe mais ne contient aucun champ affichable reconnu.','empty');
 }
+const companySourceLabels = {
+  registre_public_insee: 'Registre public (INSEE)',
+  registre_public_etat: 'Registre public (État)',
+  saisie_utilisateur: 'Saisie utilisateur',
+  estimation_non_verifiee: 'Estimation non vérifiée',
+  non_communique: 'Non communiqué'
+};
+function provenanceText(source, value, period) {
+  const hasValue = value !== null && value !== undefined && String(value).trim() !== '';
+  let label = companySourceLabels[source] || (hasValue ? 'Source non renseignée pour cet audit' : 'Non communiqué');
+  if (source === 'non_communique' && hasValue) label = 'Source non renseignée pour cet audit';
+  if (period !== null && period !== undefined && String(period).trim() !== '') label += ' · ' + String(period);
+  return label;
+}
 function renderAudit(a) {
   const summary = a.clientSummary || {};
   const complete = a.analysisComplete !== false && a.status !== 'analysis_incomplete' && a.riskScore !== null && a.riskScore !== undefined;
@@ -141,10 +157,25 @@ function renderAudit(a) {
   setText('risk-level', complete ? (a.riskLevel || 'Niveau non précisé') : 'Analyse incomplète — risque non évalué');
   setText('summary', summary.riskVerdict || summary.headline || a.summary || 'Aucune synthèse disponible.');
   $('incomplete-notice').classList.toggle('hidden', complete);
-  setText('company-name', a.companyName || (a.url ? new URL(a.url, window.location.origin).hostname : null));
-  setText('company-sector', a.entreprise_secteur);
-  setText('company-headcount', a.entreprise_salaries);
-  setText('company-turnover', a.entreprise_ca);
+  const companyRegistry = (a.companyRegistry && typeof a.companyRegistry === 'object') ? a.companyRegistry : ((a.resultat_ia && a.resultat_ia.companyRegistry) || {});
+  const companyName = a.companyName || (a.url ? new URL(a.url, window.location.origin).hostname : null);
+  const companySector = a.entreprise_secteur;
+  const companyHeadcount = a.entreprise_salaries;
+  const companyTurnover = a.entreprise_ca;
+  const siren = companyRegistry.siren;
+  const naf = companyRegistry.naf;
+  setText('company-name', companyName);
+  setText('company-name-source', companyRegistry.provider && siren ? 'Nom rapproché du registre public (SIREN confirmé)' : provenanceText(null, companyName));
+  setText('company-siren', siren);
+  setText('company-siren-source', siren ? 'Rapprochement confirmé via le registre public' : 'Aucun SIREN confirmé');
+  setText('company-sector', companySector);
+  setText('company-sector-source', provenanceText(companyRegistry.sectorSource, companySector));
+  setText('company-headcount', companyHeadcount);
+  setText('company-headcount-source', provenanceText(companyRegistry.headcountSource, companyHeadcount, companyRegistry.headcountYear ? 'année ' + companyRegistry.headcountYear : null));
+  setText('company-turnover', companyTurnover);
+  setText('company-turnover-source', provenanceText(companyRegistry.turnoverSource, companyTurnover, companyRegistry.turnoverPeriod ? 'période ' + companyRegistry.turnoverPeriod : null));
+  setText('company-naf', naf);
+  setText('company-naf-source', provenanceText(siren ? 'registre_public_insee' : null, naf));
   setText('company-url', a.url);
   setText('company-id', a.id || a.scan_id);
   setText('urgent-action', summary.keyUrgentAction || 'Aucune action prioritaire fournie dans le résultat.');
