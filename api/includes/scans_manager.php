@@ -101,7 +101,7 @@ function record_scan($url, $type_scan = 'diagnostic', $resultat_ia = null, $type
 
     $scanId = 'scan_' . gmdate('Ymd_His') . '_' . bin2hex(random_bytes(8));
     $host = parse_url($url, PHP_URL_HOST) ?: $url;
-    $domain = strtolower(preg_replace('/^www\\./i', '', trim($host)));
+    $domain = strtolower(preg_replace('/^www\./i', '', trim($host)));
     if ($domain === '') $domain = 'domaine-inconnu.com';
 
     $projetsFile = dirname(__DIR__, 2) . '/data/projets.json';
