@@ -148,15 +148,13 @@ if (empty($topClaims)) {
 // Répartition sectorielle dynamique basée exclusivement sur la base de données réelle
 $sectors = [];
 try {
-    $sectorRows = $db->query("
-        SELECT c.sector as sector_name, COUNT(a.id) as audits_count, AVG(a.score) as avg_score
+    $sectorSql = "SELECT c.sector as sector_name, COUNT(a.id) as audits_count, AVG(a.score) as avg_score
         FROM cl_audits a
         JOIN cl_companies c ON a.company_id = c.id
-        WHERE c.sector IS NOT NULL AND c.sector != ''
-        ' . ($scopeConditions ? 'AND ' . implode(' AND ', $scopeConditions) : '') . '
-        GROUP BY c.sector
-        ORDER BY audits_count DESC
-    ")->fetchAll(PDO::FETCH_ASSOC);
+        WHERE c.sector IS NOT NULL AND c.sector != ''";
+    if ($scopeConditions) $sectorSql .= ' AND ' . implode(' AND ', $scopeConditions);
+    $sectorSql .= ' GROUP BY c.sector ORDER BY audits_count DESC';
+    $sectorRows = $db->query($sectorSql)->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($sectorRows as $sr) {
         $avg = round($sr['avg_score']);
@@ -204,7 +202,7 @@ include __DIR__ . '/includes/header.php';
                 <span>Analyse Stratégique • Pilotage RSE</span>
             </div>
             <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tighter italic">DASHBOARD <span class="text-emerald-500">PRO</span></h1>
-            <p class="text-slate-400 text-sm sm:text-base font-medium max-w-2xl mx-auto">Surveillance des allégations interdites, maturité sectorielle et mesure de l'empreinte carbone plateforme.</p>
+            <p class="text-slate-400 text-sm sm:text-base font-medium max-w-2xl mx-auto">Suivi des audits, des allégations détectées et de la maturité RSE du portefeuille.</p>
             
             <div class="flex flex-wrap items-center justify-center gap-4 pt-4 no-print">
                 <label class="flex items-center gap-2 bg-white/10 border border-white/15 px-3 py-2 rounded-2xl text-xs font-bold text-white">
