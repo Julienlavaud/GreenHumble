@@ -761,7 +761,7 @@ include __DIR__ . '/includes/header.php';
                 $missionText = $missionTitle . ' ' . (string)($mission['description'] ?? '');
                 $missionKey = (string)($mission['serviceKey'] ?? $mission['id'] ?? '');
                 $recommended = ($kitOfferKey !== '' && $kitOfferKey === $missionKey)
-                    || ($kitOfferTitle !== '' && mb_strtolower($kitOfferTitle, 'UTF-8') === mb_strtolower($missionTitle, 'UTF-8'));
+                    || ($kitOfferTitle !== '' && strcasecmp($kitOfferTitle, $missionTitle) === 0);
                 if (!$recommended && $scanSignalText !== '') {
                     foreach ($missionRules as $rule) {
                         $triggered = false;
@@ -831,7 +831,7 @@ include __DIR__ . '/includes/header.php';
                                 <?php endif; ?>
                             </div>
                             <?php
-                            $copyText = 'Offre Climat Local : ' . $missionTitle . ' — Budget indicatif : ' . (string)($mission['defaultBudget'] ?? '') . '. ' . (string)($mission['description'] ?? '');
+                            $copyText = 'Offre Climat Local : ' . (string)($mission['serviceTitle'] ?? '') . ' — Budget indicatif : ' . (string)($mission['defaultBudget'] ?? '') . '. ' . (string)($mission['description'] ?? '');
                             ?>
                             <button type="button" class="mission-copy-btn mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-xs font-bold text-white transition hover:bg-emerald-800" data-copy="<?php echo htmlspecialchars($copyText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
                                 <span>Copier dans le devis</span><span aria-hidden="true">↗</span>
