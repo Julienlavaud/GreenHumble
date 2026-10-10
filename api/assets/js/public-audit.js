@@ -64,7 +64,8 @@
         const message = data.error || data.message || (response.status === 503
           ? 'L’analyse n’a pas pu être finalisée. Vérifiez la configuration du service puis réessayez.'
           : 'Le pré-diagnostic n’a pas abouti. Vérifiez l’adresse du site puis réessayez.');
-        throw new Error(message);
+        const details = [data.summary, data.diagnosticCode ? 'Référence technique : ' + data.diagnosticCode : ''].filter((item) => typeof item === 'string' && item.trim() && item.trim() !== message);
+        throw new Error([message, ...details].join(' '));
       }
       activeAuditRef = typeof data.id === 'string' && /^aud_[A-Za-z0-9_-]{8,80}$/.test(data.id) ? data.id : '';
       const rawScore = data.riskScore ?? data.score;
