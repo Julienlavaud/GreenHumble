@@ -1097,12 +1097,17 @@ async function syncState(type, data, isBatch = false) {
 }
 
 // --- Dispatcher de Sauvegarde par Onglet ---
-function saveTab(tab) {
-    if (tab === 'agency') { saveAgency().then(async (saved) => { if (saved) await saveTeam(false); }); }
-    else if (tab === 'missions') saveMissions();
-    else if (tab === 'legal') saveLegal();
-    else if (tab === 'scanner') saveScanner();
-    else if (tab === 'team') saveTeam();
+async function saveTab(tab) {
+    if (tab === 'agency') {
+        const saved = await saveAgency();
+        if (saved) return saveTeam(false);
+        return false;
+    }
+    if (tab === 'missions') return saveMissions();
+    if (tab === 'legal') return saveLegal();
+    if (tab === 'scanner') return saveScanner();
+    if (tab === 'team') return saveTeam();
+    return false;
 }
 
 function saveAgency() {
@@ -1115,21 +1120,50 @@ function saveAgency() {
     return syncState('agency', appState.agency);
 }
 
-function saveMissions() {
-    const items = [];
-    document.querySelectorAll('#missions-container > .mission-card').forEach((c, i) => {
-        items.push({
-            id: c.dataset.id || 'm_' + Date.now() + i,
-            isActive: c.querySelector('.m-active').checked,
-            serviceTitle: c.querySelector('.m-title').value,
-            description: c.querySelector('.m-desc').value,
-            defaultBudget: c.querySelector('.m-budget').value,
-            subsidyAmount: c.querySelector('.m-sub').value,
-            serviceKey: 'key_' + i
-        });
+async 
+// Keep the compact service summaries in sync while editing their expanded fields.
+document.querySelectorAll('#missions-container > .mission-card').forEach(card => {
+    const title = card.querySelector('.m-title');
+    const description = card.querySelector('.m-desc');
+    const active = card.querySelector('.m-active');
+    const summaryTitle = card.querySelector('.m-summary-title');
+    const summaryDescription = card.querySelector('.m-summary-desc');
+    const summaryStatus = card.querySelector('.m-summary-status');
+    title?.addEventListener('input', () => { if (summaryTitle) summaryTitle.textContent = title.value.trim() || 'Métier sans titre'; });
+    description?.addEventListener('input', () => { if (summaryDescription) summaryDescription.textContent = description.value.trim() || 'Cliquez pour compléter la description, le budget et les aides.'; });
+    active?.addEventListener('change', () => {
+        if (!summaryStatus) return;
+        summaryStatus.textContent = active.checked ? 'Actif' : 'Inactif';
+        summaryStatus.classList.toggle('bg-emerald-50', active.checked);
+        summaryStatus.classList.toggle('text-emerald-700', active.checked);
+        summaryStatus.classList.toggle('bg-slate-100', !active.checked);
+        summaryStatus.classList.toggle('text-slate-600', !active.checked);
     });
+});
+
+function saveMissions() {
+    const cards = Array.from(document.querySelectorAll('#missions-container > .mission-card'));
+    const items = [];
+    for (const card of cards) {
+        const title = card.querySelector('.m-title')?.value.trim() || '';
+        if (!title) {
+            card.open = true;
+            card.querySelector('.m-title')?.focus();
+            alert('Chaque métier doit avoir un titre avant la sauvegarde.');
+            return false;
+        }
+        items.push({
+            id: card.dataset.id || 'mission_' + Date.now() + '_' + items.length,
+            serviceKey: card.dataset.serviceKey || 'service_' + (card.dataset.id || Date.now() + '_' + items.length),
+            isActive: Boolean(card.querySelector('.m-active')?.checked),
+            serviceTitle: title,
+            description: card.querySelector('.m-desc')?.value.trim() || '',
+            defaultBudget: card.querySelector('.m-budget')?.value.trim() || '',
+            subsidyAmount: card.querySelector('.m-sub')?.value.trim() || ''
+        });
+    }
     appState.serviceOpps = items;
-    syncState('serviceOpps', appState.serviceOpps);
+    return syncState('serviceOpps', items);
 }
 
 function saveLegal() {
@@ -1221,23 +1255,19 @@ function generatePass(btn) {
 }
 
 // --- Gestion des listes (Add/Delete) ---
-function addItem(type) {
+async function addItem(type) {
+    const id = (type === 'missions' ? 'mission_' : type === 'legal' ? 'leg_' : 'collab_') + Date.now();
     if (type === 'missions') {
-        appState.serviceOpps.unshift({ id: 'm_'+Date.now(), serviceTitle: 'Nouvelle Mission', description: '', defaultBudget: '0 €', subsidyAmount: '0 €', isActive: true });
+        if (!Array.isArray(appState.serviceOpps)) appState.serviceOpps = [];
+        appState.serviceOpps.unshift({ id, serviceKey: 'service_' + id, serviceTitle: 'Nouveau métier', description: '', defaultBudget: '', subsidyAmount: '', isActive: true });
     } else if (type === 'legal') {
-        appState.legalTexts.unshift({ id: 'leg_'+Date.now(), title: 'Nouveau Référentiel', description: '', weight: 5, isActive: true });
+        appState.legalTexts.unshift({ id, title: 'Nouveau Référentiel', description: '', weight: 5, isActive: true });
     } else if (type === 'team') {
-        const newId = 'collab_'+Date.now();
-        appState.collaborators.unshift({ id: newId, name: 'Nouveau Membre', email: '', role: 'Consultant', avatarColor: 'bg-slate-700' });
+        appState.collaborators.unshift({ id, name: 'Nouveau Membre', email: '', role: 'Consultant', avatarColor: 'bg-slate-700' });
     }
-    // Simple way to refresh UI without complex JS rendering: reload after push (since we use PHP rendering)
-    // Or we could save first then reload. Better: save then reload.
-    const p = (type === 'team') 
-        ? syncState('collaborators', appState.collaborators)
-        : syncState(type === 'missions' ? 'serviceOpps' : 'legalTexts', 
-                    type === 'missions' ? appState.serviceOpps : appState.legalTexts);
-
-    p.then((saved) => { if (saved) window.location.reload(); });
+    const key = type === 'missions' ? 'serviceOpps' : type === 'legal' ? 'legalTexts' : 'collaborators';
+    const saved = await syncState(key, appState[key]);
+    if (saved) window.location.reload();
 }
 
 function deleteItem(type, idx) {
@@ -1253,18 +1283,19 @@ function deleteItem(type, idx) {
 
 // --- CSV Handlers (Unified) ---
 function exportTabCSV(tab) {
-    let data = [];
-    let csv = "";
-    let filename = `climat_local_${tab}.csv`;
-
+    let rows = [];
+    let filename = 'climat_local_' + tab + '.csv';
+    const csvCell = value => '"' + String(value ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ') + '"';
     if (tab === 'missions') {
-        data = appState.serviceOpps;
-        csv = "ID;Titre;Budget;Subvention;Description;Actif\n";
-        data.forEach(m => csv += `"${m.id}";"${m.serviceTitle}";"${m.defaultBudget}";"${m.subsidyAmount}";"${m.description.replace(/"/g, '""')}";"${m.isActive?1:0}"\n`);
+        rows = [['ID', 'Clé métier', 'Titre', 'Budget', 'Subvention', 'Description', 'Actif'],
+            ...(Array.isArray(appState.serviceOpps) ? appState.serviceOpps : []).map(m => [
+                m.id, m.serviceKey, m.serviceTitle, m.defaultBudget, m.subsidyAmount, m.description, m.isActive ? 1 : 0
+            ])];
     } else if (tab === 'legal') {
-        data = appState.legalTexts;
-        csv = "ID;Titre;Poids;Description;Actif\n";
-        data.forEach(l => csv += `"${l.id}";"${l.title}";"${l.weight}";"${l.description.replace(/"/g, '""')}";"${l.isActive?1:0}"\n`);
+        rows = [['ID', 'Titre', 'Poids', 'Description', 'Actif'],
+            ...(Array.isArray(appState.legalTexts) ? appState.legalTexts : []).map(item => [
+                item.id, item.title, item.weight, item.description, item.isActive ? 1 : 0
+            ])];
     } else if (tab === 'texts') {
         window.location.href = '/api/admin/export.php?download=texts';
         return;
@@ -1274,13 +1305,22 @@ function exportTabCSV(tab) {
     } else if (tab === 'audits') {
         window.location.href = '/api/admin/export.php';
         return;
+    } else {
+        alert('L’export CSV n’est pas disponible pour cette page.');
+        return;
     }
 
+    const csv = '\uFEFF' + rows.map(row => row.map(csvCell).join(';')).join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
     link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
     link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 // --- Audits & DB Management ---
@@ -1676,7 +1716,7 @@ async function deleteScanCard(scanId) {
         box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.1);
     }
     
-    .mission-card:hover .m-active, .legal-row:hover .l-active {
+    .mission-card > summary::-webkit-details-marker { display: none; }\n    .mission-card[open] .mission-chevron { transform: rotate(180deg); }\n    .mission-card:hover .m-active, .legal-row:hover .l-active {
         transform: scale(1.1);
     }
 </style>
