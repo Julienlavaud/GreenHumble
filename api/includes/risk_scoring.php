@@ -21,7 +21,8 @@ function gh_calculate_risk_assessment(array $claims): array {
         $nature = 8;
         if (preg_match('/(neutre|neutralit|z[eé]ro carbone|100\s*%|sans impact|totalement|garanti)/u', $term)) $nature = 24;
         elseif (preg_match('/(durable|[eé]cologique|responsable|naturel|vert|biod[eé]gradable)/u', $term)) $nature = 16;
-        $precision = preg_match('/(100\s*%|z[eé]ro|sans |totalement|garanti|toujours|jamais)/u', $term) ? 20 : (mb_strlen($term) > 24 ? 12 : 6);
+        $precisionText = $term . ' ' . strtolower((string)($claim['quoteInText'] ?? ''));
+        $precision = preg_match('/(100\s*%|z[eé]ro|sans |totalement|garanti|toujours|jamais|tous nos|toute la gamme)/u', $precisionText) ? 20 : (mb_strlen($term) > 24 ? 12 : 6);
         $quote = strtolower((string)($claim['quoteInText'] ?? ''));
         $reach = preg_match('/(tous nos|toute la gamme|tous les produits|l’ensemble de|100\s*%)/u', $quote) ? 18 : 8;
         $evidence = $missing ? 0 : ($status === 'substantiated' ? 0 : 14);
