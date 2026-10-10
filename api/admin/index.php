@@ -728,7 +728,7 @@ include __DIR__ . '/../includes/header.php';
                                     <span class="m-summary-title block truncate text-base font-bold text-slate-900"><?php echo htmlspecialchars($missionTitle ?: 'Métier sans titre', ENT_QUOTES, 'UTF-8'); ?></span>
                                     <span class="m-summary-desc mt-1 block truncate text-sm text-slate-500"><?php echo htmlspecialchars(trim((string)($m['description'] ?? '')) ?: 'Cliquez pour compléter la description, le budget et les aides.', ENT_QUOTES, 'UTF-8'); ?></span>
                                 </span>
-                                <span class="hidden shrink-0 rounded-full px-3 py-1 text-xs font-semibold sm:inline-flex <?php echo !empty($m['isActive']) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'; ?>"><?php echo !empty($m['isActive']) ? 'Actif' : 'Inactif'; ?></span>
+                                <span class="m-summary-status shrink-0 rounded-full px-3 py-1 text-xs font-semibold <?php echo !empty($m['isActive']) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'; ?>"><?php echo !empty($m['isActive']) ? 'Actif' : 'Inactif'; ?></span>
                                 <span class="mission-chevron shrink-0 text-slate-400 transition-transform" aria-hidden="true">⌄</span>
                             </summary>
                             <div class="mission-editor border-t border-slate-100 px-5 py-5 sm:px-6">
