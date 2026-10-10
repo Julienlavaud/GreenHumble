@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/risk_scoring.php';
 
 /** Normalise les preuves sans transformer une suspicion en infraction établie. */
 function gh_normalize_claims($claims, string $sourceText = '', string $sourceUrl = ''): array {
@@ -158,23 +159,21 @@ function gh_validate_ia_response($parsed, string $domain, string $sourceText = '
         ]);
     }
 
-    $score = max(0, min(100, (int)round((float)$rawScore)));
-    if ($score >= 75) $riskLevel = 'faible';
-    elseif ($score >= 55) $riskLevel = 'modere';
-    elseif ($score >= 35) $riskLevel = 'eleve';
-    else $riskLevel = 'critique';
+    $assessment = gh_calculate_risk_assessment($claims);
+    $score = $assessment['riskScore'];
+    $riskLevel = $assessment['riskLevel'];
 
     $clientSummary = is_array($parsed['clientSummary'] ?? null) ? $parsed['clientSummary'] : [
         'headline' => "Résultat d'analyse à examiner : {$domain}",
-        'riskVerdict' => "Score calculé : {$score}/100. Ce score ne constitue pas, à lui seul, une conclusion juridique.",
+        'riskVerdict' => $score === null ? 'Aucun signal vérifié à scorer; cela ne démontre ni conformité ni infraction.' : "Risque observé : {$score}/100 (confiance {$assessment['confidence']}%). Ce score ne constitue pas une conclusion juridique.",
         'keyUrgentAction' => "Vérifier les allégations et leurs justificatifs avant toute conclusion.",
         'immediateRisks' => [], 'stepsToCompliance' => []
     ];
     $kit = $parsed['commercialProspectingKit'] ?? ($parsed['prospection'] ?? null);
-    $kit = gh_normalize_commercial_kit($kit, $claims, $score, $serviceCatalog);
+    $kit = gh_normalize_commercial_kit($kit, $claims, (int)($score ?? 50), $serviceCatalog);
 
     return array_merge($parsed, [
-        'analysisComplete' => true, 'riskScore' => $score, 'riskLevel' => $riskLevel,
+        'analysisComplete' => true, 'riskScore' => $score, 'riskLevel' => $riskLevel, 'riskAssessment' => $assessment,
         'detectedClaims' => $claims, 'clientSummary' => $clientSummary,
         'commercialProspectingKit' => $kit
     ]);
