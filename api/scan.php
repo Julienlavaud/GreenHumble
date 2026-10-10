@@ -46,6 +46,19 @@ try {
     }
 } catch (Throwable $e) {}
 
+$latestAuditIdByDomain = [];
+try {
+    $sqlAudits = $db->query("SELECT id, clean_url, url FROM cl_audits ORDER BY analyzedAt DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($sqlAudits as $sqlAudit) {
+        $cleanValue = trim((string)($sqlAudit['clean_url'] ?? ''));
+        $auditHost = parse_url($cleanValue, PHP_URL_HOST) ?: parse_url((string)($sqlAudit['url'] ?? ''), PHP_URL_HOST);
+        $auditDomain = strtolower(preg_replace('/^www\\./i', '', trim((string)($auditHost ?: $cleanValue))));
+        if ($auditDomain !== '' && !isset($latestAuditIdByDomain[$auditDomain])) {
+            $latestAuditIdByDomain[$auditDomain] = (int)$sqlAudit['id'];
+        }
+    }
+} catch (Throwable $e) {}
+
 $canonicalCompanies = [];
 try {
     $canonicalCompanies = $db->query("SELECT c.id, c.name, c.siren, c.website FROM cl_companies c WHERE c.siren IS NULL OR c.siren = '' OR c.id = (SELECT MIN(c2.id) FROM cl_companies c2 WHERE c2.siren = c.siren) ORDER BY c.name ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -113,7 +126,7 @@ include __DIR__ . '/includes/header.php';
                 <button onclick="openCreateListModal()" class="px-5 py-2.5 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all border-none cursor-pointer">
                     + Créer une liste
                 </button>
-                <a href="/api/audit.php" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all">
+                <a href="/api/admin/audit.php" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all">
                     Audit & Prospection →
                 </a>
             </div>
@@ -203,6 +216,7 @@ include __DIR__ . '/includes/header.php';
                         </button>
                     </div>
                 </form>
+                <p id="audit-scan-feedback" class="hidden mt-3 rounded-xl px-4 py-3 text-sm" role="status" aria-live="polite"></p>
             </div>
         </div>
 
@@ -292,6 +306,10 @@ include __DIR__ . '/includes/header.php';
                     if ($scCompanyName === '') $scCompanyName = $sc['_dashboard_domain'];
                     $historyCount = $scanHistoryCounts[$sc['_dashboard_company_key'] ?? ('domain:' . $sc['_dashboard_domain'])] ?? 1;
                     $scType = $sc['type_scan'] ?? 'diagnostic';
+                    $scAuditRef = $latestAuditIdByDomain[$sc['_dashboard_domain']] ?? null;
+                    if ($scAuditRef === null && preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', (string)($scRes['auditId'] ?? ''))) {
+                        $scAuditRef = (string)$scRes['auditId'];
+                    }
                 ?>
                     <div class="bg-[#121212] p-5 rounded-2xl border border-white/10 space-y-4 flex flex-col justify-between">
                         <div class="space-y-3">
@@ -315,8 +333,17 @@ include __DIR__ . '/includes/header.php';
                             </div>
                         </div>
 
-                        <!-- Actions : Ajouter à une liste / Assignation Groupe -->
+                        <!-- Actions : dossier d’analyse, listes et groupes -->
                         <div class="pt-3 border-t border-white/10 flex flex-wrap gap-2 items-center justify-between">
+                            <?php if ($scAuditRef !== null): ?>
+                                <a href="/api/analyse.php?id=<?php echo rawurlencode((string)$scAuditRef); ?>" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg">
+                                    📁 Ouvrir le dossier
+                                </a>
+                            <?php else: ?>
+                                <span class="px-3 py-1.5 bg-white/5 text-[#AAAAAA] text-xs rounded-lg" title="Aucune fiche d’analyse SQL ou référence d’audit disponible pour ce scan.">
+                                    Dossier indisponible
+                                </span>
+                            <?php endif; ?>
                             <button onclick="addScanToListPrompt('<?php echo htmlspecialchars($sc['id']); ?>')" class="px-3 py-1.5 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white text-xs font-bold rounded-lg border-none cursor-pointer">
                                 + Ajouter à une liste
                             </button>
@@ -490,6 +517,50 @@ async function scanSiteFromList(button, listId, siteId, url) {
         button.textContent = original;
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const scanForm = document.getElementById('auditScanForm');
+    const feedback = document.getElementById('audit-scan-feedback');
+    if (scanForm) {
+        scanForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const button = event.submitter || scanForm.querySelector('button[type="submit"]');
+            const originalLabel = button ? button.textContent : '';
+            const showFeedback = (message, isError = false) => {
+                if (!feedback) return;
+                feedback.textContent = message;
+                feedback.classList.remove('hidden', 'bg-rose-950/50', 'text-rose-100', 'border', 'border-rose-400/30', 'bg-emerald-950/40', 'text-emerald-100', 'border-emerald-400/30');
+                feedback.classList.add('border');
+                feedback.classList.add(...(isError
+                    ? ['bg-rose-950/50', 'text-rose-100', 'border-rose-400/30']
+                    : ['bg-emerald-950/40', 'text-emerald-100', 'border-emerald-400/30']));
+                feedback.classList.toggle('hidden', !message);
+            };
+            if (!scanForm.reportValidity()) return;
+            if (button) { button.disabled = true; button.textContent = 'Analyse en cours…'; }
+            showFeedback('Analyse en cours. Vous serez redirigé vers le dossier dès son enregistrement.');
+            try {
+                const response = await fetch('/api/audit', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' },
+                    body: new FormData(scanForm)
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result.analysisComplete === false || result.status === 'analysis_incomplete' ||
+                    result.status === 'storage_unavailable' || result.error || !result.id) {
+                    throw new Error(result.error || result.message || 'Le scan n’a pas abouti ou son résultat n’a pas été enregistré.');
+                }
+                const dossierId = result.analysisId || result.id;
+                if (button) button.textContent = 'Dossier enregistré, ouverture…';
+                window.location.assign('/api/analyse.php?id=' + encodeURIComponent(String(dossierId)));
+            } catch (error) {
+                showFeedback(error instanceof Error ? error.message : 'Échec du scan. Réessayez.', true);
+                if (button) { button.disabled = false; button.textContent = originalLabel; }
+            }
+        });
+    }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     const company = document.getElementById('audit-company');

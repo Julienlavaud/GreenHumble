@@ -179,7 +179,7 @@ function renderAudit(a) {
   setText('company-url', a.url);
   setText('company-id', a.id || a.scan_id);
   setText('urgent-action', summary.keyUrgentAction || 'Aucune action prioritaire fournie dans le résultat.');
-  renderGenericList('claims-list', a.detectedClaims || [], 'Aucune allégation détectée ou enregistrée dans le résultat.', ['claim','text','claimText','allegation','title','label'], ['evidence','proof','justification','riskLevel','severity','explanation','recommendation','source']);
+  renderGenericList('claims-list', a.detectedClaims || a.claims || a.allegations || (a.resultat_ia && (a.resultat_ia.detectedClaims || a.resultat_ia.claims || a.resultat_ia.allegations)) || [], 'Aucune allégation détectée ou enregistrée dans le résultat.', ['claim','text','claimText','allegation','title','label'], ['evidence','proof','justification','riskLevel','severity','explanation','recommendation','source']);
   renderSteps(summary.stepsToCompliance || a.recommendations || (a.resultat_ia && a.resultat_ia.recommendations));
   renderCommercial(a.commercialProspectingKit || (a.resultat_ia && a.resultat_ia.prospection));
   const risks = summary.immediateRisks;
