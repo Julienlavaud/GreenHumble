@@ -6,6 +6,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/cms.php';
 require_once __DIR__ . '/includes/app_state.php';
+require_once __DIR__ . '/includes/company_data_provenance.php';
 require_login();
 
 if (isset($_GET['id']) && preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', (string)$_GET['id'])) {
@@ -258,8 +259,8 @@ if (!$audit) {
         'score' => 62,
         'riskLevel' => 'modere',
         'company_name' => 'Marque Éthique SAS',
-        'siren' => '892145678',
-        'sector' => 'Textile & Mode Durable',
+        'siren' => null,
+        'sector' => null,
         'analyzedAt' => date('Y-m-d H:i:s'),
         'summary' => 'Audit complet de conformité environnementale selon la directive européenne EmpCO (UE 2024/825) et les exigences CSRD/AGEC.',
         'financial_impact' => 'Risque de sanctions DGCCRF pouvant atteindre 75 000 € en l\'absence de bilan carbone vérifié.',
@@ -485,9 +486,19 @@ include __DIR__ . '/includes/header.php';
         <div class="space-y-8">
             <!-- Profil & Identité Entreprise (Nombre de salariés, CA & Secteur) -->
             <?php
-            $displayHeadcount = !empty($audit['comp_headcount']) ? $audit['comp_headcount'] : (!empty($audit['headcount']) ? $audit['headcount'] : '25 salariés');
-            $displayTurnover = !empty($audit['comp_turnover']) ? $audit['comp_turnover'] : (!empty($audit['turnover']) ? $audit['turnover'] : '4.5 M€');
-            $displaySector = !empty($audit['sector']) ? $audit['sector'] : 'Services & Conseil B2B';
+            $auditPayload = gh_company_raw_audit_payload($audit);
+            $companyProvenance = is_array($auditPayload['companyRegistry'] ?? null) ? $auditPayload['companyRegistry'] : [];
+            $headcountValue = $auditPayload['entreprise_salaries'] ?? ($audit['headcount'] ?? ($audit['comp_headcount'] ?? null));
+            $turnoverValue = $auditPayload['entreprise_ca'] ?? ($audit['turnover'] ?? ($audit['comp_turnover'] ?? null));
+            $sectorValue = $auditPayload['entreprise_secteur'] ?? ($audit['sector'] ?? null);
+            $displayHeadcount = trim((string)$headcountValue) !== '' ? (string)$headcountValue : 'Non communiqué';
+            $displayTurnover = trim((string)$turnoverValue) !== '' ? (string)$turnoverValue : 'Non communiqué';
+            $displaySector = trim((string)$sectorValue) !== '' ? (string)$sectorValue : 'Non renseigné';
+            $headcountSource = gh_company_provenance_label($companyProvenance['headcountSource'] ?? null, $displayHeadcount !== 'Non communiqué');
+            $turnoverSource = gh_company_provenance_label($companyProvenance['turnoverSource'] ?? null, $displayTurnover !== 'Non communiqué');
+            $sectorSource = gh_company_provenance_label($companyProvenance['sectorSource'] ?? null, $displaySector !== 'Non renseigné');
+            $headcountYear = trim((string)($companyProvenance['headcountYear'] ?? ''));
+            $turnoverPeriod = trim((string)($companyProvenance['turnoverPeriod'] ?? ''));
             ?>
             <div id="section_company_profile" class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
@@ -505,6 +516,7 @@ include __DIR__ . '/includes/header.php';
                         <div>
                             <span class="text-[10px] font-black uppercase tracking-wider text-emerald-800">Nombre de salariés</span>
                             <div class="text-base font-black text-slate-900"><?php echo htmlspecialchars($displayHeadcount); ?></div>
+                            <div class="text-[10px] text-slate-500">Source : <?php echo htmlspecialchars($headcountSource); ?><?php echo $headcountYear !== '' ? ' · année ' . htmlspecialchars($headcountYear) : ''; ?></div>
                         </div>
                     </div>
 
@@ -513,6 +525,7 @@ include __DIR__ . '/includes/header.php';
                         <div>
                             <span class="text-[10px] font-black uppercase tracking-wider text-teal-800">Chiffre d'Affaires (CA)</span>
                             <div class="text-base font-black text-slate-900"><?php echo htmlspecialchars($displayTurnover); ?></div>
+                            <div class="text-[10px] text-slate-500">Source : <?php echo htmlspecialchars($turnoverSource); ?><?php echo $turnoverPeriod !== '' ? ' · période ' . htmlspecialchars($turnoverPeriod) : ''; ?></div>
                         </div>
                     </div>
 
@@ -521,6 +534,7 @@ include __DIR__ . '/includes/header.php';
                         <div>
                             <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Secteur d'activité</span>
                             <div class="text-base font-black text-slate-900 truncate max-w-[200px]"><?php echo htmlspecialchars($displaySector); ?></div>
+                            <div class="text-[10px] text-slate-500">Source : <?php echo htmlspecialchars($sectorSource); ?></div>
                         </div>
                     </div>
                 </div>
