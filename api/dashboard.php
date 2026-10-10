@@ -159,16 +159,13 @@ try {
     foreach ($sectorRows as $sr) {
         $avg = round($sr['avg_score']);
         $risk = 'Faible';
-        $color = 'bg-teal-500';
-        if ($avg < 50) {
-            $risk = 'Critique';
-            $color = 'bg-red-500';
-        } elseif ($avg < 65) {
+        $color = 'bg-emerald-500';
+        if ($avg >= 70) {
             $risk = 'Élevé';
-            $color = 'bg-amber-500';
-        } elseif ($avg < 80) {
+            $color = 'bg-rose-500';
+        } elseif ($avg >= 45) {
             $risk = 'Modéré';
-            $color = 'bg-blue-500';
+            $color = 'bg-amber-500';
         }
         
         $sectors[] = [
@@ -233,15 +230,15 @@ include __DIR__ . '/includes/header.php';
     <!-- 4 Widgets KPI Principaux -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Score Moyen RSE</span>
+            <span class="text-xs font-bold uppercase text-slate-400 tracking-wider">Risque observé moyen</span>
             <div class="flex items-baseline space-x-2 mt-2">
                 <span class="text-4xl font-black text-emerald-800"><?php echo $avgScore; ?></span>
                 <span class="text-sm text-slate-400">/100</span>
             </div>
             <div class="mt-3 w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div class="bg-emerald-600 h-full rounded-full" style="width: <?php echo min(100, $avgScore); ?>%"></div>
+                <div class="h-full rounded-full <?php echo $avgScore >= 70 ? 'bg-rose-600' : ($avgScore >= 45 ? 'bg-amber-500' : 'bg-emerald-600'); ?>" style="width: <?php echo min(100, $avgScore); ?>%"></div>
             </div>
-            <p class="text-[11px] text-slate-500 mt-2">Conformité globale du portefeuille</p>
+            <p class="text-[11px] text-slate-500 mt-2">Score de risque observé · une note élevée indique davantage de signaux à vérifier</p>
         </div>
 
         <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
@@ -423,7 +420,7 @@ include __DIR__ . '/includes/header.php';
                 <div class="space-y-3 pt-2 text-xs">
                     <div class="p-3.5 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-between">
                         <div>
-                            <strong class="text-red-900 block font-bold">Risque Critique & Allégations Interdites</strong>
+                            <strong class="text-red-900 block font-bold">Signaux de risque élevé ou critique</strong>
                             <span class="text-red-700 text-[11px]">Infraction directe EmpCO Art. 2 (Neutralité compensée)</span>
                         </div>
                         <span class="text-lg font-black text-red-800"><?php echo $riskCounts['critique'] + $riskCounts['eleve']; ?></span>
