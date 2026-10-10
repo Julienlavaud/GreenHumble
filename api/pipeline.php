@@ -5,6 +5,7 @@ require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/cms.php';
+require_once __DIR__ . '/includes/company_data_provenance.php';
 require_login();
 
 $db = get_db_connection();
@@ -202,7 +203,19 @@ include __DIR__ . '/includes/header.php';
                             Aucun dossier à cette étape
                         </div>
                     <?php else: ?>
-                        <?php foreach ($col['items'] as $item): ?>
+                        <?php foreach ($col['items'] as $item):
+                            $pipelineAuditPayload = gh_company_raw_audit_payload($item);
+                            $pipelineCompanyProvenance = is_array($pipelineAuditPayload['companyRegistry'] ?? null) ? $pipelineAuditPayload['companyRegistry'] : [];
+                            $pipelineHeadcount = $pipelineAuditPayload['entreprise_salaries'] ?? ($item['headcount'] ?? null);
+                            $pipelineTurnover = $pipelineAuditPayload['entreprise_ca'] ?? ($item['turnover'] ?? null);
+                            $pipelineSector = $pipelineAuditPayload['entreprise_secteur'] ?? ($item['sector'] ?? null);
+                            $pipelineHeadcountLabel = trim((string)$pipelineHeadcount) !== '' ? (string)$pipelineHeadcount : 'Non communiqué';
+                            $pipelineTurnoverLabel = trim((string)$pipelineTurnover) !== '' ? (string)$pipelineTurnover : 'Non communiqué';
+                            $pipelineSectorLabel = trim((string)$pipelineSector) !== '' ? (string)$pipelineSector : 'Non renseigné';
+                            $pipelineHeadcountSource = gh_company_provenance_label($pipelineCompanyProvenance['headcountSource'] ?? null, $pipelineHeadcountLabel !== 'Non communiqué');
+                            $pipelineTurnoverSource = gh_company_provenance_label($pipelineCompanyProvenance['turnoverSource'] ?? null, $pipelineTurnoverLabel !== 'Non communiqué');
+                            $pipelineSectorSource = gh_company_provenance_label($pipelineCompanyProvenance['sectorSource'] ?? null, $pipelineSectorLabel !== 'Non renseigné');
+                        ?>
                             <div class="p-4 rounded-2xl border border-slate-200 bg-white hover:border-emerald-500 hover:shadow-md transition-all space-y-2.5">
                                 <div class="flex items-start justify-between gap-2">
                                     <span class="text-xs font-black text-slate-900">#<?php echo $item['id']; ?></span>
@@ -217,9 +230,14 @@ include __DIR__ . '/includes/header.php';
                                             <?php echo htmlspecialchars($item['company_name'] ?: preg_replace('#^https?://(www\.)?#i', '', $item['url'])); ?>
                                         </a>
                                     </h3>
-                                    <?php if (!empty($item['sector'])): ?>
-                                        <div class="text-[10px] text-slate-400"><?php echo htmlspecialchars($item['sector']); ?></div>
-                                    <?php endif; ?>
+                                    <div class="text-[10px] text-slate-500">
+                                        Secteur : <?php echo htmlspecialchars($pipelineSectorLabel, ENT_QUOTES, 'UTF-8'); ?>
+                                        <span class="text-slate-400">· <?php echo htmlspecialchars($pipelineSectorSource, ENT_QUOTES, 'UTF-8'); ?></span>
+                                    </div>
+                                    <div class="rounded-lg bg-slate-50 border border-slate-100 px-2.5 py-2 text-[10px] text-slate-600 space-y-1">
+                                        <div>Effectif : <strong><?php echo htmlspecialchars($pipelineHeadcountLabel, ENT_QUOTES, 'UTF-8'); ?></strong> <span class="text-slate-400">· <?php echo htmlspecialchars($pipelineHeadcountSource, ENT_QUOTES, 'UTF-8'); ?></span></div>
+                                        <div>CA : <strong><?php echo htmlspecialchars($pipelineTurnoverLabel, ENT_QUOTES, 'UTF-8'); ?></strong> <span class="text-slate-400">· <?php echo htmlspecialchars($pipelineTurnoverSource, ENT_QUOTES, 'UTF-8'); ?></span></div>
+                                    </div>
                                 </div>
 
                                 <div class="text-[11px] font-mono text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg truncate">
