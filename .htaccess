@@ -23,6 +23,9 @@ RewriteRule ^admin/?$ api/admin/index.php [L,QSA]
 RewriteRule ^admin/(dashboard|pipeline|scan|analyse|audit-report)\.php$ api/$1.php [L,QSA]
 RewriteRule ^admin/(.*)$ api/admin/$1 [L,QSA]
 
+# Route explicite des préférences de style avant le routeur générique.
+RewriteRule ^api/user-style/?$ api/admin/user_style.php [L,QSA]
+
 # Si la requête est adressée à l'API et n'est pas un fichier statique réel
 RewriteCond %{REQUEST_URI} ^/api/
 RewriteCond %{REQUEST_FILENAME} !-f
