@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Installation ClimatLocal - Étape 2</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/api/assets/css/tailwind-compiled.css?v=1">
 </head>
 <body class="min-h-full flex items-center justify-center p-6">
     <div class="max-w-xl w-full bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-xl">
