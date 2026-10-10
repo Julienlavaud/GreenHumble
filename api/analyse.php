@@ -10,32 +10,7 @@ require_once __DIR__ . '/includes/company_data_provenance.php';
 require_login();
 
 if (isset($_GET['id']) && preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', (string)$_GET['id'])) {
-    $publicAuditId = (string)$_GET['id'];
-    $storedPath = __DIR__ . '/../data/stored_audits.json';
-    $storedAuditsForRoute = is_file($storedPath) ? json_decode((string)@file_get_contents($storedPath), true) : [];
-    $publicAuditUrl = '';
-    if (is_array($storedAuditsForRoute)) {
-        foreach ($storedAuditsForRoute as $storedItem) {
-            if (is_array($storedItem) && (string)($storedItem['id'] ?? '') === $publicAuditId) {
-                $publicAuditUrl = trim((string)($storedItem['url'] ?? ''));
-                break;
-            }
-        }
-    }
-    $databaseAuditId = null;
-    if ($publicAuditUrl !== '') {
-        try {
-            $routeDb = get_db_connection();
-            $routeStmt = $routeDb->prepare('SELECT id FROM cl_audits WHERE url = ? ORDER BY id DESC LIMIT 1');
-            $routeStmt->execute([$publicAuditUrl]);
-            $databaseAuditId = $routeStmt->fetchColumn();
-        } catch (Throwable $e) {}
-    }
-    if ($databaseAuditId) {
-        header('Location: /api/analyse.php?id=' . rawurlencode((string)$databaseAuditId) . (isset($_GET['tab']) ? '&tab=' . rawurlencode((string)$_GET['tab']) : ''), true, 303);
-    } else {
-        header('Location: /api/audit-report.php?id=' . rawurlencode($publicAuditId), true, 303);
-    }
+    header('Location: /api/audit-report.php?id=' . rawurlencode((string)$_GET['id']), true, 303);
     exit;
 }
 
@@ -315,7 +290,6 @@ if ($audit && isset($audit['id'])) {
 // les outils historiques basés sur MySQL. Pour une URL déjà auditée, afficher les constats
 // du rapport canonique afin que les deux vues ne se contredisent pas.
 $reportAuditId = '';
-$websiteContacts = [];
 if ($audit && !empty($audit['url'])) {
     $canonicalUrl = strtolower(rtrim((string)$audit['url'], '/'));
     $storedPath = __DIR__ . '/../data/stored_audits.json';
@@ -325,7 +299,6 @@ if ($audit && !empty($audit['url'])) {
             if (!is_array($storedAudit) || empty($storedAudit['id']) || empty($storedAudit['url'])) continue;
             if (strtolower(rtrim((string)$storedAudit['url'], '/')) !== $canonicalUrl) continue;
             $reportAuditId = (string)$storedAudit['id'];
-            $websiteContacts = is_array($storedAudit['websiteContacts'] ?? null) ? $storedAudit['websiteContacts'] : [];
             $storedClaims = $storedAudit['detectedClaims'] ?? [];
             if (is_array($storedClaims)) {
                 $claims = array_map(static function ($claim) {
@@ -518,7 +491,6 @@ include __DIR__ . '/includes/header.php';
             $headcountValue = $auditPayload['entreprise_salaries'] ?? ($audit['headcount'] ?? ($audit['comp_headcount'] ?? null));
             $turnoverValue = $auditPayload['entreprise_ca'] ?? ($audit['turnover'] ?? ($audit['comp_turnover'] ?? null));
             $sectorValue = $auditPayload['entreprise_secteur'] ?? ($audit['sector'] ?? null);
-            $companySirenValue = $audit['siren'] ?? ($companyProvenance['siren'] ?? ($auditPayload['companyRegistry']['siren'] ?? null));
             $displayHeadcount = trim((string)$headcountValue) !== '' ? (string)$headcountValue : 'Non communiqué';
             $displayTurnover = trim((string)$turnoverValue) !== '' ? (string)$turnoverValue : 'Non communiqué';
             $displaySector = trim((string)$sectorValue) !== '' ? (string)$sectorValue : 'Non renseigné';
@@ -535,7 +507,7 @@ include __DIR__ . '/includes/header.php';
                         <h2 class="text-xl font-black text-slate-900 mt-0.5"><?php echo htmlspecialchars($audit['company_name'] ?? 'Entreprise'); ?></h2>
                     </div>
                     <span class="px-3 py-1 bg-slate-100 text-slate-800 rounded-full text-xs font-bold border border-slate-200">
-                        SIREN : <?php echo htmlspecialchars($companySirenValue ?: 'N/C', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>
+                        SIREN : <?php echo htmlspecialchars($audit['siren'] ?? 'N/C'); ?>
                     </span>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6">
@@ -567,28 +539,6 @@ include __DIR__ . '/includes/header.php';
                     </div>
                 </div>
             </div>
-            <?php
-            $claimCountForQuality = count($claims);
-            $claimQuotesForQuality = 0;
-            $claimSourcesForQuality = 0;
-            foreach ($claims as $qualityClaim) {
-                if (trim((string)($qualityClaim['quoteInText'] ?? '')) !== '') $claimQuotesForQuality++;
-                $qualitySource = trim((string)($qualityClaim['sourceUrl'] ?? $qualityClaim['source_url'] ?? $qualityClaim['pageUrl'] ?? ''));
-                $qualityScheme = strtolower((string)parse_url($qualitySource, PHP_URL_SCHEME));
-                if (filter_var($qualitySource, FILTER_VALIDATE_URL) && in_array($qualityScheme, ['http', 'https'], true)) $claimSourcesForQuality++;
-            }
-            $qualityLabel = $claimCountForQuality === 0 ? 'Aucun constat à contrôler' : ($claimSourcesForQuality === $claimCountForQuality && $claimQuotesForQuality === $claimCountForQuality ? 'Traçabilité complète' : (($claimSourcesForQuality > 0 || $claimQuotesForQuality > 0) ? 'Traçabilité partielle' : 'Traçabilité à compléter'));
-            ?>
-            <section class="rounded-3xl border border-indigo-100 bg-indigo-50 p-6 sm:p-8 shadow-sm">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <span class="text-xs font-bold uppercase tracking-wider text-indigo-800">Qualité observable de l’analyse IA</span>
-                        <h2 class="mt-1 text-xl font-black text-slate-900"><?php echo htmlspecialchars($qualityLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></h2>
-                        <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-700"><?php echo (int)$claimCountForQuality; ?> allégation(s), <?php echo (int)$claimQuotesForQuality; ?> citation(s) enregistrée(s), <?php echo (int)$claimSourcesForQuality; ?> page(s) source liée(s). Cet indicateur mesure la traçabilité sauvegardée, pas une garantie d’exactitude.</p>
-                    </div>
-                    <?php if ($reportAuditId !== ''): ?><a class="rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-bold text-indigo-900 hover:bg-indigo-100" href="/api/audit-report.php?id=<?php echo rawurlencode($reportAuditId); ?>">Voir le rapport détaillé →</a><?php endif; ?>
-                </div>
-            </section>
             <!-- Synthèse Juridique & Impact Financier -->
             <div id="section_synthese" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
@@ -756,19 +706,6 @@ include __DIR__ . '/includes/header.php';
                                     </div>
                                 <?php endif; ?>
 
-                                <?php
-                                $claimSourceUrl = trim((string)($cl['sourceUrl'] ?? $cl['source_url'] ?? $cl['pageUrl'] ?? ''));
-                                $claimSourceScheme = strtolower((string)parse_url($claimSourceUrl, PHP_URL_SCHEME));
-                                $claimSourceIsSafe = filter_var($claimSourceUrl, FILTER_VALIDATE_URL) && in_array($claimSourceScheme, ['http', 'https'], true);
-                                ?>
-                                <?php if ($claimSourceIsSafe): ?>
-                                    <a class="inline-flex items-center gap-2 text-xs font-bold text-emerald-800 underline underline-offset-2 hover:text-emerald-950" href="<?php echo htmlspecialchars($claimSourceUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer">
-                                        Voir la page où l’allégation a été repérée ↗
-                                    </a>
-                                <?php else: ?>
-                                    <span class="text-xs text-slate-500">Page source non enregistrée pour cette allégation.</span>
-                                <?php endif; ?>
-
                                 <!-- Grille d'Analyse Légale & Risque -->
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                                     <div class="p-3 bg-red-50/60 rounded-xl border border-red-100 space-y-1">
@@ -883,8 +820,9 @@ include __DIR__ . '/includes/header.php';
 
                 <div id="mission-catalogue" class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <?php foreach ($missions as $mission): ?>
-                        <article class="mission-pro-card flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-emerald-300 hover:bg-white hover:shadow-md<?php echo (!$showAllInitially && empty($mission['_recommended'])) ? ' hidden' : ''; ?>"
-                                 data-recommended="<?php echo !empty($mission['_recommended']) ? '1' : '0'; ?>">
+                        <article class="mission-pro-card flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-emerald-300 hover:bg-white hover:shadow-md"
+                                 data-recommended="<?php echo !empty($mission['_recommended']) ? '1' : '0'; ?>"
+                                 <?php echo (!$showAllInitially && empty($mission['_recommended'])) ? 'hidden' : ''; ?>>
                             <div class="flex items-start justify-between gap-3">
                                 <h3 class="min-w-0 flex-1 break-words text-base font-extrabold leading-snug text-slate-900"><?php echo htmlspecialchars($mission['serviceTitle'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></h3>
                                 <?php if (!empty($mission['_recommended'])): ?>
@@ -927,35 +865,6 @@ include __DIR__ . '/includes/header.php';
     <!-- ========================================================================= -->
     <?php if ($currentTab === 'contact'): ?>
         <div id="section_contacts" class="space-y-8">
-            <?php if (!empty($websiteContacts)): ?>
-                <section class="rounded-3xl border border-blue-200 bg-blue-50 p-6 shadow-sm">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <h2 class="text-base font-extrabold text-blue-950">Coordonnées publiques trouvées sur le site</h2>
-                            <p class="mt-1 text-sm text-blue-900">Contacts généraux extraits des pages récupérées par le scan, avec leur source. Aucune personne n’est identifiée automatiquement.</p>
-                        </div>
-                        <span class="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-900"><?php echo count($websiteContacts); ?> élément(s)</span>
-                    </div>
-                    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <?php foreach ($websiteContacts as $websiteContact):
-                            $contactValue = trim((string)($websiteContact['value'] ?? ''));
-                            $contactType = (string)($websiteContact['type'] ?? '');
-                            $contactSourceUrl = trim((string)($websiteContact['sourceUrl'] ?? ''));
-                            $contactSourceScheme = strtolower((string)parse_url($contactSourceUrl, PHP_URL_SCHEME));
-                            $contactSourceSafe = filter_var($contactSourceUrl, FILTER_VALIDATE_URL) && in_array($contactSourceScheme, ['http', 'https'], true);
-                            if ($contactValue === '') continue;
-                        ?>
-                            <article class="rounded-2xl border border-blue-100 bg-white p-4">
-                                <strong class="block break-all text-sm text-slate-900"><?php echo htmlspecialchars($contactValue, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></strong>
-                                <span class="mt-1 block text-xs text-slate-600"><?php echo $contactType === 'email' ? 'Adresse e-mail publique' : 'Téléphone public'; ?></span>
-                                <?php if ($contactSourceSafe): ?><a class="mt-2 inline-block text-xs font-bold text-blue-800 underline" href="<?php echo htmlspecialchars($contactSourceUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer">Page source ↗</a><?php endif; ?>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
-                </section>
-            <?php else: ?>
-                <p class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">Aucune coordonnée générale n’a été trouvée dans les pages conservées par ce scan. Les coordonnées présentes uniquement dans des pages non récupérées ne sont pas disponibles ici.</p>
-            <?php endif; ?>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Formulaire d'ajout de contact -->
                 <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4 no-print">
@@ -1533,7 +1442,7 @@ document.addEventListener('click', async (event) => {
     if (filterButton) {
         const mode = filterButton.dataset.filter;
         document.querySelectorAll('#mission-catalogue .mission-pro-card').forEach(card => {
-            card.classList.toggle('hidden', mode === 'recommended' && card.dataset.recommended !== '1');
+            card.hidden = mode === 'recommended' && card.dataset.recommended !== '1';
         });
         document.querySelectorAll('.mission-filter-btn').forEach(button => {
             const selected = button === filterButton;
