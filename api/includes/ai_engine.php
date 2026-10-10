@@ -8,6 +8,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/gemini.php';
 require_once __DIR__ . '/groq.php';
 require_once __DIR__ . '/mistral.php';
+require_once __DIR__ . '/ai_contract.php';
 
 /**
  * API publique principale
@@ -228,6 +229,10 @@ function ai_engine_run(
         ? $providedWebContent
         : ((strpos($url, 'https://') === 0 || strpos($url, 'http://') === 0) ? ai_engine_scrape_website_content($url) : '');
 
+    $canonicalUrl = gh_ai_canonical_url((string)$url) ?? (string)$url;
+    $corpus = gh_ai_corpus_pages_from_text($canonicalUrl, (string)$webContent);
+    $runMetadata = ['promptVersion' => GH_AI_PROMPT_VERSION, 'schemaVersion' => GH_AI_SCHEMA_VERSION, 'generationVersion' => GH_AI_GENERATION_VERSION, 'provider' => $provider, 'model' => $model, 'generation' => ['temperature' => 0.2], 'corpus' => ['canonicalUrl' => $corpus['canonicalUrl'], 'pageCount' => $corpus['pageCount'], 'fingerprint' => $corpus['corpusFingerprint']]];
+
     // 3. Règles métier / exceptions
     $customExceptions = "";
     try {
@@ -305,7 +310,8 @@ function ai_engine_run(
             'claims' => $detectedClaims,
             'prospection' => null,
             'financialImpact' => null,
-            'limitations' => ['Analyse IA indisponible', 'Aucune conclusion juridique ni estimation de sanction produite']
+            'limitations' => ['Analyse IA indisponible', 'Aucune conclusion juridique ni estimation de sanction produite'],
+            'aiMetadata' => $runMetadata
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
@@ -362,33 +368,12 @@ function ai_engine_run(
         $aiResponse = gemini_call($prompt, $systemInstruction, $model, $apiKey);
     }
 
-    // Normaliser les réponses JSON: certains fournisseurs ajoutent des fences Markdown
-    // malgré la consigne JSON. Ne jamais fabriquer de score si le contenu reste invalide.
-    $decodeAiObject = static function ($raw) {
-        if (!is_string($raw) || trim($raw) === '') return null;
-        $raw = trim($raw);
-        $decoded = json_decode($raw, true);
-        if (is_array($decoded) && json_last_error() === JSON_ERROR_NONE) return $decoded;
-        $withoutFences = preg_replace('/^\x60{3}(?:json)?\s*|\s*\x60{3}$/i', '', $raw);
-        $decoded = json_decode(trim($withoutFences), true);
-        if (is_array($decoded) && json_last_error() === JSON_ERROR_NONE) return $decoded;
-        $start = strpos($raw, '{');
-        $end = strrpos($raw, '}');
-        if ($start !== false && $end !== false && $end > $start) {
-            $decoded = json_decode(substr($raw, $start, $end - $start + 1), true);
-            if (is_array($decoded) && json_last_error() === JSON_ERROR_NONE) return $decoded;
-        }
-        return null;
-    };
-    $decodedResponse = $decodeAiObject($aiResponse);
-    if (
-        is_array($decodedResponse) &&
-        json_last_error() === JSON_ERROR_NONE &&
-        (array_key_exists('score', $decodedResponse) || array_key_exists('riskScore', $decodedResponse)) && is_numeric($decodedResponse['score'] ?? $decodedResponse['riskScore'] ?? null)
-        && (($decodedResponse['analysisComplete'] ?? true) !== false)
-        && (($decodedResponse['status'] ?? '') !== 'analysis_incomplete')
-    ) {
-        return json_encode($decodedResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    // Le contrat exige un objet JSON brut, complet et conforme au schéma.
+    $decodedResponse = gh_ai_validate_response($aiResponse);
+    if ($decodedResponse['valid']) {
+        $result = $decodedResponse['data'];
+        $result['aiMetadata'] = $runMetadata;
+        return json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
     // Fallbacks optionnels : seuls les fournisseurs dont la clé est configurée sont appelés.
@@ -415,23 +400,22 @@ function ai_engine_run(
         } else {
             $fallbackRes = gemini_call($prompt, $systemInstruction, $fallback['model'], $fallback['key']);
         }
-        $decodedFallback = $decodeAiObject($fallbackRes);
-        if (
-            is_array($decodedFallback) &&
-            json_last_error() === JSON_ERROR_NONE &&
-            (array_key_exists('score', $decodedFallback) || array_key_exists('riskScore', $decodedFallback)) && is_numeric($decodedFallback['score'] ?? $decodedFallback['riskScore'] ?? null)
-            && (($decodedFallback['analysisComplete'] ?? true) !== false)
-            && (($decodedFallback['status'] ?? '') !== 'analysis_incomplete')
-        ) {
-            return json_encode($decodedFallback, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $decodedFallback = gh_ai_validate_response($fallbackRes);
+        if ($decodedFallback['valid']) {
+            $result = $decodedFallback['data'];
+            $runMetadata['provider'] = $fallback['provider'];
+            $runMetadata['model'] = $fallback['model'];
+            $runMetadata['fallbackUsed'] = true;
+            $result['aiMetadata'] = $runMetadata;
+            return json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         }
     }
 
     $failureCode = 'response_not_json';
-    if (is_string($aiResponse) && stripos(trim($aiResponse), 'Erreur Moteur IA') === 0) {
+    if (is_string($aiResponse) && stripos(trim($aiResponse), 'Erreur') === 0) {
         $failureCode = 'provider_request_failed';
-    } elseif (is_array($decodedResponse)) {
-        $failureCode = 'response_missing_score';
+    } elseif (in_array(($decodedResponse['code'] ?? ''), ['schema_invalid', 'analysis_incomplete'], true)) {
+        $failureCode = $decodedResponse['code'];
     }
     $failureSummary = $failureCode === 'provider_request_failed'
         ? "Le fournisseur IA n’a pas pu traiter la demande. Vérifiez le modèle, les quotas et les journaux serveur."
@@ -449,6 +433,7 @@ function ai_engine_run(
         'claims' => [],
         'prospection' => null,
         'financialImpact' => null,
-        'limitations' => ['Réponse IA absente, invalide ou non structurée en JSON']
+        'limitations' => ['Réponse IA absente, invalide ou non structurée en JSON'],
+        'aiMetadata' => $runMetadata
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 }

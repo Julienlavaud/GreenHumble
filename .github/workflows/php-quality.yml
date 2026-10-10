@@ -50,3 +50,4 @@ jobs:
           php tests/collaborator_auth_test.php
           php tests/audit_response_test.php
           php tests/ai_engine_reference_test.php
+          php tests/ai_contract_test.php
