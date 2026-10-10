@@ -39,6 +39,7 @@ function gh_recommend_services(array $lead): array
         $type = trim((string)($signal['type'] ?? ''));
         if ($type === '') continue;
         $finding = [
+            'urgency' => (!empty($signal['deadline']) || !empty($signal['urgent'])) ? 2 : 0,
             'finding_id' => trim((string)($signal['finding_id'] ?? $id)),
             'type' => $type,
             'summary' => trim((string)($signal['summary'] ?? $signal['term'] ?? $type)),
@@ -63,8 +64,7 @@ function gh_recommend_services(array $lead): array
         if (empty($verified[$type]) || !isset($catalog[$serviceId])) continue;
         $urgency = 0;
         foreach ($verified[$type] as $finding) {
-            $signal = $signals[array_search($finding['evidence_id'], array_column($signals, 'evidence_id'), true)] ?? [];
-            if (!empty($signal['deadline']) || !empty($signal['urgent'])) $urgency = 2;
+            if (($finding['urgency'] ?? 0) > 0) $urgency = 2;
         }
         $confidence = 70;
         if (count(array_filter($verified[$type], static fn($f) => $f['quote'] !== null)) > 0) $confidence = 85;
