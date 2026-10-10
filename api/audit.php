@@ -402,6 +402,7 @@ if ($method === 'POST') {
 
     // 5. Formater resultat_ia pour scans.json
     $formattedResultatIa = [
+        'auditId' => $auditId,
         'score' => $validatedAudit['riskScore'],
         'riskLevel' => $validatedAudit['riskLevel'],
         'companyName' => $validatedAudit['companyName'] ?? $enterpriseData['company_name'],
@@ -441,13 +442,15 @@ if ($method === 'POST') {
     }
 
     // Persistance commerciale SQL facultative : le scan JSON reste disponible en secours.
-    $databaseSaved = gh_persist_commercial_audit($validatedAudit, $enterpriseData);
+    $databaseAuditId = null;
+    $databaseSaved = gh_persist_commercial_audit($validatedAudit, $enterpriseData, $databaseAuditId);
 
     // 7. Retour JSON strict, complet et validé
     $responsePayload = [
         'id' => $auditId,
         'scan_id' => $savedScan['id'],
         'databaseSaved' => $databaseSaved,
+        'analysisId' => $databaseAuditId ?: $auditId,
         'url' => $url,
         'statut' => 'ok',
         'type_audit' => $type_audit,
