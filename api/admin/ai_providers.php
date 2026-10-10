@@ -43,9 +43,41 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         elseif ($provider === 'mistral') $reply = call_mistral(['model' => $model, 'messages' => [['role' => 'user', 'content' => 'Réponds uniquement OK']], 'temperature' => 0], $key);
         else $reply = call_groq(['model' => $model, 'messages' => [['role' => 'user', 'content' => 'Réponds uniquement OK']], 'temperature' => 0], $key);
         $ok = is_string($reply) && trim($reply) !== '' && stripos($reply, 'Erreur') !== 0 && stripos($reply, 'HTTP ') === false;
-        if (!$ok) error_log('GreenHumble provider test failed: ' . $provider . '; no key logged');
-        if (!$ok) http_response_code(502);
-        echo json_encode(['success' => $ok, 'message' => $ok ? 'Connexion fournisseur réussie.' : 'Échec : vérifiez la clé, le modèle, les quotas et les journaux serveur.']); exit;
+        if ($ok) {
+            echo json_encode(['success' => true, 'message' => 'Connexion fournisseur réussie.']);
+            exit;
+        }
+
+        // Keep provider diagnostics useful while never returning request headers, keys, or raw bodies.
+        $replyText = is_string($reply) ? $reply : '';
+        $httpStatus = 0;
+        if (preg_match('/HTTP\\s*([0-9]{3})/i', $replyText, $matches)) $httpStatus = (int)$matches[1];
+        $diagnosticCode = 'provider_error';
+        if (in_array($httpStatus, [401, 403], true)) {
+            $diagnosticCode = 'provider_key_rejected';
+            $message = 'Le fournisseur a refusé l’authentification. Vérifie la clé enregistrée et les droits du projet.';
+        } elseif ($httpStatus === 404) {
+            $diagnosticCode = 'provider_model_unavailable';
+            $message = 'Le modèle ou l’endpoint est indisponible pour ce fournisseur. Vérifie le modèle sélectionné.';
+        } elseif ($httpStatus === 429) {
+            $diagnosticCode = 'provider_quota';
+            $message = 'Le fournisseur a atteint une limite de quota ou de débit. Vérifie les quotas et réessaie plus tard.';
+        } elseif ($httpStatus >= 500) {
+            $diagnosticCode = 'provider_unavailable';
+            $message = 'Le fournisseur rencontre une erreur temporaire. Réessaie dans quelques instants.';
+        } elseif ($httpStatus === 0 && preg_match('/timeout|timed out|resolve|connect|SSL|network/i', $replyText)) {
+            $diagnosticCode = 'server_network_error';
+            $message = 'Le serveur OVH n’a pas pu joindre le fournisseur. Vérifie les connexions sortantes et le certificat TLS.';
+        } elseif ($httpStatus === 400) {
+            $diagnosticCode = 'provider_request_rejected';
+            $message = 'Le fournisseur a refusé la requête. Vérifie le modèle et sa disponibilité pour cette clé.';
+        } else {
+            $message = 'Le fournisseur n’a pas répondu correctement. Vérifie la configuration et les journaux PHP côté OVH.';
+        }
+        error_log('GreenHumble provider test failed: ' . $provider . '; status=' . $httpStatus . '; code=' . $diagnosticCode . '; key omitted');
+        http_response_code(502);
+        echo json_encode(['success' => false, 'diagnosticCode' => $diagnosticCode, 'message' => $message]);
+        exit;
     }
     $model = trim((string)($in['model'] ?? $defs[$provider]['model']));
     if (!in_array($model, $defs[$provider]['models'], true)) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Modèle non autorisé']); exit; }
