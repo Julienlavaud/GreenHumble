@@ -24,7 +24,6 @@
       prospec: '/api/prospec',
       flush: '/flush.php',
       userStyle: '/api/user-style',
-      userStyleDirect: '/data/user_style.json',
       diagnostic: '/api/server/diagnostic'
     },
     version: '1.1.0',
@@ -77,15 +76,6 @@
             styleData = data.style || data;
           }
         } catch (_) {}
-
-        if (!styleData) {
-          try {
-            const resStatic = await fetch(AppConfig.endpoints.userStyleDirect);
-            if (resStatic.ok) {
-              styleData = await resStatic.json();
-            }
-          } catch (_) {}
-        }
 
         if (styleData && typeof styleData === 'object') {
           this.state.userStyle = { ...this.state.userStyle, ...styleData };
