@@ -315,6 +315,7 @@ if ($audit && isset($audit['id'])) {
 // les outils historiques basés sur MySQL. Pour une URL déjà auditée, afficher les constats
 // du rapport canonique afin que les deux vues ne se contredisent pas.
 $reportAuditId = '';
+$websiteContacts = [];
 if ($audit && !empty($audit['url'])) {
     $canonicalUrl = strtolower(rtrim((string)$audit['url'], '/'));
     $storedPath = __DIR__ . '/../data/stored_audits.json';
@@ -324,6 +325,7 @@ if ($audit && !empty($audit['url'])) {
             if (!is_array($storedAudit) || empty($storedAudit['id']) || empty($storedAudit['url'])) continue;
             if (strtolower(rtrim((string)$storedAudit['url'], '/')) !== $canonicalUrl) continue;
             $reportAuditId = (string)$storedAudit['id'];
+            $websiteContacts = is_array($storedAudit['websiteContacts'] ?? null) ? $storedAudit['websiteContacts'] : [];
             $storedClaims = $storedAudit['detectedClaims'] ?? [];
             if (is_array($storedClaims)) {
                 $claims = array_map(static function ($claim) {
@@ -732,6 +734,19 @@ include __DIR__ . '/includes/header.php';
                                     </div>
                                 <?php endif; ?>
 
+                                <?php
+                                $claimSourceUrl = trim((string)($cl['sourceUrl'] ?? $cl['source_url'] ?? $cl['pageUrl'] ?? ''));
+                                $claimSourceScheme = strtolower((string)parse_url($claimSourceUrl, PHP_URL_SCHEME));
+                                $claimSourceIsSafe = filter_var($claimSourceUrl, FILTER_VALIDATE_URL) && in_array($claimSourceScheme, ['http', 'https'], true);
+                                ?>
+                                <?php if ($claimSourceIsSafe): ?>
+                                    <a class="inline-flex items-center gap-2 text-xs font-bold text-emerald-800 underline underline-offset-2 hover:text-emerald-950" href="<?php echo htmlspecialchars($claimSourceUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer">
+                                        Voir la page où l’allégation a été repérée ↗
+                                    </a>
+                                <?php else: ?>
+                                    <span class="text-xs text-slate-500">Page source non enregistrée pour cette allégation.</span>
+                                <?php endif; ?>
+
                                 <!-- Grille d'Analyse Légale & Risque -->
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                                     <div class="p-3 bg-red-50/60 rounded-xl border border-red-100 space-y-1">
@@ -890,6 +905,35 @@ include __DIR__ . '/includes/header.php';
     <!-- ========================================================================= -->
     <?php if ($currentTab === 'contact'): ?>
         <div id="section_contacts" class="space-y-8">
+            <?php if (!empty($websiteContacts)): ?>
+                <section class="rounded-3xl border border-blue-200 bg-blue-50 p-6 shadow-sm">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h2 class="text-base font-extrabold text-blue-950">Coordonnées publiques trouvées sur le site</h2>
+                            <p class="mt-1 text-sm text-blue-900">Contacts généraux extraits des pages récupérées par le scan, avec leur source. Aucune personne n’est identifiée automatiquement.</p>
+                        </div>
+                        <span class="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-900"><?php echo count($websiteContacts); ?> élément(s)</span>
+                    </div>
+                    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <?php foreach ($websiteContacts as $websiteContact):
+                            $contactValue = trim((string)($websiteContact['value'] ?? ''));
+                            $contactType = (string)($websiteContact['type'] ?? '');
+                            $contactSourceUrl = trim((string)($websiteContact['sourceUrl'] ?? ''));
+                            $contactSourceScheme = strtolower((string)parse_url($contactSourceUrl, PHP_URL_SCHEME));
+                            $contactSourceSafe = filter_var($contactSourceUrl, FILTER_VALIDATE_URL) && in_array($contactSourceScheme, ['http', 'https'], true);
+                            if ($contactValue === '') continue;
+                        ?>
+                            <article class="rounded-2xl border border-blue-100 bg-white p-4">
+                                <strong class="block break-all text-sm text-slate-900"><?php echo htmlspecialchars($contactValue, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></strong>
+                                <span class="mt-1 block text-xs text-slate-600"><?php echo $contactType === 'email' ? 'Adresse e-mail publique' : 'Téléphone public'; ?></span>
+                                <?php if ($contactSourceSafe): ?><a class="mt-2 inline-block text-xs font-bold text-blue-800 underline" href="<?php echo htmlspecialchars($contactSourceUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer">Page source ↗</a><?php endif; ?>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+            <?php else: ?>
+                <p class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">Aucune coordonnée générale n’a été trouvée dans les pages conservées par ce scan. Les coordonnées présentes uniquement dans des pages non récupérées ne sont pas disponibles ici.</p>
+            <?php endif; ?>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Formulaire d'ajout de contact -->
                 <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4 no-print">
