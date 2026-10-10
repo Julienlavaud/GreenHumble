@@ -367,26 +367,7 @@ function ai_engine_run(
         $aiResponse = gemini_call($prompt, $systemInstruction, $model, $apiKey);
     }
 
-    // Normaliser les réponses JSON: certains fournisseurs ajoutent des fences Markdown
-    // malgré la consigne JSON. Ne jamais fabriquer de score si le contenu reste invalide.
-    $decodeAiObject = static function ($raw) {
-        if (!is_string($raw) || trim($raw) === '') return null;
-        $raw = trim($raw);
-        $decoded = json_decode($raw, true);
-        if (is_array($decoded) && json_last_error() === JSON_ERROR_NONE) return $decoded;
-        $withoutFences = preg_replace('/^\x60{3}(?:json)?\s*|\s*\x60{3}$/i', '', $raw);
-        $decoded = json_decode(trim($withoutFences), true);
-        if (is_array($decoded) && json_last_error() === JSON_ERROR_NONE) return $decoded;
-        $start = strpos($raw, '{');
-        $end = strrpos($raw, '}');
-        if ($start !== false && $end !== false && $end > $start) {
-            $decoded = json_decode(substr($raw, $start, $end - $start + 1), true);
-            if (is_array($decoded) && json_last_error() === JSON_ERROR_NONE) return $decoded;
-        }
-        return null;
-    };
-    $decodedResponse = $decodeAiObject($aiResponse);
-    if ($decodedResponse['valid']) {
+    // Le contrat exige un objet JSON brut, complet et conforme au schéma.\n    $decodedResponse = gh_ai_validate_response($aiResponse);\n    if ($decodedResponse['valid']) {
         $result = $decodedResponse['data'];
         $result['aiMetadata'] = $runMetadata;
         return json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
