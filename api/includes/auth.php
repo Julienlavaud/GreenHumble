@@ -20,8 +20,6 @@ if (session_status() === PHP_SESSION_NONE) {
  * Comptes prédéfinis sécurisés
  */
 function get_system_accounts() {
-    // No credentials are stored in source control. Configure usernames and password hashes
-    // in the hosting environment before enabling these system accounts.
     $accounts = [];
     $definitions = [
         'admin' => [
@@ -43,8 +41,7 @@ function get_system_accounts() {
     foreach ($definitions as $key => $definition) {
         $username = getenv($definition['username_env']);
         $passwordHash = getenv($definition['hash_env']);
-        if (!is_string($username) || trim($username) === '' ||
-            !is_string($passwordHash) || $passwordHash === '') {
+        if (!is_string($username) || trim($username) === '' || !is_string($passwordHash) || $passwordHash === '') {
             continue;
         }
         $definition['username'] = trim($username);
@@ -54,19 +51,19 @@ function get_system_accounts() {
 
     return $accounts;
 }
+
 /**
  * Tente d'authentifier un utilisateur
  */
 function authenticate_user($username, $password) {
     $accounts = get_system_accounts();
     $cleanUser = strtolower(trim($username));
-    
+
     foreach ($accounts as $acc) {
         $matchesUsername = strtolower($acc['username']) === $cleanUser;
         $matchesPassword = isset($acc['password_hash']) && is_string($acc['password_hash'])
             && password_verify($password, $acc['password_hash']);
         if ($matchesUsername && $matchesPassword) {
-            // Prevent session fixation by rotating the session identifier after authentication.
             if (session_status() === PHP_SESSION_ACTIVE) {
                 session_regenerate_id(true);
             }
@@ -93,10 +90,9 @@ function get_current_role() {
         return 'admin';
     }
 
-    // Optional API tokens must be configured in the hosting environment.
     $headers = function_exists('getallheaders') ? getallheaders() : [];
     $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
-    if (!is_string($authHeader) || preg_match('/^Bearer\\s+(.+)$/i', trim($authHeader), $matches) !== 1) {
+    if (!is_string($authHeader) || preg_match('/^Bearer\s+(.+)$/i', trim($authHeader), $matches) !== 1) {
         return 'public';
     }
     $providedToken = $matches[1];
@@ -111,27 +107,101 @@ function get_current_role() {
     }
     return 'public';
 }
+
+function generate_csrf_token() {
+    if (empty($_SESSION['_csrf_token'])) {
+        $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['_csrf_token'];
+}
+
+function validate_csrf_token($token) {
+    if (!is_string($token)) {
+        return false;
+    }
+    $expected = $_SESSION['_csrf_token'] ?? null;
+    return is_string($expected) && hash_equals($expected, trim($token));
+}
+
+function extract_request_csrf_token() {
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
+    $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $headers['X-CSRF-Token'] ?? $headers['x-csrf-token'] ?? null;
+    if ($token === null) {
+        $token = $_POST['_csrf_token'] ?? $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? null;
+    }
+    if ($token === null) {
+        $rawInput = file_get_contents('php://input');
+        if (is_string($rawInput) && $rawInput !== '') {
+            $decoded = json_decode($rawInput, true);
+            if (is_array($decoded)) {
+                $token = $decoded['_csrf_token'] ?? $decoded['csrf_token'] ?? null;
+            }
+        }
+    }
+    return is_string($token) ? trim($token) : null;
+}
+
 /**
  * Bloque les mutations de session admin déclenchées depuis une autre origine.
  * Les requêtes POST admin du navigateur doivent envoyer Origin ou Referer same-origin.
+ * Les mutations sans Same-Origin doivent aussi fournir un token CSRF valide.
  */
 function gh_require_same_origin_mutation() {
-    $expectedHost = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
-    $source = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
+    $requestMethod = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    if (!in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
+        return true;
+    }
+
+    $expectedHost = strtolower((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+    $expectedHost = preg_replace('/:\d+$/', '', $expectedHost) ?: $expectedHost;
+
+    $source = trim((string)($_SERVER['HTTP_ORIGIN'] ?? ''));
     if ($source === '' && !empty($_SERVER['HTTP_REFERER'])) {
         $parts = parse_url((string)$_SERVER['HTTP_REFERER']);
-        if (is_array($parts) && !empty($parts['scheme']) && !empty($parts['host'])) {
-            $source = $parts['scheme'] . '://' . $parts['host'] . (isset($parts['port']) ? ':' . $parts['port'] : '');
+        if (is_array($parts) && !empty($parts['host'])) {
+            $scheme = $parts['scheme'] ?? 'https';
+            $source = $scheme . '://' . $parts['host'];
+            if (!empty($parts['port'])) {
+                $source .= ':' . $parts['port'];
+            }
         }
     }
-    $parts = $source !== '' ? parse_url($source) : false;
-    $sourceHost = is_array($parts) ? strtolower((string)($parts['host'] ?? '') . (isset($parts['port']) ? ':' . $parts['port'] : '')) : '';
-    if ($expectedHost === '' || $sourceHost === '' || !hash_equals($expectedHost, $sourceHost)) {
+
+    $sourceHost = '';
+    if ($source !== '') {
+        $parts = parse_url($source);
+        if (is_array($parts) && !empty($parts['host'])) {
+            $sourceHost = strtolower((string)$parts['host']);
+            if (!empty($parts['port'])) {
+                $sourceHost .= ':' . (string)$parts['port'];
+            }
+        }
+    }
+
+    $csrfToken = extract_request_csrf_token();
+    $hasValidCsrf = $csrfToken !== null && validate_csrf_token($csrfToken);
+
+    if ($sourceHost !== '' && $sourceHost !== $expectedHost) {
         http_response_code(403);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['success' => false, 'error' => 'Origine de requête refusée.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Origine de requête refusée.'
+        ], JSON_UNESCAPED_UNICODE);
         exit;
     }
+
+    if ($sourceHost === '' && !$hasValidCsrf) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => false,
+            'error' => 'Token CSRF absent ou invalide.'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    return true;
 }
 
 /**
