@@ -1,95 +1,55 @@
-# ==============================================================================
-# GreenHumble v1.1 — Configuration Apache .htaccess Optimisée (OVH Mutualisé)
-# ==============================================================================
-
-RewriteEngine On
-
-# ------------------------------------------------------------------------------
-# 1. FORCER HTTPS SUR HÉBERGEMENT OVH
-# ------------------------------------------------------------------------------
 <IfModule mod_rewrite.c>
-    RewriteCond %{HTTPS} off
-    RewriteCond %{HTTP:X-Forwarded-Proto} !https
-    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    RewriteEngine On
+    RewriteBase /
+
+    # Canonical API routing
+    RewriteRule ^api/(.*)$ - [L]
+
+    # Legacy redirect: /index.php -> /api/index.php
+    RewriteRule ^index\.php$ /api/index.php [L,R=301]
+
+    # Legacy redirect: /admin/index.php -> /api/admin/index.php
+    RewriteRule ^admin/index\.php$ /api/admin/index.php [L,R=301]
+
+    # Legacy redirect: /flush.php -> /api/flush.php
+    RewriteRule ^flush\.php$ /api/flush.php [L,R=301]
+
+    # Hide sensitive files
+    RewriteRule ^\.env$ - [F]
+    RewriteRule ^config/\.env$ - [F]
+    RewriteRule ^data/admin_config\.json$ - [F]
+    RewriteRule ^data/ia_settings\.json$ - [F]
+
+    # Deny direct access to sensitive directories
+    RewriteRule ^data/ - [F]
+    RewriteRule ^config/ - [F]
+
+    # Default routing
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ /api/index.php?path=$1 [QSA,L]
 </IfModule>
 
-# ------------------------------------------------------------------------------
-# 2. ROUTAGE DE L'API REST VERS /api/router.php ET PAGES ANCIENNES
-# ------------------------------------------------------------------------------
-# Redirections d'anciennes pages vers l'API REST v1.1
-RewriteRule ^scan\.php$ api/scan.php [L,R=301]
-RewriteRule ^scan_process\.php$ api/audit.php [L,R=301]
-RewriteRule ^admin/?$ api/admin/index.php [L,QSA]
-RewriteRule ^admin/(dashboard|pipeline|scan|analyse|audit-report)\.php$ api/$1.php [L,QSA]
-RewriteRule ^admin/(.*)$ api/admin/$1 [L,QSA]
-
-# Route explicite des préférences de style avant le routeur générique.
-RewriteRule ^api/user-style/?$ api/admin/user_style.php [L,QSA]
-
-# Si la requête est adressée à l'API et n'est pas un fichier statique réel
-RewriteCond %{REQUEST_URI} ^/api/
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^api/(.*)$ api/router.php [L,QSA]
-
-# ------------------------------------------------------------------------------
-# 3. ANTI-CACHE AGRESSIF POUR RESSORTIS DYNAMIQUES (CSS, JS) SUR OVH
-# ------------------------------------------------------------------------------
+# Security headers
 <IfModule mod_headers.c>
-    <FilesMatch "\.(css|js)$">
-        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0"
-        Header set Pragma "no-cache"
-        Header set Expires "0"
-    </FilesMatch>
-    <FilesMatch "\.(html|htm|json)$">
-        Header set Cache-Control "no-cache, must-revalidate"
-    </FilesMatch>
+    Header always set X-Frame-Options "DENY"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
 </IfModule>
 
-# ------------------------------------------------------------------------------
-# 4. CACHE INTELLIGENT POUR IMAGES ET POLICES
-# ------------------------------------------------------------------------------
-<IfModule mod_expires.c>
-    ExpiresActive On
-    ExpiresByType image/jpg "access plus 1 month"
-    ExpiresByType image/jpeg "access plus 1 month"
-    ExpiresByType image/gif "access plus 1 month"
-    ExpiresByType image/png "access plus 1 month"
-    ExpiresByType image/svg+xml "access plus 1 month"
-    ExpiresByType font/ttf "access plus 1 year"
-    ExpiresByType font/woff "access plus 1 year"
-    ExpiresByType font/woff2 "access plus 1 year"
-</IfModule>
-
-# ------------------------------------------------------------------------------
-# 5. COMPRESSION DEFLATE / GZIP (ALÈGE LES EXPÉDITIONS OVH)
-# ------------------------------------------------------------------------------
+# Compression
 <IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/x-javascript application/json application/xml
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css text/javascript application/javascript application/json
 </IfModule>
 
-# ------------------------------------------------------------------------------
-# 6. SÉCURITÉ ET BLOCAGE DES FICHIERS SENSIBLES (.env, config.php)
-# ------------------------------------------------------------------------------
-# Apache 2.4+ Require Directive (Compatible OVH)
-<FilesMatch "^\.env|config\.php$">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order allow,deny
-        Deny from all
-    </IfModule>
+# Caching
+<FilesMatch "\.(jpg|jpeg|png|gif|ico|css|js|pdf)$">
+    Header set Cache-Control "max-age=2592000, public"
 </FilesMatch>
 
-# Interdire l'affichage de l'indexation des dossiers
-Options -Indexes
-
-# ------------------------------------------------------------------------------
-# 7. ROUTAGE ET FALLBACK PAR DÉFAUT
-# ------------------------------------------------------------------------------
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-
-RewriteRule ^$ api/index.php [L]
+<FilesMatch "\.(php)$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+</FilesMatch>

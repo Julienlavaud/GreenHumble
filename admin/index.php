@@ -1,3 +1,5 @@
 <?php
-// /admin/index.php — Point d'entrée direct pour le Cockpit Admin GreenHumble v1.1
-require_once __DIR__ . '/../api/admin/index.php';
+// Legacy redirect - use /api/admin/index.php instead
+http_response_code(301);
+header('Location: /api/admin/index.php', true, 301);
+exit;
