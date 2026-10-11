@@ -1,26 +1,26 @@
 <?php
 // /api/admin/ai_console.php
 // Contrôleur centralisé Moteur IA & Allégations GreenHumble
-// Gère : variables_ia, dictionnaires, regles_metier, prompts, templates_json, scoring, conformite
 
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../includes/app_state.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/app_state.php';
 
-// Toutes les opérations de configuration (lecture, export, import et écriture) sont réservées aux admins.
-if (empty($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true || ($_SESSION['role'] ?? '') !== 'admin') {
-    http_response_code(401);
-    header('Content-Type: application/json; charset=UTF-8');
+header('Content-Type: application/json; charset=utf-8');
+
+// 1. Auth check
+if (get_current_role() !== 'admin') {
+    http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Authentification administrateur requise.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
+// 2. Same-origin + CSRF for mutations
+if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'DELETE'])) {
+    gh_require_same_origin_mutation();
+}
 
-header('Content-Type: application/json; charset=UTF-8');
-// Same-origin session endpoint: no wildcard CORS for admin configuration.
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
@@ -40,8 +40,6 @@ function get_full_config($filePath) {
 function save_full_config($filePath, $data) {
     $data['updated_at'] = date('c');
     file_put_contents($filePath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    
-    // Synchronisation automatique vers app_state.json pour l'IA et le scanner
     if (isset($data['variables_ia'])) {
         $appState = load_app_state();
         if (!isset($appState['scanVars'])) {
@@ -66,10 +64,8 @@ switch ($method) {
             echo json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             exit;
         }
-
         $category = $_GET['category'] ?? null;
         $id = $_GET['id'] ?? null;
-
         if ($id) {
             foreach ($config as $catKey => $items) {
                 if (is_array($items)) {
@@ -85,12 +81,10 @@ switch ($method) {
             echo json_encode(['success' => false, 'error' => "Élément introuvable : $id"], JSON_UNESCAPED_UNICODE);
             exit;
         }
-
         if ($category && isset($config[$category])) {
             echo json_encode(['success' => true, 'category' => $category, 'items' => $config[$category]], JSON_UNESCAPED_UNICODE);
             exit;
         }
-
         echo json_encode(['success' => true, 'config' => $config], JSON_UNESCAPED_UNICODE);
         break;
 
@@ -98,7 +92,6 @@ switch ($method) {
     case 'PUT':
         $rawInput = file_get_contents('php://input');
         $payload = json_decode($rawInput, true);
-
         if ($action === 'import') {
             if (!is_array($payload) || empty($payload)) {
                 http_response_code(400);
@@ -109,18 +102,15 @@ switch ($method) {
             echo json_encode(['success' => true, 'message' => 'Configuration importée et synchronisée avec succès.', 'config' => $payload], JSON_UNESCAPED_UNICODE);
             exit;
         }
-
         if (!isset($payload['id']) || !isset($payload['categorie'])) {
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'Format incomplet. Les champs id et categorie sont obligatoires.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
-
         $category = $payload['categorie'];
         if (!isset($config[$category])) {
             $config[$category] = [];
         }
-
         $updated = false;
         foreach ($config[$category] as &$existingItem) {
             if (isset($existingItem['id']) && $existingItem['id'] === $payload['id']) {
@@ -130,7 +120,6 @@ switch ($method) {
             }
         }
         unset($existingItem);
-
         if (!$updated) {
             $config[$category][] = [
                 'id' => $payload['id'],
@@ -144,7 +133,6 @@ switch ($method) {
                 'supprimable' => $payload['supprimable'] ?? true,
             ];
         }
-
         save_full_config($configFile, $config);
         echo json_encode(['success' => true, 'message' => $updated ? 'Élément mis à jour.' : 'Nouvel élément ajouté.', 'item' => $payload], JSON_UNESCAPED_UNICODE);
         break;
@@ -156,13 +144,11 @@ switch ($method) {
             $body = json_decode($rawInput, true);
             $id = $body['id'] ?? null;
         }
-
         if (!$id) {
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'ID requis pour la suppression.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
-
         $deleted = false;
         foreach ($config as $catKey => &$items) {
             if (is_array($items)) {
@@ -181,7 +167,6 @@ switch ($method) {
             }
         }
         unset($items);
-
         if ($deleted) {
             save_full_config($configFile, $config);
             echo json_encode(['success' => true, 'message' => "Élément $id supprimé avec succès."], JSON_UNESCAPED_UNICODE);
