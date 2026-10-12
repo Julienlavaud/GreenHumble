@@ -9,6 +9,9 @@ function check_contract($condition, $message) {
 $home = file_get_contents(__DIR__ . '/../api/index.php');
 $script = file_get_contents(__DIR__ . '/../api/assets/js/public-audit.js');
 $audit = file_get_contents(__DIR__ . '/../api/audit.php');
+$router = file_get_contents(__DIR__ . '/../api/router.php');
+$legacyScanProcess = __DIR__ . '/../api/scan_process.php';
+$unvalidatedScanCreate = __DIR__ . '/../api/scans/create.php';
 
 check_contract(strpos($home, '/api/assets/js/public-audit.js') !== false, 'la page publique charge son script séparé');
 check_contract(strpos($script, "fetch('/api/audit'") !== false, 'le formulaire appelle le point d’entrée officiel du scan');
@@ -23,6 +26,8 @@ check_contract(strpos($script, 'Cela ne garantit pas la conformité du site') !=
 check_contract(strpos($audit, "require_api_role(['admin', 'pipeline', 'collaborator', 'consultant'])") !== false, 'la lecture des audits est réservée aux utilisateurs authentifiés');
 check_contract(strpos($audit, "require_api_role(['admin'])") !== false, 'la suppression des audits est réservée à l’administration');
 check_contract(strpos($audit, 'LOCK_EX') !== false && strpos($audit, "'storage_unavailable'") !== false, 'un audit n’est pas annoncé comme sauvegardé si son écriture échoue');
+check_contract(strpos($router, "'scan/process'") === false && !is_file($legacyScanProcess), 'le chemin historique qui enregistrait des allégations de secours fabriquées est supprimé');
+check_contract(strpos($router, "'scans/create'") === false && !is_file($unvalidatedScanCreate), 'la création directe de scans sans vérification de preuve est supprimée');
 
 $lead = file_get_contents(__DIR__ . '/../api/public_lead.php');
 check_contract(strpos($lead, 'cl_company_contacts') !== false, 'la demande publique utilise la table de contacts installée');

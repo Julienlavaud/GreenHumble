@@ -787,6 +787,7 @@ include __DIR__ . '/includes/header.php';
         <div id="section_missions" class="space-y-6">
             <?php
             $missions = [];
+            $activeMissionCount = 0;
             $kitForMissions = json_decode((string)($audit['kit_json'] ?? ''), true);
             $kitOffer = is_array($kitForMissions['recommendedOffer'] ?? null) ? $kitForMissions['recommendedOffer'] : [];
             $kitOfferKey = trim((string)($kitOffer['serviceKey'] ?? ''));
@@ -813,6 +814,7 @@ include __DIR__ . '/includes/header.php';
                 if (!is_array($mission) || !($mission['isActive'] ?? true)) continue;
                 $missionTitle = trim((string)($mission['serviceTitle'] ?? ''));
                 if ($missionTitle === '') continue;
+                $activeMissionCount++;
                 $missionText = $missionTitle . ' ' . (string)($mission['description'] ?? '');
                 $missionKey = (string)($mission['serviceKey'] ?? $mission['id'] ?? '');
                 $recommended = ($kitOfferKey !== '' && $kitOfferKey === $missionKey)
@@ -829,41 +831,33 @@ include __DIR__ . '/includes/header.php';
                         }
                     }
                 }
-                $mission['_recommended'] = $recommended;
-                $mission['_id'] = (string)($mission['id'] ?? ('mission_' . $idx));
-                $missions[] = $mission;
+                if ($recommended) {
+                    $mission['_recommended'] = true;
+                    $missions[] = $mission;
+                }
             }
-            $recommendedCount = count(array_filter($missions, static fn($mission) => !empty($mission['_recommended'])));
-            $showAllInitially = $recommendedCount === 0;
+            $recommendedCount = count($missions);
             ?>
             <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                 <div class="flex flex-col gap-5 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <div class="mb-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800">
-                            <span aria-hidden="true">💼</span><span><?php echo count($missions); ?> accompagnement(s) actif(s)</span>
+                            <span aria-hidden="true">💼</span><span><?php echo $recommendedCount; ?> mission(s) préconisée(s)</span>
                         </div>
                         <h2 class="text-xl font-black tracking-tight text-slate-900 sm:text-2xl">Missions recommandées</h2>
                         <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">Sélection basée sur les constats encore à vérifier dans ce dossier. Une recommandation ne signifie pas qu’une infraction est établie.</p>
                     </div>
-                    <div class="flex shrink-0 flex-wrap gap-2" role="group" aria-label="Filtrer les missions">
-                        <?php if ($recommendedCount > 0): ?>
-                            <button type="button" class="mission-filter-btn rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white" data-filter="recommended" aria-pressed="true">Recommandées (<?php echo $recommendedCount; ?>)</button>
-                            <button type="button" class="mission-filter-btn rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50" data-filter="all" aria-pressed="false">Toutes (<?php echo count($missions); ?>)</button>
-                        <?php endif; ?>
-                    </div>
                 </div>
 
                 <?php if ($recommendedCount === 0): ?>
-                    <p class="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-relaxed text-blue-900">Aucune mission ne correspond directement aux constats non écartés du scan. Voici le catalogue complet pour garder le choix au consultant.</p>
+                    <p class="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-relaxed text-blue-900"><?php echo $activeMissionCount === 0 ? 'Aucune mission active dans le catalogue métier.' : 'Aucune mission du catalogue ne correspond aux constats non écartés de ce scan.'; ?></p>
                 <?php else: ?>
-                    <p id="mission-filter-status" class="mt-4 text-xs font-medium text-slate-500" role="status"><?php echo $recommendedCount; ?> mission(s) mise(s) en avant à partir des résultats du scan.</p>
+                    <p class="mt-4 text-xs font-medium text-slate-500"><?php echo $recommendedCount; ?> mission(s) recommandée(s) à partir des résultats du scan.</p>
                 <?php endif; ?>
 
                 <div id="mission-catalogue" class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <?php foreach ($missions as $mission): ?>
-                        <article class="mission-pro-card flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-emerald-300 hover:bg-white hover:shadow-md"
-                                 data-recommended="<?php echo !empty($mission['_recommended']) ? '1' : '0'; ?>"
-                                 <?php echo (!$showAllInitially && empty($mission['_recommended'])) ? 'hidden' : ''; ?>>
+                        <article class="mission-pro-card flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-emerald-300 hover:bg-white hover:shadow-md">
                             <div class="flex items-start justify-between gap-3">
                                 <h3 class="min-w-0 flex-1 break-words text-base font-extrabold leading-snug text-slate-900"><?php echo htmlspecialchars($mission['serviceTitle'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></h3>
                                 <?php if (!empty($mission['_recommended'])): ?>
@@ -894,9 +888,6 @@ include __DIR__ . '/includes/header.php';
                         </article>
                     <?php endforeach; ?>
                 </div>
-                <?php if (empty($missions)): ?>
-                    <p class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-600">Aucun accompagnement actif. Activez les offres à proposer dans le catalogue métier de l’administration.</p>
-                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>
@@ -1477,94 +1468,5 @@ include __DIR__ . '/includes/header.php';
 }
 </style>
 
-<script>
-document.addEventListener('click', async (event) => {
-    const filterButton = event.target.closest('.mission-filter-btn');
-    if (filterButton) {
-        const mode = filterButton.dataset.filter;
-        document.querySelectorAll('#mission-catalogue .mission-pro-card').forEach(card => {
-            card.hidden = mode === 'recommended' && card.dataset.recommended !== '1';
-        });
-        document.querySelectorAll('.mission-filter-btn').forEach(button => {
-            const selected = button === filterButton;
-            button.setAttribute('aria-pressed', selected ? 'true' : 'false');
-            button.classList.toggle('bg-emerald-800', selected);
-            button.classList.toggle('text-white', selected);
-            button.classList.toggle('border', !selected);
-            button.classList.toggle('border-slate-200', !selected);
-            button.classList.toggle('bg-white', !selected);
-            button.classList.toggle('text-slate-700', !selected);
-        });
-        const count = mode === 'all'
-            ? document.querySelectorAll('#mission-catalogue .mission-pro-card').length
-            : document.querySelectorAll('#mission-catalogue .mission-pro-card[data-recommended="1"]').length;
-        const status = document.getElementById('mission-filter-status');
-        if (status) status.textContent = mode === 'all' ? count + ' mission(s) dans le catalogue.' : count + ' mission(s) mise(s) en avant à partir des résultats du scan.';
-        return;
-    }
-    const copyButton = event.target.closest('.mission-copy-btn');
-    if (copyButton) {
-        try {
-            await navigator.clipboard.writeText(copyButton.dataset.copy || '');
-            copyButton.innerHTML = '<span>Copié pour le devis</span><span aria-hidden="true">✓</span>';
-        } catch (error) {
-            window.prompt('Copiez le texte de l’offre :', copyButton.dataset.copy || '');
-        }
-    }
-});
-
-function openClaimCorrectionModal(claim) {
-    document.getElementById('modal_claim_id').value = claim.id;
-    document.getElementById('modal_claim_term').value = claim.term;
-    document.getElementById('modal_validation_status').value = claim.consultantValidationStatus || 'en_attente';
-    document.getElementById('modal_claim_severity').value = claim.severity || 'haut_risque';
-    document.getElementById('modal_correction_note').value = claim.correctionNote || '';
-    
-    document.getElementById('claim_modal').classList.remove('hidden');
-}
-
-function closeClaimCorrectionModal() {
-    document.getElementById('claim_modal').classList.add('hidden');
-}
-
-function openPdfModal() {
-    document.getElementById('pdf_customizer_modal').classList.remove('hidden');
-}
-
-function closePdfModal() {
-    document.getElementById('pdf_customizer_modal').classList.add('hidden');
-}
-
-function generateAndPrintPdf() {
-    closePdfModal();
-
-    const optHeader = document.getElementById('pdf_opt_header').checked;
-    const optSynthese = document.getElementById('pdf_opt_synthese').checked;
-    const optAllegations = document.getElementById('pdf_opt_allegations').checked;
-    const optSanctions = document.getElementById('pdf_opt_sanctions').checked;
-    const optMissions = document.getElementById('pdf_opt_missions').checked;
-    const optTextes = document.getElementById('pdf_opt_textes').checked;
-
-    const elHeader = document.getElementById('section_header_pro');
-    const elSynthese = document.getElementById('section_synthese');
-    const elAllegations = document.getElementById('section_allegations');
-    const elSanctions = document.getElementById('section_sanctions');
-    const elMissions = document.getElementById('section_missions');
-    const elTextes = document.getElementById('section_textes');
-
-    if (elHeader) elHeader.classList.toggle('pdf-hidden', !optHeader);
-    if (elSynthese) elSynthese.classList.toggle('pdf-hidden', !optSynthese);
-    if (elAllegations) elAllegations.classList.toggle('pdf-hidden', !optAllegations);
-    if (elSanctions) elSanctions.classList.toggle('pdf-hidden', !optSanctions);
-    if (elMissions) elMissions.classList.toggle('pdf-hidden', !optMissions);
-    if (elTextes) elTextes.classList.toggle('pdf-hidden', !optTextes);
-
-    setTimeout(() => {
-        window.print();
-        // Restore visibility after print
-        document.querySelectorAll('.pdf-hidden').forEach(el => el.classList.remove('pdf-hidden'));
-    }, 200);
-}
-</script>
-
+<script src="/api/assets/js/analyse.js?v=<?= gh_asset_version('assets/js/analyse.js') ?>" defer></script>
 <?php include __DIR__ . '/includes/footer.php'; ?>

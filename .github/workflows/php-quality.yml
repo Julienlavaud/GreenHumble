@@ -53,6 +53,9 @@ jobs:
           php tests/ai_contract_test.php
           php tests/ai_provider_test.php
           php tests/ui_buttons_contract_test.php
+          php tests/admin_workspace_contract_test.php
+          php tests/bulk_delete_endpoint_test.php
+          php tests/recommended_missions_contract_test.php
           php tests/risk_scoring_test.php
           php tests/green_claims_rules_test.php
           php tests/commercial_engine_test.php
@@ -64,6 +67,8 @@ jobs:
           php tests/list_single_scan_status_test.php
           php tests/company_data_provenance_test.php
           php tests/scan_storage_integration_test.php
+          php tests/cache_refresh_contract_test.php
+          php tests/scanner_prompt_csv_contract_test.php
   mysql-integration:
     name: Intégration MySQL 8.0
     runs-on: ubuntu-latest

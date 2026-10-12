@@ -1,8 +1,10 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/includes/asset_version.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/collaborator_auth.php';
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 $error = null;
 $next = trim((string)($_POST['next'] ?? $_GET['next'] ?? ''));
 
@@ -77,7 +79,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#f5f8f5">
 <title>Connexion — GreenHumble</title>
-<link rel="stylesheet" href="/api/assets/css/greenhumble-app.css?v=4">
+<link rel="stylesheet" href="/api/assets/css/greenhumble-app.css?v=<?= gh_asset_version('assets/css/greenhumble-app.css') ?>">
 </head>
 <body class="gh-login-page">
 <div class="gh-login-layout">

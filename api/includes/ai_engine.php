@@ -379,10 +379,16 @@ if (empty($apiKey)) {
         . "\n\n";
 
     $configuredUserPrompt = trim((string)($scanVars['aiUserPrompt'] ?? ''));
-    $prompt = ($custom_prompt ?: (($configuredUserPrompt !== '' ? $configuredUserPrompt : "Effectue un audit complet de conformité environnementale et de potentiel de prospection") . " pour : $url"))
+    $baseUserPrompt = $configuredUserPrompt !== ''
+        ? $configuredUserPrompt
+        : "Effectue un audit complet de conformité environnementale et de potentiel de prospection";
+    $customPrompt = trim((string)($custom_prompt ?? ''));
+    $prompt = ($customPrompt !== ''
+        ? $baseUserPrompt . "\n\nCONSIGNE SPÉCIFIQUE À CET AUDIT :\n" . $customPrompt
+        : $baseUserPrompt . " pour : $url")
         . $scrapedPart;
 
-    if (!$custom_prompt) {
+    if ($customPrompt === '') {
         $prompt .= "MISSION : Analyse chaque phrase pour détecter les allégations pertinentes et les opportunités commerciales qui découlent des constats vérifiables.\\n"
             . "RETOUR : JSON {score, riskLevel, summary, financialImpact, claims: [{term, quoteInText, sourceUrl, severity, riskRationale, legalRisk, lawArticle, sanction, requiredProof, correctionNote}], "
             . "prospection: {scoreProspect, priority, priorityRationale, nextAction, recommendedOffer: {serviceKey, serviceTitle, reason, budget} ou null, evidenceBasedReasons: [{claimTerm, quoteInText, reason}], signauxFaibles, besoinsPotentiels, risques, recommandation, messageApproche}}";

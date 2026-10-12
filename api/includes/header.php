@@ -1,8 +1,13 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/asset_version.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/cms.php';
 require_once __DIR__ . '/app_state.php';
+if (!headers_sent()) {
+  header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+  header('Pragma: no-cache');
+}
 $state = load_app_state();
 $userRole = (string)($_SESSION['role'] ?? '');
 $isLoggedIn = !empty($_SESSION['user_id']) || !empty($_SESSION['admin_logged_in']);
@@ -19,14 +24,15 @@ if ($activeTab === '') {
     'pipeline.php' => 'pipeline',
     'scan.php' => 'scans',
     'analyse.php' => 'scans',
-    'export.php' => 'exports'
+    'export.php' => 'exports',
+    'ai_providers.php' => 'ai_providers'
   ][$currentPage] ?? '';
 }
 $adminGroups = [
-  'PILOTAGE' => ['dashboard' => 'Tableau de bord', 'pipeline' => 'Pipeline', 'scans' => 'Scans'],
-  'PROSPECTION' => ['dossiers' => 'Dossiers', 'listes' => 'Listes', 'exports' => 'Exports CSV'],
-  'CONSOLE IA' => ['ai_providers' => 'Fournisseurs IA', 'scanner' => 'Prompts & règles', 'texts' => 'Dictionnaire IA', 'legal' => 'Références & conformité'],
-  'CONFIGURATION' => ['agency' => 'Organisation', 'missions' => 'Catalogue métier', 'widgets' => 'Configurer les widgets', 'scanner_groups' => 'Groupes de scanners', 'style' => 'Textes du site']
+  'PILOTAGE' => ['dashboard' => 'Tableau de bord', 'pipeline' => 'Pipeline', 'scans' => 'Scans & dossiers'],
+  'PROSPECTION' => ['listes' => 'Listes de prospection', 'exports' => 'Exports CSV'],
+  'IA & RÉFÉRENTIELS' => ['ai_providers' => 'Fournisseurs IA', 'scanner' => 'Prompts & règles', 'missions' => 'Catalogue métier', 'legal' => 'Références & conformité', 'texts' => 'Dictionnaire IA'],
+  'ORGANISATION' => ['agency' => 'Organisation & équipe', 'widgets' => 'Configurer les widgets', 'style' => 'Textes du site']
 ];
 $adminDirectLinks = [
   'dashboard' => '/api/dashboard.php',
@@ -34,7 +40,8 @@ $adminDirectLinks = [
   'scans' => '/api/scan.php',
   'exports' => '/api/admin/export.php',
   'ai_providers' => '/api/admin/ai_providers.php',
-  'widgets' => '/api/admin/widget.php'
+  'widgets' => '/api/admin/widget.php',
+  'agency' => '/api/admin/index.php?tab=agency#organisation-equipe'
 ];
 ?>
 <!doctype html>
@@ -80,11 +87,11 @@ $adminDirectLinks = [
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/api/assets/css/tailwind-compiled.css?v=1">
-<link rel="stylesheet" href="/api/assets/css/styles.css?v=3">
-<link rel="stylesheet" href="/api/assets/css/greenhumble-refresh.css?v=3">
-<link rel="stylesheet" href="/api/assets/css/greenhumble-app.css?v=5">
-<?php if (basename((string)($_SERVER['PHP_SELF'] ?? '')) === 'analyse.php'): ?><link rel="stylesheet" href="/api/assets/css/greenhumble-analyse.css?v=1"><?php endif; ?>
+<link rel="stylesheet" href="/api/assets/css/tailwind-compiled.css?v=<?= gh_asset_version('assets/css/tailwind-compiled.css') ?>">
+<link rel="stylesheet" href="/api/assets/css/styles.css?v=<?= gh_asset_version('assets/css/styles.css') ?>">
+<link rel="stylesheet" href="/api/assets/css/greenhumble-refresh.css?v=<?= gh_asset_version('assets/css/greenhumble-refresh.css') ?>">
+<link rel="stylesheet" href="/api/assets/css/greenhumble-app.css?v=<?= gh_asset_version('assets/css/greenhumble-app.css') ?>">
+<?php if (basename((string)($_SERVER['PHP_SELF'] ?? '')) === 'analyse.php'): ?><link rel="stylesheet" href="/api/assets/css/greenhumble-analyse.css?v=<?= gh_asset_version('assets/css/greenhumble-analyse.css') ?>"><?php endif; ?>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='7' fill='%23176b4c'/><text x='7' y='17' fill='white' font-size='14' font-family='Arial' font-weight='bold'>G</text></svg>">
 </head>
 <body data-gh-role="<?= $isAdmin ? 'admin' : ($isCollaborator ? 'collaborator' : 'public') ?>">

@@ -4,6 +4,8 @@
  * Un seul fichier canonique est utilisé par lecture et écriture.
  */
 
+const MAX_BULK_DELETE_SCANS = 500;
+
 function get_scan_storage_paths() {
     return [
         dirname(__DIR__, 2) . '/data/scans.json',
@@ -114,49 +116,121 @@ function append_scan_to_json_path($path, $sourcePaths, $newScan) {
 }
 
 /**
- * Remplace l'historique complet des scans (modification, suppression, réassignation).
- * Le fichier canonique est écrit sous verrou ; les anciens emplacements existants sont
- * alignés pour qu'un scan supprimé ne réapparaisse pas à la fusion des lectures.
+ * Applique une modification à l'historique courant sous le même verrou que les ajouts,
+ * puis synchronise les emplacements historiques avant de libérer le verrou canonique.
+ * Tous les écrivains multi-fichiers verrouillent le canonique avant les copies historiques;
+ * append_scan_to_json_path ne verrouille que le canonique.
+ * Le callback facultatif de remplacement doit retourner un booléen et laisser le temporaire
+ * intact en cas d'échec; le helper le supprime alors lui-même.
+ *
+ * @param callable|null $replaceFile Remplacement atomique temporaire→destination.
  */
-function save_all_scans($scans) {
-    if (!is_array($scans)) return false;
+function mutate_all_scans(callable $mutator, ?array $storagePaths = null, ?callable $replaceFile = null) {
+    $storagePaths = $storagePaths ?? get_scan_storage_paths();
+    if ($storagePaths === []) return false;
+    $replaceFile = $replaceFile ?? static fn(string $temporary, string $path): bool => @rename($temporary, $path);
+    // A custom path set always starts with its canonical storage file.
+    $canonical = get_scan_storage_paths() === $storagePaths ? get_scans_file_path() : $storagePaths[0];
+    $dir = dirname($canonical);
+    if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) return false;
+    if (!is_writable($dir)) return false;
+
+    $lock = @fopen($canonical . '.lock', 'c');
+    if ($lock === false) return false;
+
+    $targetLocks = [];
+    $staged = [];
+    $originalContents = [];
+    $originalModes = [];
     try {
-        $json = json_encode(array_values($scans), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-    } catch (Throwable $e) {
-        error_log('GreenHumble: encodage JSON des scans impossible.');
-        return false;
-    }
-    $canonical = get_scans_file_path();
-    $targets = [$canonical];
-    foreach (get_scan_storage_paths() as $path) {
-        if ($path !== $canonical && is_file($path)) $targets[] = $path;
-    }
-    foreach ($targets as $path) {
-        $dir = dirname($path);
-        if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) return false;
-        if (!is_writable($dir)) return false;
-        $lock = @fopen($path . '.lock', 'c');
-        if ($lock === false) return false;
-        $ok = false;
-        try {
-            if (flock($lock, LOCK_EX)) {
-                $tmp = tempnam($dir, '.gh-scans-');
-                if ($tmp !== false) {
-                    $ok = @file_put_contents($tmp, $json, LOCK_EX) === strlen($json);
-                    if ($ok) {
-                        @chmod($tmp, 0640);
-                        $ok = @rename($tmp, $path);
-                    }
-                    if (!$ok) @unlink($tmp);
-                }
-            }
-        } finally {
-            @flock($lock, LOCK_UN);
-            @fclose($lock);
+        if (!flock($lock, LOCK_EX)) return false;
+        $paths = array_merge([$canonical], array_values(array_filter($storagePaths, static fn($path) => $path !== $canonical)));
+        $scans = read_scans_from_paths($paths, true);
+        if (!is_array($scans)) return false;
+
+        $updatedScans = $mutator($scans);
+        if (!is_array($updatedScans)) return false;
+        $json = json_encode(array_values($updatedScans), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $targets = [$canonical];
+        foreach ($paths as $path) {
+            if ($path !== $canonical && is_file($path)) $targets[] = $path;
         }
-        if (!$ok) return false;
+
+        foreach ($targets as $path) {
+            $targetDir = dirname($path);
+            if (!is_dir($targetDir) || !is_writable($targetDir)) return false;
+        }
+
+        foreach ($targets as $path) {
+            $targetDir = dirname($path);
+            if ($path !== $canonical) {
+                $targetLock = @fopen($path . '.lock', 'c');
+                if ($targetLock === false) return false;
+                if (!flock($targetLock, LOCK_EX)) {
+                    fclose($targetLock);
+                    return false;
+                }
+                $targetLocks[] = $targetLock;
+            }
+
+            $originalContents[$path] = null;
+            if (is_file($path)) {
+                $originalContents[$path] = @file_get_contents($path);
+                if (!is_string($originalContents[$path])) return false;
+                $mode = @fileperms($path);
+                if ($mode !== false) $originalModes[$path] = $mode & 0777;
+            }
+
+            $tmp = tempnam($targetDir, '.gh-scans-');
+            if ($tmp === false) return false;
+            if (@file_put_contents($tmp, $json, LOCK_EX) !== strlen($json)) {
+                @unlink($tmp);
+                return false;
+            }
+            @chmod($tmp, 0640);
+            $staged[$path] = $tmp;
+        }
+
+        $committed = [];
+        foreach ($targets as $path) {
+            if (!$replaceFile($staged[$path], $path)) {
+                foreach (array_reverse($committed) as $rollbackPath) {
+                    $previous = $originalContents[$rollbackPath];
+                    if ($previous === null) {
+                        $restored = !is_file($rollbackPath) || @unlink($rollbackPath);
+                    } else {
+                        $rollbackTmp = tempnam(dirname($rollbackPath), '.gh-scans-rollback-');
+                        $restored = $rollbackTmp !== false
+                            && @file_put_contents($rollbackTmp, $previous, LOCK_EX) === strlen($previous)
+                            && @rename($rollbackTmp, $rollbackPath);
+                        if (!$restored && $rollbackTmp !== false) @unlink($rollbackTmp);
+                        if ($restored && isset($originalModes[$rollbackPath])) {
+                            @chmod($rollbackPath, $originalModes[$rollbackPath]);
+                        }
+                    }
+                    if (!$restored) {
+                        error_log('GreenHumble: impossible de restaurer une copie de l’historique des scans.');
+                    }
+                }
+                return false;
+            }
+            unset($staged[$path]);
+            $committed[] = $path;
+            @chmod($path, 0640);
+        }
+        return true;
+    } catch (Throwable $e) {
+        error_log('GreenHumble: échec de modification atomique des scans.');
+        return false;
+    } finally {
+        foreach ($staged as $tmp) @unlink($tmp);
+        foreach ($targetLocks as $targetLock) {
+            @flock($targetLock, LOCK_UN);
+            @fclose($targetLock);
+        }
+        @flock($lock, LOCK_UN);
+        @fclose($lock);
     }
-    return true;
 }
 
 function appendScanToJson($newScan) {

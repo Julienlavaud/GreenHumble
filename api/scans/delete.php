@@ -30,30 +30,27 @@ if (empty($id)) {
     exit;
 }
 
-$scans = load_all_scans();
-$newScans = [];
 $found = false;
-
-foreach ($scans as $s) {
-    if ($s['id'] === $id) {
-        $found = true;
-        continue;
+$newScans = [];
+$saved = mutate_all_scans(static function (array $scans) use ($id, &$found, &$newScans): array {
+    foreach ($scans as $scan) {
+        if ((string)($scan['id'] ?? '') === $id) {
+            $found = true;
+            continue;
+        }
+        $newScans[] = $scan;
     }
-    $newScans[] = $s;
-}
+    return $newScans;
+});
 
-if (!$found) {
-    http_response_code(404);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Scan introuvable.'
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-if (!save_all_scans($newScans)) {
+if (!$saved) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Enregistrement impossible (droits d’écriture du dossier data).'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+if (!$found) {
+    http_response_code(404);
+    echo json_encode(['success' => false, 'error' => 'Scan introuvable.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

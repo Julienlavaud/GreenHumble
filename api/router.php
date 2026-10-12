@@ -36,7 +36,6 @@ $routes = [
     'prospect' => 'prospect.php',
 
     'scan' => 'scan.php',
-    'scan/process' => 'scan_process.php',
 
     'analyse' => 'analyse.php',
     'pipeline' => 'pipeline.php',
@@ -56,10 +55,10 @@ $routes = [
     'groups/assign_scanner' => 'groups/assign_scanner.php',
 
     'scans/list' => 'scans/list.php',
-    'scans/create' => 'scans/create.php',
     'scans/assign_group' => 'scans/assign_group.php',
     'scans/by_group' => 'scans/by_group.php',
     'scans/delete' => 'scans/delete.php',
+    'scans/bulk_delete' => 'scans/bulk_delete.php',
     'scans/update' => 'scans/update.php',
 
     'listes/list' => 'listes/list.php',

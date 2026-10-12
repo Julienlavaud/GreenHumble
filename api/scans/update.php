@@ -30,28 +30,28 @@ if (empty($id)) {
     exit;
 }
 
-$scans = load_all_scans();
 $updated = false;
-
-foreach ($scans as &$s) {
-    if ($s['id'] === $id) {
-        if (isset($input['type_scan']) && in_array($input['type_scan'], ['diagnostic', 'pipeline', 'widget'])) {
-            $s['type_scan'] = $input['type_scan'];
+$saved = mutate_all_scans(static function (array $currentScans) use ($id, $input, &$updated): array {
+    foreach ($currentScans as &$scan) {
+        if ((string)($scan['id'] ?? '') !== $id) continue;
+        if (isset($input['type_scan']) && in_array($input['type_scan'], ['diagnostic', 'pipeline', 'widget'], true)) {
+            $scan['type_scan'] = $input['type_scan'];
         }
-        if (isset($input['group_id'])) {
-            $s['group_id'] = $input['group_id'];
-        }
-        if (isset($input['statut'])) {
-            $s['statut'] = $input['statut'];
-        }
-        if (isset($input['utilisateur'])) {
-            $s['utilisateur'] = $input['utilisateur'];
+        foreach (['group_id', 'statut', 'utilisateur'] as $field) {
+            if (isset($input[$field])) $scan[$field] = $input[$field];
         }
         $updated = true;
         break;
     }
-}
+    unset($scan);
+    return $currentScans;
+});
 
+if (!$saved) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Enregistrement impossible (droits d’écriture du dossier data).'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 if (!$updated) {
     http_response_code(404);
     echo json_encode([
@@ -61,14 +61,7 @@ if (!$updated) {
     exit;
 }
 
-if (!save_all_scans($scans)) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Enregistrement impossible (droits d’écriture du dossier data).'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
 echo json_encode([
     'success' => true,
-    'message' => 'Scan mis à jour avec succès.',
-    'scans' => $scans
+    'message' => 'Scan mis à jour avec succès.'
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);

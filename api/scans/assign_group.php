@@ -28,26 +28,25 @@ if (empty($scanId) || empty($groupId)) {
     exit;
 }
 
-$scans = load_all_scans();
 $updatedScan = null;
-
-foreach ($scans as &$s) {
-    if (($s['id'] ?? '') === $scanId) {
-        $s['group_id'] = $groupId;
-        $updatedScan = $s;
+$saved = mutate_all_scans(static function (array $scans) use ($scanId, $groupId, &$updatedScan): array {
+    foreach ($scans as &$scan) {
+        if ((string)($scan['id'] ?? '') !== $scanId) continue;
+        $scan['group_id'] = $groupId;
+        $updatedScan = $scan;
         break;
     }
+    unset($scan);
+    return $scans;
+});
+if (!$saved) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Enregistrement impossible (droits d’écriture du dossier data).'], JSON_UNESCAPED_UNICODE);
+    exit;
 }
-
 if (!$updatedScan) {
     http_response_code(404);
     echo json_encode(['success' => false, 'error' => 'Scan non trouvé.'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-if (!save_all_scans($scans)) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Enregistrement impossible (droits d’écriture du dossier data).'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

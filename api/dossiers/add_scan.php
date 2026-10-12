@@ -37,15 +37,18 @@ if (!$updatedDossier) {
     exit;
 }
 
-// Mise à jour de project_id dans le scan
-$scans = load_all_scans();
-foreach ($scans as &$s) {
-    if (($s['id'] ?? '') === $scanId) {
-        $s['project_id'] = $dossierId;
-        break;
+// Mise à jour de project_id sans écraser un scan enregistré en parallèle.
+$saved = mutate_all_scans(static function (array $scans) use ($scanId, $dossierId): array {
+    foreach ($scans as &$scan) {
+        if ((string)($scan['id'] ?? '') === $scanId) {
+            $scan['project_id'] = $dossierId;
+            break;
+        }
     }
-}
-if (!save_all_scans($scans)) {
+    unset($scan);
+    return $scans;
+});
+if (!$saved) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Enregistrement impossible (droits d’écriture du dossier data).'], JSON_UNESCAPED_UNICODE);
     exit;

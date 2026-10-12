@@ -22,7 +22,7 @@
     endpoints: {
       audit: '/api/audit',
       prospec: '/api/prospec',
-      flush: '/flush.php',
+      flush: '/api/flush.php',
       userStyle: '/api/user-style',
       diagnostic: '/api/server/diagnostic'
     },
@@ -414,11 +414,15 @@
           btn.innerHTML = '⏳ Purge OPcache...';
 
           try {
-            const res = await fetch(AppConfig.endpoints.flush);
-            const data = await res.json();
+            const res = await fetch(AppConfig.endpoints.flush, { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.success === false) {
+              alert(data.error || data.message || 'La purge OPcache a échoué.');
+              return;
+            }
             alert(data.message || 'OPcache vidé avec succès.');
           } catch (err) {
-            alert('Purge OPcache exécutée.');
+            alert('Erreur réseau pendant la purge OPcache.');
           } finally {
             btn.disabled = false;
             btn.innerHTML = origText;
