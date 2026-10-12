@@ -1,55 +1,104 @@
+# ==================================================
+# Sécurité générale
+# ==================================================
+Options -Indexes
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
 
-    # Canonical API routing
-    RewriteRule ^api/(.*)$ - [L]
+    # ==================================================
+    # Protection fichiers sensibles
+    # ==================================================
 
-    # Legacy redirect: /index.php -> /api/index.php
-    RewriteRule ^index\.php$ /api/index.php [L,R=301]
+    RewriteRule ^\.env$ - [F,L]
+    RewriteRule ^config/ - [F,L]
+    RewriteRule ^data/ - [F,L]
 
-    # Legacy redirect: /admin/index.php -> /api/admin/index.php
-    RewriteRule ^admin/index\.php$ /api/admin/index.php [L,R=301]
+    RewriteRule ^composer\.json$ - [F,L]
+    RewriteRule ^composer\.lock$ - [F,L]
 
-    # Legacy redirect: /flush.php -> /api/flush.php
-    RewriteRule ^flush\.php$ /api/flush.php [L,R=301]
+    # ==================================================
+    # Redirections héritées
+    # ==================================================
 
-    # Hide sensitive files
-    RewriteRule ^\.env$ - [F]
-    RewriteRule ^config/\.env$ - [F]
-    RewriteRule ^data/admin_config\.json$ - [F]
-    RewriteRule ^data/ia_settings\.json$ - [F]
+    RewriteRule ^index\.php$ / [R=301,L]
 
-    # Deny direct access to sensitive directories
-    RewriteRule ^data/ - [F]
-    RewriteRule ^config/ - [F]
+    RewriteRule ^admin/index\.php$ /admin [R=301,L]
 
-    # Default routing
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^flush\.php$ /api/flush.php [R=301,L]
+
+    # ==================================================
+    # Laisser passer les ressources existantes
+    # ==================================================
+
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # ==================================================
+    # Routage API
+    # ==================================================
+
+    RewriteRule ^api/(.*)$ /api/index.php?path=$1 [QSA,L]
+
+    # ==================================================
+    # Routage principal
+    # ==================================================
+
     RewriteRule ^(.*)$ /api/index.php?path=$1 [QSA,L]
+
 </IfModule>
 
-# Security headers
+# ==================================================
+# Headers de sécurité
+# ==================================================
+
 <IfModule mod_headers.c>
+
     Header always set X-Frame-Options "DENY"
     Header always set X-Content-Type-Options "nosniff"
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+    # Obsolète mais sans impact négatif majeur
+    Header always unset X-XSS-Protection
+
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
     Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+
+    # À conserver uniquement si tout le site est en HTTPS
+    Header always set Strict-Transport-Security "max-age=31536000"
+
 </IfModule>
 
+# ==================================================
 # Compression
+# ==================================================
+
 <IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css text/javascript application/javascript application/json
+
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/json
+
 </IfModule>
 
-# Caching
-<FilesMatch "\.(jpg|jpeg|png|gif|ico|css|js|pdf)$">
-    Header set Cache-Control "max-age=2592000, public"
+# ==================================================
+# Cache ressources statiques
+# ==================================================
+
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|ico|css|js|woff|woff2)$">
+    Header set Cache-Control "public, max-age=2592000"
 </FilesMatch>
 
-<FilesMatch "\.(php)$">
+# ==================================================
+# Pas de cache PHP
+# ==================================================
+
+<FilesMatch "\.php$">
     Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
 </FilesMatch>
