@@ -191,7 +191,8 @@ function gemini_call(
         ],
 
         'generationConfig' => [
-            'temperature' => 0.2
+            'temperature' => 0.2,
+            'responseMimeType' => 'application/json'
         ]
 
     ];
@@ -223,8 +224,12 @@ function analyze_url_with_gemini(
 
     return json_encode(
         [
-            'score' => 60,
-            'summary' => 'Analyse IA initialisée.'
-        ]
+            'status' => 'analysis_incomplete',
+            'analysisComplete' => false,
+            'score' => null,
+            'riskLevel' => 'a_evaluer',
+            'summary' => 'Moteur IA indisponible : aucune analyse réalisée.'
+        ],
+        JSON_UNESCAPED_UNICODE
     );
 }

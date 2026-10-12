@@ -11,6 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+require_once __DIR__ . '/../includes/api_guard.php';
+gh_api_guard(false);
+
 require_once __DIR__ . '/../includes/scans_manager.php';
 
 $groupId = $_GET['group_id'] ?? $_POST['group_id'] ?? '';

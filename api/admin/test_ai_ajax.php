@@ -2,7 +2,7 @@
 // /api/admin/test_ai_ajax.php
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/gemini.php';
+require_once __DIR__ . '/../includes/ai_engine.php';
 
 header('Content-Type: application/json; charset=utf-8');
 

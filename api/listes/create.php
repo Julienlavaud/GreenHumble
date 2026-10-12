@@ -11,6 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+require_once __DIR__ . '/../includes/api_guard.php';
+gh_api_guard(true);
+
 require_once __DIR__ . '/../includes/listes_manager.php';
 
 $raw = file_get_contents('php://input');
@@ -26,6 +29,12 @@ if (empty($nom)) {
 }
 
 $newList = create_liste($nom, $description);
+
+if ($newList === null) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'La liste n’a pas pu être enregistrée (droits d’écriture du dossier data).'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 echo json_encode([
     'success' => true,

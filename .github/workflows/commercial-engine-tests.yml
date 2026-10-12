@@ -19,6 +19,11 @@ jobs:
           php --version
       - name: Vérifier la syntaxe
         run: |
+          php -l api/router.php
+          php -l api/includes/ai_engine.php
+          php -l tests/ai_provider_test.php
+          php -l tests/ui_buttons_contract_test.php
+          php -l api/includes/api_guard.php
           php -l api/includes/commercial_engine.php
           php -l api/includes/commercial_dossier.php
           php -l api/includes/commercial_adapter.php
@@ -83,3 +88,9 @@ jobs:
 
       - name: Tester le contrat de statut de scan individuel (L02)
         run: php tests/list_single_scan_status_test.php
+
+      - name: Tester les providers IA
+        run: php tests/ai_provider_test.php
+
+      - name: Tester le contrat des boutons et endpoints JSON
+        run: php tests/ui_buttons_contract_test.php

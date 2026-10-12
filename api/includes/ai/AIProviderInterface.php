@@ -19,6 +19,7 @@ interface AIProviderInterface
     public function generate(
         string $prompt,
         string $systemPrompt,
-        ?string $model = null
+        ?string $model = null,
+        ?string $apiKey = null
     ): string;
 }

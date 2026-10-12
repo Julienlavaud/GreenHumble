@@ -12,6 +12,14 @@ Options -Indexes
     RewriteRule ^composer\.json$ - [F,L]
     RewriteRule ^composer\.lock$ - [F,L]
 
+    # Anciennes URLs /admin/* -> URL canonique /api/admin/* (301)
+    RewriteRule ^admin/?$ /api/admin/index.php [R=301,L]
+    RewriteCond %{DOCUMENT_ROOT}/api/admin/$1 -f
+    RewriteRule ^admin/(.+)$ /api/admin/$1 [R=301,L]
+    RewriteCond %{DOCUMENT_ROOT}/api/$1 -f
+    RewriteRule ^admin/(.+)$ /api/$1 [R=301,L]
+    RewriteRule ^admin/.*$ /api/admin/index.php [R=301,L]
+
     #################################################
     # Laisser passer les fichiers et dossiers réels
     #################################################

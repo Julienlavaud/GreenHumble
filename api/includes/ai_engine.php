@@ -242,6 +242,14 @@ if (empty($apiKey)) {
         ?? null;
 }
 
+if (empty($apiKey)) {
+    try {
+        $apiKey = AIProviderFactory::make($provider)->getApiKey();
+    } catch (Throwable $e) {
+        error_log('AI Provider key lookup failed: ' . $e->getMessage());
+    }
+}
+
     // 2. Scraping du contenu réel
    $webContent = is_string($providedWebContent)
     ? $providedWebContent
@@ -394,7 +402,8 @@ try {
         $providerInstance->generate(
             $prompt,
             $systemInstruction,
-            $model
+            $model,
+            $apiKey
         );
 
 } catch (Throwable $e) {
@@ -404,6 +413,7 @@ try {
         . $e->getMessage()
     );
 
+    $providerErrorDetail = $e->getMessage();
     $aiResponse = '';
 }
 
@@ -413,6 +423,14 @@ try {
         $result = $decodedResponse['data'];
         $result['aiMetadata'] = $runMetadata;
         return json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    }
+
+        // Prompt personnalise (kit commercial, contre-analyse) : le JSON libre n'a pas a suivre le schema d'audit.
+    if ($custom_prompt && is_string($aiResponse)) {
+        $freeJson = json_decode(gh_ai_extract_json($aiResponse), true);
+        if (is_array($freeJson) && !array_is_list($freeJson)) {
+            return json_encode($freeJson, JSON_UNESCAPED_UNICODE);
+        }
     }
 
   foreach (
@@ -439,6 +457,13 @@ try {
                 $prompt,
                 $systemInstruction
             );
+
+        if ($custom_prompt && is_string($fallbackResponse)) {
+            $freeFallback = json_decode(gh_ai_extract_json($fallbackResponse), true);
+            if (is_array($freeFallback) && !array_is_list($freeFallback)) {
+                return json_encode($freeFallback, JSON_UNESCAPED_UNICODE);
+            }
+        }
 
         $decodedFallback =
             gh_ai_validate_response(
@@ -479,8 +504,26 @@ try {
     }
 }
 
+    $providerErrorDetail = isset($providerErrorDetail) ? $providerErrorDetail : '';
+    if ($providerErrorDetail === '' && is_string($aiResponse) && (stripos(trim($aiResponse), 'Erreur') === 0 || stripos(trim($aiResponse), 'HTTP ') === 0)) {
+        $providerErrorDetail = trim($aiResponse);
+    }
+    if ($providerErrorDetail === '' && ($decodedResponse['code'] ?? '') === 'schema_invalid' && is_array($decodedResponse['data'] ?? null)) {
+        $sd = $decodedResponse['data'];
+        $providerErrorDetail = 'schema_invalid; normalizer=' . (function_exists('gh_ai_normalize') ? 'oui' : 'non')
+            . '; cles=' . implode(',', array_slice(array_map('strval', array_keys($sd)), 0, 20))
+            . '; score=' . (isset($sd['score']) ? gettype($sd['score']) : 'absent')
+            . '; riskLevel=' . (isset($sd['riskLevel']) && is_string($sd['riskLevel']) ? substr($sd['riskLevel'], 0, 20) : 'absent')
+            . '; summary=' . (isset($sd['summary']) ? gettype($sd['summary']) : 'absent')
+            . '; claims=' . (isset($sd['claims']) ? gettype($sd['claims']) : 'absent')
+            . '; prospection=' . (array_key_exists('prospection', $sd) ? gettype($sd['prospection']) : 'absent');
+    }
+    $providerErrorDetail = preg_replace('/(key=|AIza|gsk_|sk-|Bearer\s+)[A-Za-z0-9_\-]+/i', '$1***', substr($providerErrorDetail, 0, 300));
     $failureCode = 'response_not_json';
-    if (is_string($aiResponse) && stripos(trim($aiResponse), 'Erreur') === 0) {
+    if ($providerErrorDetail !== '' && ($aiResponse === '' || $aiResponse === null)) {
+        $failureCode = 'provider_request_failed';
+    }
+    if (is_string($aiResponse) && (stripos(trim($aiResponse), 'Erreur') === 0 || stripos(trim($aiResponse), 'HTTP ') === 0)) {
         $failureCode = 'provider_request_failed';
     } elseif (in_array(($decodedResponse['code'] ?? ''), ['schema_invalid', 'analysis_incomplete'], true)) {
         $failureCode = $decodedResponse['code'];
@@ -501,6 +544,7 @@ try {
         'claims' => [],
         'prospection' => null,
         'financialImpact' => null,
+        'providerError' => $providerErrorDetail !== '' ? $providerErrorDetail : null,
         'limitations' => ['Réponse IA absente, invalide ou non structurée en JSON'],
         'aiMetadata' => $runMetadata
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);

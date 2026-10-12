@@ -1,5 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/cms.php';
 require_once __DIR__ . '/app_state.php';
 $state = load_app_state();
@@ -29,12 +30,12 @@ $adminGroups = [
   'RÉGLAGES' => ['missions' => 'Catalogue métier', 'widgets' => 'Configurer les widgets', 'legal' => 'Références', 'texts' => 'Dictionnaire', 'style' => 'Textes du site']
 ];
 $adminDirectLinks = [
-  'dashboard' => '/admin/dashboard.php',
-  'pipeline' => '/admin/pipeline.php',
-  'scans' => '/admin/scan.php',
-  'exports' => '/admin/export.php',
-  'ai_providers' => '/admin/ai_providers.php',
-  'widgets' => '/admin/widget.php'
+  'dashboard' => '/api/dashboard.php',
+  'pipeline' => '/api/pipeline.php',
+  'scans' => '/api/scan.php',
+  'exports' => '/api/admin/export.php',
+  'ai_providers' => '/api/admin/ai_providers.php',
+  'widgets' => '/api/admin/widget.php'
 ];
 ?>
 <!doctype html>
@@ -43,6 +44,39 @@ $adminDirectLinks = [
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#f5f8f5">
+<meta name="csrf-token" content="<?= htmlspecialchars(gh_get_csrf_token(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+<script>
+(function () {
+  var meta = document.querySelector('meta[name="csrf-token"]');
+  var token = meta ? meta.content : '';
+  if (!token) return;
+  var nativeFetch = window.fetch;
+  window.fetch = function (input, init) {
+    init = init || {};
+    var method = String(init.method || (input && input.method) || 'GET').toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+      var url = typeof input === 'string' ? input : (input && input.url) || '';
+      var sameOrigin = url.charAt(0) === '/' && url.charAt(1) !== '/' || url.indexOf(location.origin + '/') === 0;
+      if (sameOrigin) {
+        var headers = new Headers(init.headers || (input && input.headers) || {});
+        if (!headers.has('X-CSRF-Token')) headers.set('X-CSRF-Token', token);
+        init.headers = headers;
+        if (!init.credentials) init.credentials = 'same-origin';
+      }
+    }
+    return nativeFetch.call(this, input, init);
+  };
+  document.addEventListener('submit', function (event) {
+    var form = event.target;
+    if (!form || !form.method || form.method.toLowerCase() !== 'post' || form.querySelector('input[name="csrf_token"]')) return;
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'csrf_token';
+    input.value = token;
+    form.appendChild(input);
+  }, true);
+})();
+</script>
 <title><?= htmlspecialchars($page_title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> — GreenHumble</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -72,7 +106,7 @@ $adminDirectLinks = [
             <div class="gh-sidebar__group">
               <p><?= htmlspecialchars($groupLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
               <?php foreach ($groupTabs as $tabId => $tabLabel): ?>
-                <a class="gh-sidebar__sublink <?= $activeTab === $tabId ? 'is-active' : '' ?>" href="<?= htmlspecialchars($adminDirectLinks[$tabId] ?? ('/admin/index.php?tab=' . rawurlencode($tabId)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?= htmlspecialchars($tabLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a>
+                <a class="gh-sidebar__sublink <?= $activeTab === $tabId ? 'is-active' : '' ?>" href="<?= htmlspecialchars($adminDirectLinks[$tabId] ?? ('/api/admin/index.php?tab=' . rawurlencode($tabId)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?= htmlspecialchars($tabLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a>
               <?php endforeach; ?>
             </div>
           <?php endforeach; ?>

@@ -13,7 +13,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     $requestedTab = trim((string)($_GET['tab'] ?? 'scans'));
     $loginTabs = ['audits', 'scans', 'dossiers', 'listes', 'agency', 'team', 'scanner_groups', 'scanner', 'missions', 'legal', 'texts', 'style'];
     if (!in_array($requestedTab, $loginTabs, true)) $requestedTab = 'scans';
-    $next = '/admin/index.php?tab=' . rawurlencode($requestedTab);
+    $next = '/api/admin/index.php?tab=' . rawurlencode($requestedTab);
     header('Location: /api/login.php?next=' . rawurlencode($next), true, 303);
     exit;
 }
@@ -21,11 +21,11 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 // 2. Data Loading
 $activeTab = $_GET['tab'] ?? 'audits';
 if ($activeTab === 'team') {
-    header('Location: /admin/index.php?tab=agency#organisation-equipe', true, 303);
+    header('Location: /api/admin/index.php?tab=agency#organisation-equipe', true, 303);
     exit;
 }
 if (in_array($activeTab, ['dossiers', 'scanner_groups'], true)) {
-    header('Location: /admin/index.php?tab=listes', true, 303);
+    header('Location: /api/admin/index.php?tab=listes', true, 303);
     exit;
 }
 $state = load_app_state();
@@ -83,7 +83,7 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-3 relative z-10">
-            <a href="/admin/backup_database.php" class="inline-flex items-center gap-2 px-5 py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl border border-emerald-500/30 shadow-sm transition-all font-bold text-sm" title="Télécharger une sauvegarde SQL de la base GreenHumble">
+            <a href="/api/admin/backup_database.php" class="inline-flex items-center gap-2 px-5 py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl border border-emerald-500/30 shadow-sm transition-all font-bold text-sm" title="Télécharger une sauvegarde SQL de la base GreenHumble">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3" /></svg>
                 <span>Sauvegarder la base</span>
             </a>
@@ -334,6 +334,14 @@ include __DIR__ . '/../includes/header.php';
             require_once __DIR__ . '/../includes/scans_manager.php';
             $allDossiers = load_all_dossiers();
             $allScans = load_all_scans();
+            $latestAuditByDomain = [];
+            try {
+                foreach ($db->query("SELECT id, clean_url, url FROM cl_audits ORDER BY analyzedAt DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC) as $dosAudit) {
+                    $dosHost = parse_url(trim((string)($dosAudit['clean_url'] ?? '')), PHP_URL_HOST) ?: parse_url((string)($dosAudit['url'] ?? ''), PHP_URL_HOST);
+                    $dosDomain = strtolower(preg_replace('/^www\\./i', '', trim((string)($dosHost ?: ($dosAudit['clean_url'] ?? '')))));
+                    if ($dosDomain !== '' && !isset($latestAuditByDomain[$dosDomain])) $latestAuditByDomain[$dosDomain] = (int)$dosAudit['id'];
+                }
+            } catch (Throwable $e) {}
             ?>
             <div class="p-8 sm:p-12 space-y-10 bg-[#121212] text-[#E0E0E0] min-h-[650px] rounded-[3rem]">
                 <div class="flex flex-wrap items-center justify-between gap-6 border-b border-white/10 pb-8">
@@ -376,9 +384,14 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
 
                                 <div class="pt-3 border-t border-white/10 flex flex-wrap gap-2">
-                                    <a href="/admin/analyse.php?domain=<?php echo urlencode($dos['domaine']); ?>" class="px-3.5 py-2 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white text-xs font-bold rounded-xl transition-all">
-                                        Consulter le dossier →
+                                    <?php $dosAuditId = $latestAuditByDomain[strtolower(preg_replace('/^www\\./i', '', (string)($dos['domaine'] ?? '')))] ?? null; ?>
+                                    <?php if ($dosAuditId !== null): ?>
+                                    <a href="/api/analyse.php?id=<?php echo (int)$dosAuditId; ?>" class="px-3.5 py-2 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white text-xs font-bold rounded-xl transition-all">
+                                        Consulter le dernier audit →
                                     </a>
+                                    <?php else: ?>
+                                    <span class="px-3.5 py-2 bg-white/5 text-[#AAAAAA] text-xs rounded-xl" title="Aucun audit enregistré pour ce domaine.">Aucun audit</span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>

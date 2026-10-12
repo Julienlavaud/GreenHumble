@@ -34,7 +34,10 @@ try {
 
 // 1. Traitement des formulaires POST
 try {
-    $db->exec("ALTER TABLE cl_audits ADD COLUMN IF NOT EXISTS kit_json LONGTEXT NULL AFTER notes");
+    $hasKitJson = $db->query("SHOW COLUMNS FROM cl_audits LIKE 'kit_json'")->fetch();
+    if (!$hasKitJson) {
+        $db->exec("ALTER TABLE cl_audits ADD COLUMN kit_json LONGTEXT NULL");
+    }
 } catch (Exception $e) {}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -140,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $audData = $stmt->fetch();
             
             if ($audData) {
-                require_once __DIR__ . '/includes/gemini.php';
+                require_once __DIR__ . '/includes/ai_engine.php';
                 
                 $stmtCl = $db->prepare("SELECT term, quoteInText, requiredProof, consultantValidationStatus FROM cl_claims WHERE audit_id = ? AND consultantValidationStatus NOT IN ('non_fonde', 'justifie_par_preuve') LIMIT 10");
                 $stmtCl->execute([$audId]);
@@ -233,7 +236,7 @@ try {
 $auditId = isset($_GET['id']) ? intval($_GET['id']) : ($allAudits[0]['id'] ?? 1);
 $currentTab = $_GET['tab'] ?? 'diag'; // diag, missio, contact, kit, suivi
 if ($currentTab === 'textes') {
-    header('Location: /admin/index.php?tab=texts', true, 303);
+    header('Location: /api/admin/index.php?tab=texts', true, 303);
     exit;
 }
 

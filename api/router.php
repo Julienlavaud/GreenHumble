@@ -9,20 +9,20 @@ declare(strict_types=1);
 
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 
-$path = parse_url($*equestUri, PHP_URL_PATH) ?? '/';
-$*ath = trim($path, '/');
+$path = parse_url($requestUri, PHP_URL_PATH) ?? '/';
+$path = trim($path, '/');
 
 /**
- * Co*patibilité avec :
+ * Compatibilité avec :
  * /api/scan
- * *api/admin
+ * /api/admin
  * /api/export/raw
  */
-i* (strpos($path, 'api/') === 0) {
- *  $path = substr($path, 4);
+if (strpos($path, 'api/') === 0) {
+    $path = substr($path, 4);
 }
 
-$ro*tes = [
+$routes = [
 
     '' => 'index.php',
     'index' => 'index.php',
@@ -31,7 +31,9 @@ $ro*tes = [
     'logout' => 'logout.php',
 
     'audit' => 'audit.php',
-    'prospec' => 'prospec.php',
+    'audit-report' => 'audit-report.php',
+    'prospec' => 'prospect.php',
+    'prospect' => 'prospect.php',
 
     'scan' => 'scan.php',
     'scan/process' => 'scan_process.php',
@@ -74,6 +76,11 @@ $ro*tes = [
 
     'admin' => 'admin/index.php',
     'admin/index' => 'admin/index.php',
+    'admin/dashboard' => 'dashboard.php',
+    'admin/pipeline' => 'pipeline.php',
+    'admin/scan' => 'scan.php',
+    'admin/analyse' => 'analyse.php',
+    'admin/audit-report' => 'audit-report.php',
     'admin/companies' => 'admin/companies.php',
     'admin/texts' => 'admin/texts.php',
     'admin/widget' => 'admin/widget.php',
@@ -92,7 +99,7 @@ if (isset($routes[$path])) {
 /**
  * Fallback : /truc => truc.php
  */
-if ($path !== '') {
+if ($path !== '' && preg_match('#^[A-Za-z0-9_\-]+(/[A-Za-z0-9_\-]+)*$#', $path)) {
 
     $directFile = __DIR__ . '/' . $path . '.php';
 
