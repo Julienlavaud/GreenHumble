@@ -71,4 +71,3 @@ final class AIProviderRegistry
         return self::get($provider) !== null;
     }
 }
-``
