@@ -1569,7 +1569,12 @@ function importTabCSV(tab, input) {
         for(let i=1; i<lines.length; i++) {
             const p = lines[i];
             if (tab === 'scanner') {
-                if (p.length >= 2) imports.push({ key: p[0].trim(), value: p.slice(1).join(';') });
+                if (p.length !== 2) {
+                    alert('Chaque ligne Scanner doit contenir exactement une clé et une consigne.');
+                    input.value = '';
+                    return;
+                }
+                imports.push({ key: p[0].trim(), value: p[1] });
                 continue;
             }
             if (p.length < 3) continue;

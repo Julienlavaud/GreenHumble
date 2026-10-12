@@ -116,16 +116,6 @@ function append_scan_to_json_path($path, $sourcePaths, $newScan) {
 }
 
 /**
- * Remplace l'historique complet des scans (modification, suppression, réassignation).
- * Le fichier canonique est écrit sous verrou ; les anciens emplacements existants sont
- * alignés pour qu'un scan supprimé ne réapparaisse pas à la fusion des lectures.
- */
-function save_all_scans($scans) {
-    if (!is_array($scans)) return false;
-    return mutate_all_scans(static fn(array $currentScans): array => array_values($scans));
-}
-
-/**
  * Applique une modification à l'historique courant sous le même verrou que les ajouts,
  * puis synchronise les emplacements historiques avant de libérer le verrou canonique.
  * Tous les écrivains multi-fichiers verrouillent le canonique avant les copies historiques;

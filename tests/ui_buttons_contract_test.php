@@ -18,7 +18,7 @@ foreach (['groups/list', 'scans/list', 'scans/by_group', 'dossiers/list', 'liste
 }
 
 require_once $api . '/includes/scans_manager.php';
-check(function_exists('save_all_scans'), 'save_all_scans() existe (modification/suppression de scans)');
+check(function_exists('mutate_all_scans'), 'scan modifications use the lock-protected mutation helper');
 
 $admin = (string)file_get_contents($api . '/admin/index.php');
 check(!str_contains($admin, '/admin/analyse.php?domain='), 'Dossiers : le lien ouvre le dernier audit par identifiant, pas par domaine');
