@@ -1474,7 +1474,7 @@ document.addEventListener('click', async (event) => {
         }
     }
 });
-</script>
+
 function openClaimCorrectionModal(claim) {
     document.getElementById('modal_claim_id').value = claim.id;
     document.getElementById('modal_claim_term').value = claim.term;
