@@ -10,33 +10,26 @@ require_once __DIR__ . '/providers/OpenRouterProvider.php';
 
 final class AIProviderFactory
 {
- public static function instances(): array
-{
-    $instances = [];
+    public static function make(
+        string $provider
+    ): AIProviderInterface {
 
-    foreach (
-        self::available()
-        as $provider
-    ) {
+        $provider = strtolower(
+            trim($provider)
+        );
 
-        try {
-
-            $instances[$provider] =
-                self::make($provider);
-
-        } catch (Throwable $e) {
-
-            error_log(
-                'AIProviderFactory: impossible de charger '
-                . $provider
-                . ' : '
-                . $e->getMessage()
+        $config =
+            AIProviderRegistry::get(
+                $provider
             );
-        }
-    }
 
-    return $instances;
-}
+        if (!$config) {
+            throw new RuntimeException(
+                sprintf(
+                    'Provider IA inconnu : %s',
+                    $provider
+                )
+            );
         }
 
         $class =
@@ -84,8 +77,9 @@ final class AIProviderFactory
     ): bool {
 
         return
-            AIProviderRegistry::get($provider)
-            !== null;
+            AIProviderRegistry::get(
+                strtolower(trim($provider))
+            ) !== null;
     }
 
     public static function instances(): array
@@ -96,8 +90,21 @@ final class AIProviderFactory
             self::available()
             as $provider
         ) {
-            $instances[$provider] =
-                self::make($provider);
+
+            try {
+
+                $instances[$provider] =
+                    self::make($provider);
+
+            } catch (Throwable $e) {
+
+                error_log(
+                    'AIProviderFactory: impossible de charger '
+                    . $provider
+                    . ' : '
+                    . $e->getMessage()
+                );
+            }
         }
 
         return $instances;
