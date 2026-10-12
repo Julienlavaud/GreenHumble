@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $audData = $stmt->fetch();
             
             if ($audData) {
-                require_once __DIR__ . '/includes/gemini.php';
+                require_once __DIR__ . '/includes/ai_engine.php';
                 
                 $stmtCl = $db->prepare("SELECT term, quoteInText, requiredProof, consultantValidationStatus FROM cl_claims WHERE audit_id = ? AND consultantValidationStatus NOT IN ('non_fonde', 'justifie_par_preuve') LIMIT 10");
                 $stmtCl->execute([$audId]);
