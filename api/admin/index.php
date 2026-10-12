@@ -1086,7 +1086,7 @@ const appState = <?php echo json_encode($clientState, JSON_HEX_TAG | JSON_HEX_AM
 // --- Unification de la Synchronisation ---
 async function syncState(type, data, isBatch = false) {
     const btns = document.querySelectorAll('.save-btn');
-    btns.forEach(b => { b.disabled = true; b.innerHTML = '⏳ Synchronisation...'; });
+    btns.forEach(b => { if (!b.dataset.label) b.dataset.label = b.innerHTML; b.disabled = true; b.innerHTML = '⏳ Synchronisation...'; });
 
     const payload = isBatch ? { batch: data } : { type, data };
 
@@ -1101,12 +1101,12 @@ async function syncState(type, data, isBatch = false) {
         if (!response.ok || !res.success) throw new Error(res.error || 'Le serveur a refusé la sauvegarde (HTTP ' + response.status + ').');
         {
             btns.forEach(b => { 
-                b.innerHTML = '✨ Mise à jour réussie'; 
+                b.innerHTML = '✅ Modification réussie'; 
                 b.classList.replace('bg-emerald-700', 'bg-indigo-600');
             });
             setTimeout(() => {
                 btns.forEach(b => { 
-                    b.innerHTML = 'Sauvegarder'; 
+                    b.innerHTML = b.dataset.label || 'Sauvegarder'; 
                     b.classList.replace('bg-indigo-600', 'bg-emerald-700');
                     b.disabled = false;
                 });
@@ -1115,7 +1115,7 @@ async function syncState(type, data, isBatch = false) {
         }
     } catch (e) {
         alert(e.message || 'Échec de la sauvegarde. Vérifiez la connexion puis réessayez.');
-        btns.forEach(b => { b.disabled = false; b.innerHTML = 'Sauvegarder'; });
+        btns.forEach(b => { b.disabled = false; b.innerHTML = b.dataset.label || 'Sauvegarder'; });
     }
     return false;
 }
