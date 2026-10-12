@@ -14,32 +14,52 @@ final class GeminiProvider implements AIProviderInterface
 
     public function getLabel(): string
     {
-        return 'Google Gemini';
+        $config = AIProviderRegistry::get(
+            $this->getName()
+        );
+
+        return
+            $config['label']
+            ?? 'Google Gemini';
     }
 
     public function getDefaultModel(): string
     {
-        $config = AIProviderRegistry::get('gemini');
+        $config = AIProviderRegistry::get(
+            $this->getName()
+        );
 
-        return $config['default_model']
+        return
+            $config['default_model']
             ?? 'gemini-flash-latest';
     }
 
     public function getModels(): array
     {
-        $config = AIProviderRegistry::get('gemini');
+        $config = AIProviderRegistry::get(
+            $this->getName()
+        );
 
-        return $config['models']
+        return
+            $config['models']
             ?? [];
     }
 
     public function getApiKey(): ?string
     {
         $state = load_app_state();
-        $scanVars = $state['scanVars'] ?? [];
 
-        if (!empty($scanVars['geminiApiKey'])) {
-            return (string)$scanVars['geminiApiKey'];
+        $scanVars =
+            $state['scanVars']
+            ?? [];
+
+        if (
+            !empty(
+                $scanVars['geminiApiKey']
+            )
+        ) {
+            return (string)
+                $scanVars['geminiApiKey'];
         }
 
         if (
@@ -49,12 +69,18 @@ final class GeminiProvider implements AIProviderInterface
             return GEMINI_API_KEY;
         }
 
-        if (!empty(getenv('GEMINI_API_KEY'))) {
-            return getenv('GEMINI_API_KEY');
+        $env =
+            getenv('GEMINI_API_KEY');
+
+        if (!empty($env)) {
+            return $env;
         }
 
-        if (!empty(getenv('AI_API_KEY'))) {
-            return getenv('AI_API_KEY');
+        $legacy =
+            getenv('AI_API_KEY');
+
+        if (!empty($legacy)) {
+            return $legacy;
         }
 
         return null;
@@ -62,41 +88,57 @@ final class GeminiProvider implements AIProviderInterface
 
     public function hasApiKey(): bool
     {
-        return !empty($this->getApiKey());
+        return !empty(
+            $this->getApiKey()
+        );
     }
 
     public function testConnection(): bool
     {
-        $apiKey = $this->getApiKey();
+        $apiKey =
+            $this->getApiKey();
 
         if (empty($apiKey)) {
             return false;
         }
 
-        $reply = call_gemini(
-            $this->getDefaultModel(),
-            [
-                'contents' => [
-                    [
-                        'parts' => [
-                            [
-                                'text' => 'Réponds uniquement OK'
+        try {
+
+            $reply = call_gemini(
+                $this->getDefaultModel(),
+                [
+                    'contents' => [
+                        [
+                            'parts' => [
+                                [
+                                    'text' =>
+                                        'Réponds uniquement OK'
+                                ]
                             ]
                         ]
+                    ],
+                    'generationConfig' => [
+                        'temperature' => 0
                     ]
                 ],
-                'generationConfig' => [
-                    'temperature' => 0
-                ]
-            ],
-            $apiKey
-        );
+                $apiKey
+            );
 
-        return
-            is_string($reply)
-            && trim($reply) !== ''
-            && stripos($reply, 'erreur') !== 0
-            && stripos($reply, 'http ') === false;
+            return
+                is_string($reply)
+                && trim($reply) !== ''
+                && stripos($reply, 'erreur') !== 0
+                && stripos($reply, 'http ') === false;
+
+        } catch (Throwable $e) {
+
+            error_log(
+                'GeminiProvider test failed: '
+                . $e->getMessage()
+            );
+
+            return false;
+        }
     }
 
     public function generate(
@@ -105,21 +147,48 @@ final class GeminiProvider implements AIProviderInterface
         ?string $model = null
     ): string {
 
-        $apiKey = $this->getApiKey();
+        $apiKey =
+            $this->getApiKey();
 
         if (empty($apiKey)) {
-            return 'Erreur : clé API Gemini absente.';
+            return
+                'Erreur : clé API Gemini absente.';
         }
 
         $selectedModel =
             $model
             ?: $this->getDefaultModel();
 
-        return gemini_call(
-            $prompt,
-            $systemPrompt,
-            $selectedModel,
-            $apiKey
-        );
+        if (
+            !in_array(
+                $selectedModel,
+                $this->getModels(),
+                true
+            )
+        ) {
+            $selectedModel =
+                $this->getDefaultModel();
+        }
+
+        try {
+
+            return gemini_call(
+                $prompt,
+                $systemPrompt,
+                $selectedModel,
+                $apiKey
+            );
+
+        } catch (Throwable $e) {
+
+            error_log(
+                'GeminiProvider generate failed: '
+                . $e->getMessage()
+            );
+
+            return
+                'Erreur Gemini : '
+                . $e->getMessage();
+        }
     }
 }
