@@ -125,7 +125,7 @@ switch ($method) {
                 $config['gestion_equipes'][] = [
                     'id' => 'equipe_siege',
                     'nom' => 'equipes',
-                    'description' => 'Liste des cabinets et agences territoriales',
+                    'description': 'Liste des cabinets et agences territoriales',
                     'categorie' => 'gestion_equipes',
                     'valeur' => $currentList,
                     'modifiable' => true,

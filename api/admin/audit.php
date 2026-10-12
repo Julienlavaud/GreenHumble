@@ -131,7 +131,7 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<script src="/api/admin/assets/js/audit.js?v=<?php echo floor(time()/60)*60; ?>"></script>
+<script src="/admin/assets/js/audit.js?v=<?php echo floor(time()/60)*60; ?>"></script>
 <script>
 // Chargement automatique des audits archivés
 async function loadStoredAudits() {
