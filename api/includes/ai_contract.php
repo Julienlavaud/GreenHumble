@@ -16,7 +16,8 @@ function gh_ai_normalize(array $d):array{
         $map=['faible'=>'faible','low'=>'faible','bas'=>'faible','modere'=>'modere','moyen'=>'modere','medium'=>'modere','moderate'=>'modere','eleve'=>'eleve','haut'=>'eleve','high'=>'eleve','critique'=>'critique','critical'=>'critique','a_evaluer'=>'a_evaluer','a evaluer'=>'a_evaluer'];
         $d['riskLevel']=$map[$l]??$d['riskLevel'];
     }
-    if(!isset($d['riskLevel'])&&isset($d['score'])&&is_numeric($d['score'])){$s=(float)$d['score'];$d['riskLevel']=$s>=75?'critique':($s>=50?'eleve':($s>=25?'modere':'faible'));}
+    if(isset($d['riskLevel'])&&!in_array($d['riskLevel'],['faible','modere','modéré','eleve','élevé','critique','a_evaluer'],true))unset($d['riskLevel']);
+    if(!isset($d['riskLevel'])&&isset($d['score'])&&is_numeric($d['score'])){$s=(float)$d['score'];$d['riskLevel']=$s>=75?'critique':($s>=50?'eleve':($s>=25?'modere':'faible'));}elseif(!isset($d['riskLevel']))$d['riskLevel']='a_evaluer';
     if((!isset($d['summary'])||!is_string($d['summary'])||trim($d['summary'])==='')){
         $alt=$d['clientSummary']['riskVerdict']??($d['clientSummary']['headline']??($d['synthese']??null));
         $d['summary']=is_string($alt)&&trim($alt)!==''?$alt:'Synthèse non fournie par le fournisseur IA.';
