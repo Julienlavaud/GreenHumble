@@ -5,9 +5,9 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/app_state.php';
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/gemini.php';
-require_once __DIR__ . '/groq.php';
-require_once __DIR__ . '/mistral.php';
+require_once __DIR__ . '/ai/AIProviderInterface.php';
+require_once __DIR__ . '/ai/AIProviderRegistry.php';
+require_once __DIR__ . '/ai/AIProviderFactory.php';
 require_once __DIR__ . '/ai_contract.php';
 
 /**
@@ -188,20 +188,35 @@ function ai_engine_run(
     $model = trim((string)($overrideModel ?: ($scanVars[$providerModelKey] ?? ($scanVars['aiModel'] ?? (defined('AI_MODEL') ? AI_MODEL : '')))));
     // Seuls les modèles actuellement proposés par la console sont utilisés. Cela évite
     // les appels vers Gemini 2.0 arrêté et les anciens modèles Groq retirés.
-    $providerModelCatalog = [
-        'gemini' => [
-            'default' => 'gemini-flash-latest',
-            'models' => ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-pro-latest'],
-        ],
-        'mistral' => [
-            'default' => 'mistral-large-latest',
-            'models' => ['mistral-large-latest', 'mistral-small-latest'],
-        ],
-        'groq' => [
-            'default' => 'openai/gpt-oss-120b',
-            'models' => ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'],
-        ],
-    ];
+$providerConfig =
+    AIProviderRegistry::get(
+        $provider
+    );
+
+if (!$providerConfig) {
+
+    $provider = 'gemini';
+
+    $providerConfig =
+        AIProviderRegistry::get(
+            'gemini'
+        );
+}
+
+$allowedModels =
+    $providerConfig['models']
+    ?? [];
+
+if (
+    !in_array(
+        $model,
+        $allowedModels,
+        true
+    )
+) {
+    $model =
+        $providerConfig['default_model'];
+}
     if (isset($providerModelCatalog[$provider]) && !in_array($model, $providerModelCatalog[$provider]['models'], true)) {
         $model = $providerModelCatalog[$provider]['default'];
     }
@@ -214,13 +229,29 @@ function ai_engine_run(
         $apiKey = $scanVars[$providerKeyName];
     }
     if (empty($apiKey)) {
-        if ($provider === 'groq') {
-            $apiKey = defined('GROQ_API_KEY') && !empty(GROQ_API_KEY) ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: ($_ENV['GROQ_API_KEY'] ?? ''));
-        } elseif ($provider === 'mistral') {
-            $apiKey = defined('MISTRAL_API_KEY') && !empty(MISTRAL_API_KEY) ? MISTRAL_API_KEY : (getenv('MISTRAL_API_KEY') ?: ($_ENV['MISTRAL_API_KEY'] ?? ''));
-        } else {
-            $apiKey = defined('GEMINI_API_KEY') && !empty(GEMINI_API_KEY) ? GEMINI_API_KEY : (defined('AI_API_KEY') && !empty(AI_API_KEY) ? AI_API_KEY : (getenv('GEMINI_API_KEY') ?: getenv('AI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? '')));
-        }
+       try {
+
+    $providerInstance =
+        AIProviderFactory::make(
+            $provider
+        );
+
+    $aiResponse =
+        $providerInstance->generate(
+            $prompt,
+            $systemInstruction,
+            $model
+        );
+
+} catch (Throwable $e) {
+
+    error_log(
+        'AI Provider Error: '
+        . $e->getMessage()
+    );
+
+    $aiResponse = '';
+}
     }
     if (empty($apiKey)) $apiKey = $scanVars['aiApiKey'] ?? null;
 
@@ -376,40 +407,69 @@ function ai_engine_run(
         return json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
-    // Fallbacks optionnels : seuls les fournisseurs dont la clé est configurée sont appelés.
-    $fallbackProviders = [];
-    $groqKey = !empty($scanVars['groqApiKey']) ? $scanVars['groqApiKey'] : (defined('GROQ_API_KEY') && !empty(GROQ_API_KEY) ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: ($_ENV['GROQ_API_KEY'] ?? '')));
-    $mistralKey = !empty($scanVars['mistralApiKey']) ? $scanVars['mistralApiKey'] : (defined('MISTRAL_API_KEY') && !empty(MISTRAL_API_KEY) ? MISTRAL_API_KEY : (getenv('MISTRAL_API_KEY') ?: ($_ENV['MISTRAL_API_KEY'] ?? '')));
-    if ($provider !== 'groq' && !empty($groqKey)) {
-        $fallbackProviders[] = ['provider' => 'groq', 'key' => $groqKey, 'model' => 'llama-3.3-70b-versatile'];
-    }
-    $geminiKey = !empty($scanVars['geminiApiKey']) ? $scanVars['geminiApiKey'] : (defined('GEMINI_API_KEY') && !empty(GEMINI_API_KEY) ? GEMINI_API_KEY : (getenv('GEMINI_API_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? '')));
-    if ($provider !== 'mistral' && !empty($mistralKey)) {
-        $fallbackProviders[] = ['provider' => 'mistral', 'key' => $mistralKey, 'model' => 'mistral-small-latest'];
+  foreach (
+    AIProviderFactory::instances()
+    as $fallbackProviderName => $fallbackProvider
+) {
+
+    if (
+        $fallbackProviderName === $provider
+    ) {
+        continue;
     }
 
-    if ($provider !== 'gemini' && !empty($geminiKey)) {
-        $fallbackProviders[] = ['provider' => 'gemini', 'key' => $geminiKey, 'model' => 'gemini-2.5-flash'];
+    if (
+        !$fallbackProvider->hasApiKey()
+    ) {
+        continue;
     }
 
-    foreach ($fallbackProviders as $fallback) {
-        if ($fallback['provider'] === 'groq') {
-            $fallbackRes = groq_call($prompt, $systemInstruction, $fallback['model'], $fallback['key']);
-        } elseif ($fallback['provider'] === 'mistral') {
-            $fallbackRes = mistral_call($prompt, $systemInstruction, $fallback['model'], $fallback['key']);
-        } else {
-            $fallbackRes = gemini_call($prompt, $systemInstruction, $fallback['model'], $fallback['key']);
+    try {
+
+        $fallbackResponse =
+            $fallbackProvider->generate(
+                $prompt,
+                $systemInstruction
+            );
+
+        $decodedFallback =
+            gh_ai_validate_response(
+                $fallbackResponse
+            );
+
+        if (
+            $decodedFallback['valid']
+        ) {
+
+            $result =
+                $decodedFallback['data'];
+
+            $runMetadata['provider'] =
+                $fallbackProviderName;
+
+            $runMetadata['fallbackUsed'] =
+                true;
+
+            $result['aiMetadata'] =
+                $runMetadata;
+
+            return json_encode(
+                $result,
+                JSON_PRETTY_PRINT
+                | JSON_UNESCAPED_UNICODE
+            );
         }
-        $decodedFallback = gh_ai_validate_response($fallbackRes);
-        if ($decodedFallback['valid']) {
-            $result = $decodedFallback['data'];
-            $runMetadata['provider'] = $fallback['provider'];
-            $runMetadata['model'] = $fallback['model'];
-            $runMetadata['fallbackUsed'] = true;
-            $result['aiMetadata'] = $runMetadata;
-            return json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        }
+
+    } catch (Throwable $e) {
+
+        error_log(
+            'Fallback provider failed: '
+            . $fallbackProviderName
+            . ' - '
+            . $e->getMessage()
+        );
     }
+}
 
     $failureCode = 'response_not_json';
     if (is_string($aiResponse) && stripos(trim($aiResponse), 'Erreur') === 0) {
