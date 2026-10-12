@@ -25,9 +25,6 @@ $flush = (string)file_get_contents(__DIR__ . '/../api/flush.php');
 $auth = (string)file_get_contents(__DIR__ . '/../api/includes/auth.php');
 $console = (string)file_get_contents(__DIR__ . '/../api/admin/console.php');
 $admin = (string)file_get_contents(__DIR__ . '/../api/admin/index.php');
-$adminFooter = (string)file_get_contents(__DIR__ . '/../api/includes/footer.php');
-$appJs = (string)file_get_contents(__DIR__ . '/../api/assets/js/app.js');
-$adminAppJs = (string)file_get_contents(__DIR__ . '/../api/admin/assets/js/app.js');
 $workflow = (string)file_get_contents(__DIR__ . '/../.github/workflows/build-ovh-deployment.yml');
 
 cache_assert(str_contains($header, "header('Cache-Control: no-store"), 'dynamic application pages disable browser caching');
@@ -40,14 +37,13 @@ cache_assert(
     'the canonical OPcache purge loads its auth/CSRF helper and requires admin authorization'
 );
 cache_assert(str_contains($console, "'flush_cache'") === false, 'OPcache purge is implemented through one endpoint');
-cache_assert(str_contains($admin, 'class="btn-flush-opcache') && str_contains($adminFooter, "assets/js/app.js"), 'administrators can trigger the protected OPcache purge from the Style tab');
-foreach ([$appJs, $adminAppJs] as $flushUi) {
-    cache_assert(
-        str_contains($flushUi, '!res.ok || data.success === false')
-            && str_contains($flushUi, 'data.error || data.message'),
-        'OPcache purge UI reports rejected requests as errors'
-    );
-}
+cache_assert(
+    str_contains($admin, 'id="admin-clear-cache"')
+        && str_contains($admin, "fetch('/api/flush.php'")
+        && str_contains($admin, '!response.ok || result.success === false')
+        && str_contains($admin, 'admin-clear-cache-status'),
+    'administrators can trigger the protected cache purge from every console tab and see its result'
+);
 cache_assert(str_contains($workflow, 'release/ovh-deployment-clean') && str_contains($workflow, 'workflow_dispatch:') && !str_contains($workflow, 'paths:'), 'every release branch update builds a fresh deployable package');
 
 echo "OK: automatic cache refresh and release package contract\n";

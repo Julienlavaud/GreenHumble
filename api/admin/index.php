@@ -79,14 +79,21 @@ include __DIR__ . '/../includes/header.php';
                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
             </div>
             <div>
-                <h1 class="text-4xl font-extrabold text-white tracking-tight italic">COCKPIT <span class="text-[#2A7AE2]">PRO</span></h1>
+                <h1 class="text-4xl font-extrabold text-white tracking-tight">Console d’administration</h1>
                 <div class="flex items-center space-x-3 mt-2">
-                    <span class="px-3 py-1 bg-white/10 text-white rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">GreenHumble v1.1</span>
-                    <p class="text-[#AAAAAA] font-medium text-sm">Base Unifiée & Prospection Augmentée</p>
+                    <span class="px-3 py-1 bg-white/10 text-white rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">Espace sécurisé</span>
+                    <p class="text-[#AAAAAA] font-medium text-sm">Scans · IA · prospection</p>
                 </div>
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-3 relative z-10">
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" id="admin-clear-cache" class="inline-flex items-center gap-2 px-4 py-3 bg-white/10 hover:bg-white/15 text-white rounded-xl border border-white/15 transition-all font-bold text-xs" title="Purger le cache PHP du serveur">
+                    <span aria-hidden="true">↻</span>
+                    <span>Vider le cache</span>
+                </button>
+                <span id="admin-clear-cache-status" class="text-xs text-[#AAAAAA]" role="status" aria-live="polite"></span>
+            </div>
             <a href="/api/admin/backup_database.php" class="inline-flex items-center gap-2 px-5 py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl border border-emerald-500/30 shadow-sm transition-all font-bold text-sm" title="Télécharger une sauvegarde SQL de la base GreenHumble">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3" /></svg>
                 <span>Sauvegarder la base</span>
@@ -553,9 +560,6 @@ include __DIR__ . '/../includes/header.php';
                         <span class="px-3 py-1 bg-[#1E1E1E] text-slate-300 text-xs font-semibold rounded-md border border-white/10">
                             Fichier : /data/user_style.json
                         </span>
-                        <button type="button" class="btn-flush-opcache px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-lg transition-colors">
-                            Purger OPcache
-                        </button>
                     </div>
                 </div>
 
@@ -2036,9 +2040,34 @@ async function deleteScanCard(scanId) {
         alert('Erreur réseau.');
     }
 }
+
+document.getElementById('admin-clear-cache')?.addEventListener('click', async event => {
+    const button = event.currentTarget;
+    const status = document.getElementById('admin-clear-cache-status');
+    button.disabled = true;
+    if (status) status.textContent = 'Purge du cache en cours…';
+    try {
+        const response = await fetch('/api/flush.php', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.success === false) {
+            throw new Error(result.error || result.message || 'La purge du cache a échoué.');
+        }
+        if (status) status.textContent = result.message || 'Cache PHP vidé.';
+    } catch (error) {
+        if (status) status.textContent = error.message || 'Erreur réseau pendant la purge.';
+    } finally {
+        button.disabled = false;
+    }
+});
 </script>
 
 <style>
+    #admin-clear-cache { background: #176b4c; color: #fff !important; }
+    #admin-clear-cache:hover { background: #12583e; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .animate-fadeIn { animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }

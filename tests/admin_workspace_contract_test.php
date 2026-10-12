@@ -23,6 +23,23 @@ admin_workspace_assert(
     str_contains($admin, "if (\$activeTab === 'dossiers')") && str_contains($admin, '?tab=scans'),
     'the Dossiers navigation opens the full scan inventory rather than Lists'
 );
+admin_workspace_assert(
+    str_contains($header, "'scans' => 'Scans & dossiers'")
+        && !str_contains($header, "'dossiers' => 'Dossiers'")
+        && !str_contains($header, "'scanner_groups' => 'Groupes de scanners'"),
+    'the sidebar labels the real scan inventory and omits redirect-only menu entries'
+);
+admin_workspace_assert(
+    str_contains($header, "'ai_providers.php' => 'ai_providers'")
+        && str_contains($header, "'agency' => '/api/admin/index.php?tab=agency#organisation-equipe'"),
+    'direct admin pages and the team anchor map to the correct active menu section'
+);
+admin_workspace_assert(
+    str_contains($admin, 'id="admin-clear-cache"')
+        && str_contains($admin, "fetch('/api/flush.php'")
+        && str_contains($admin, 'id="admin-clear-cache-status"'),
+    'the protected cache purge is reachable from every admin console tab with status feedback'
+);
 admin_workspace_assert(str_contains($admin, 'load_all_scans()'), 'the inventory loads all persisted scans');
 admin_workspace_assert(str_contains($admin, 'rescanExistingCard') && str_contains($admin, "fetch('/api/audit'"), 'individual and bulk rescans use the official audit endpoint');
 admin_workspace_assert(str_contains($admin, 'Le scan d’origine est conservé') && str_contains($admin, 'Les originaux sont conservés'), 'rescans preserve the original scan history');

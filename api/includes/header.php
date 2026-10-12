@@ -24,14 +24,15 @@ if ($activeTab === '') {
     'pipeline.php' => 'pipeline',
     'scan.php' => 'scans',
     'analyse.php' => 'scans',
-    'export.php' => 'exports'
+    'export.php' => 'exports',
+    'ai_providers.php' => 'ai_providers'
   ][$currentPage] ?? '';
 }
 $adminGroups = [
-  'PILOTAGE' => ['dashboard' => 'Tableau de bord', 'pipeline' => 'Pipeline', 'scans' => 'Scans'],
-  'PROSPECTION' => ['dossiers' => 'Dossiers', 'listes' => 'Listes', 'exports' => 'Exports CSV'],
-  'CONSOLE IA' => ['ai_providers' => 'Fournisseurs IA', 'scanner' => 'Prompts & règles', 'texts' => 'Dictionnaire IA', 'legal' => 'Références & conformité'],
-  'CONFIGURATION' => ['agency' => 'Organisation', 'missions' => 'Catalogue métier', 'widgets' => 'Configurer les widgets', 'scanner_groups' => 'Groupes de scanners', 'style' => 'Textes du site']
+  'PILOTAGE' => ['dashboard' => 'Tableau de bord', 'pipeline' => 'Pipeline', 'scans' => 'Scans & dossiers'],
+  'PROSPECTION' => ['listes' => 'Listes de prospection', 'exports' => 'Exports CSV'],
+  'IA & RÉFÉRENTIELS' => ['ai_providers' => 'Fournisseurs IA', 'scanner' => 'Prompts & règles', 'missions' => 'Catalogue métier', 'legal' => 'Références & conformité', 'texts' => 'Dictionnaire IA'],
+  'ORGANISATION' => ['agency' => 'Organisation & équipe', 'widgets' => 'Configurer les widgets', 'style' => 'Textes du site']
 ];
 $adminDirectLinks = [
   'dashboard' => '/api/dashboard.php',
@@ -39,7 +40,8 @@ $adminDirectLinks = [
   'scans' => '/api/scan.php',
   'exports' => '/api/admin/export.php',
   'ai_providers' => '/api/admin/ai_providers.php',
-  'widgets' => '/api/admin/widget.php'
+  'widgets' => '/api/admin/widget.php',
+  'agency' => '/api/admin/index.php?tab=agency#organisation-equipe'
 ];
 ?>
 <!doctype html>
