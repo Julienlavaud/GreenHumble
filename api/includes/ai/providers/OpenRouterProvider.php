@@ -21,10 +21,9 @@ final class OpenRouterProvider implements AIProviderInterface
 
     public function getDefaultModel(): string
     {
-        $config =
-            AIProviderRegistry::get(
-                'openrouter'
-            );
+        $config = AIProviderRegistry::get(
+            'openrouter'
+        );
 
         return
             $config['default_model']
@@ -33,10 +32,9 @@ final class OpenRouterProvider implements AIProviderInterface
 
     public function getModels(): array
     {
-        $config =
-            AIProviderRegistry::get(
-                'openrouter'
-            );
+        $config = AIProviderRegistry::get(
+            'openrouter'
+        );
 
         return
             $config['models']
@@ -56,8 +54,7 @@ final class OpenRouterProvider implements AIProviderInterface
                 $scanVars['openRouterApiKey']
             )
         ) {
-            return
-                (string)
+            return (string)
                 $scanVars['openRouterApiKey'];
         }
 
@@ -82,10 +79,9 @@ final class OpenRouterProvider implements AIProviderInterface
 
     public function hasApiKey(): bool
     {
-        return
-            !empty(
-                $this->getApiKey()
-            );
+        return !empty(
+            $this->getApiKey()
+        );
     }
 
     public function testConnection(): bool
@@ -104,6 +100,11 @@ final class OpenRouterProvider implements AIProviderInterface
                 && trim($response) !== '';
 
         } catch (Throwable $e) {
+
+            error_log(
+                'OpenRouter test failed: '
+                . $e->getMessage()
+            );
 
             return false;
         }
@@ -171,6 +172,12 @@ final class OpenRouterProvider implements AIProviderInterface
                 CURLOPT_CONNECTTIMEOUT =>
                     15,
 
+                CURLOPT_SSL_VERIFYPEER =>
+                    true,
+
+                CURLOPT_SSL_VERIFYHOST =>
+                    2,
+
                 CURLOPT_HTTPHEADER => [
 
                     'Authorization: Bearer '
@@ -188,6 +195,7 @@ final class OpenRouterProvider implements AIProviderInterface
                     json_encode(
                         $payload,
                         JSON_UNESCAPED_UNICODE
+                        | JSON_UNESCAPED_SLASHES
                     )
 
             ]
@@ -197,8 +205,7 @@ final class OpenRouterProvider implements AIProviderInterface
             curl_exec($ch);
 
         $httpCode =
-            (int)
-            curl_getinfo(
+            (int) curl_getinfo(
                 $ch,
                 CURLINFO_HTTP_CODE
             );
@@ -208,9 +215,7 @@ final class OpenRouterProvider implements AIProviderInterface
 
         curl_close($ch);
 
-        if (
-            !empty($error)
-        ) {
+        if (!empty($error)) {
             return
                 'Erreur OpenRouter : '
                 . $error;
@@ -220,6 +225,7 @@ final class OpenRouterProvider implements AIProviderInterface
             $httpCode < 200
             || $httpCode >= 300
         ) {
+
             return
                 'HTTP '
                 . $httpCode
@@ -228,19 +234,18 @@ final class OpenRouterProvider implements AIProviderInterface
 
         $json =
             json_decode(
-                (string)$response,
+                (string) $response,
                 true
             );
 
-        if (
-            !is_array($json)
-        ) {
+        if (!is_array($json)) {
+
             return
                 'Erreur OpenRouter : réponse JSON invalide.';
         }
 
         return
-            (string)(
+            (string) (
                 $json['choices'][0]['message']['content']
                 ?? ''
             );
