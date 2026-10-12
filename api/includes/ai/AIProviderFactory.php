@@ -1,9 +1,9 @@
-
 <?php
 
+require_once __DIR__ . '/AIProviderInterface.php';
 require_once __DIR__ . '/providers/GeminiProvider.php';
-require_once __DIR__ . '/providers/MistralProvider.php';
 require_once __DIR__ . '/providers/GroqProvider.php';
+require_once __DIR__ . '/providers/MistralProvider.php';
 
 final class AIProviderFactory
 {
@@ -11,21 +11,46 @@ final class AIProviderFactory
         string $provider
     ): AIProviderInterface {
 
-        return match ($provider) {
+        $provider = strtolower(trim($provider));
 
-            'gemini' =>
-                new GeminiProvider(),
+        switch ($provider) {
 
-            'mistral' =>
-                new MistralProvider(),
+            case 'gemini':
+                return new GeminiProvider();
 
-            'groq' =>
-                new GroqProvider(),
+            case 'groq':
+                return new GroqProvider();
 
-            default =>
+            case 'mistral':
+                return new MistralProvider();
+
+            default:
                 throw new RuntimeException(
-                    'Provider inconnu : ' . $provider
-                )
-        };
+                    sprintf(
+                        'Provider IA inconnu : %s',
+                        $provider
+                    )
+                );
+        }
+    }
+
+    public static function available(): array
+    {
+        return [
+            'gemini',
+            'groq',
+            'mistral'
+        ];
+    }
+
+    public static function exists(
+        string $provider
+    ): bool {
+
+        return in_array(
+            strtolower(trim($provider)),
+            self::available(),
+            true
+        );
     }
 }
