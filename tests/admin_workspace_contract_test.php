@@ -19,6 +19,7 @@ $analyse = (string)file_get_contents(__DIR__ . '/../api/analyse.php');
 $analyseJs = (string)file_get_contents(__DIR__ . '/../api/assets/js/analyse.js');
 $workflow = (string)file_get_contents(__DIR__ . '/../.github/workflows/php-quality.yml');
 $saveState = (string)file_get_contents(__DIR__ . '/../api/admin/save_state.php');
+$passwordEndpoint = (string)file_get_contents(__DIR__ . '/../api/admin/set_collaborator_password.php');
 
 admin_workspace_assert(
     str_contains($admin, "if (\$activeTab === 'dossiers')") && str_contains($admin, '?tab=scans'),
@@ -66,7 +67,8 @@ admin_workspace_assert(
 admin_workspace_assert(
     str_contains($admin, 'id="collaborator-modal"')
         && str_contains($admin, 'minlength="12"')
-        && str_contains($admin, 'collaborator-status'),
+        && str_contains($admin, 'collaborator-status')
+        && str_contains($passwordEndpoint, "preg_match_all('/./us', \$password)"),
     'account creation requires a secure password and provides accessible feedback'
 );
 admin_workspace_assert(

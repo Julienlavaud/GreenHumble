@@ -734,7 +734,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 class="text-3xl font-black text-slate-900 tracking-tight">Comptes utilisateurs</h2>
-                        <p class="text-slate-500 mt-2">Créez et gérez les accès à l’espace collaborateur. Les mots de passe sont hachés avant stockage.</p>
+                        <p class="text-slate-500 mt-2">Créez et gérez les comptes de l’espace collaborateur. Ces comptes n’ont pas accès à la console administrateur ; leurs mots de passe sont hachés.</p>
                     </div>
                     <button type="button" onclick="openCollaboratorModal()" class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2A7AE2] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1D5BBF]">
                         <span aria-hidden="true">＋</span><span>Créer un compte</span>
@@ -1407,7 +1407,7 @@ async function submitCollaboratorForm(event) {
         error.textContent = message;
         error.classList.remove('hidden');
     };
-    if (!name || !email || !role || password.length < 12) {
+    if (!name || !email || !role || Array.from(password).length < 12) {
         showError('Renseignez tous les champs et choisissez un mot de passe d’au moins 12 caractères.');
         return;
     }
