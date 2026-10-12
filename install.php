@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/api/includes/asset_version.php';
+
 /**
  * GreenHumble v1.1 — Installer Automatique (OVH Mutualisé & Apache 2.4+)
  * Verification, Arborescence, Fichier .env, Sécurité .htaccess & Purge OPcache
@@ -267,7 +269,7 @@ if ($isBrowser) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/api/admin/assets/css/styles.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="/api/assets/css/styles.css?v=<?php echo gh_asset_version('assets/css/styles.css'); ?>">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F9F9F9; color: #333333; line-height: 1.5; letter-spacing: 0.3px; }
         .card { background: #FFFFFF; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 24px; margin: 16px 0; border: 1px solid rgba(0,0,0,0.05); }

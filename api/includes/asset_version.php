@@ -15,9 +15,8 @@ function gh_asset_version(string $relativePath): string
         return '1';
     }
 
-    $modifiedAt = filemtime($assetPath);
-    $size = filesize($assetPath);
-    if ($modifiedAt === false || $size === false) return '1';
+    $contentHash = hash_file('sha256', $assetPath);
+    if ($contentHash === false) return '1';
 
-    return dechex($modifiedAt) . '-' . dechex($size);
+    return $contentHash;
 }
