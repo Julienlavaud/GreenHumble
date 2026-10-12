@@ -1,8 +1,0 @@
-{
-  "name": "GreenHumble v1.1 – Audit Greenwashing & Directive Green Claims",
-  "description": "Restons humbles face à nos responsabilités. Évaluer la sincérité de votre démarche durable et la conformité de vos supports avec GreenHumble.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}
