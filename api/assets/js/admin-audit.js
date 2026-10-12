@@ -116,7 +116,7 @@ function renderAuditCards(data) {
       <p class="text-sm text-slate-300 bg-slate-950/60 p-4 rounded-lg border border-slate-800/80 mb-6">📌 <strong>Synthèse IA :</strong> ${summary}</p>\n      ${dossierLink}
       
       <h3 class="text-md font-bold text-slate-200 mb-4 flex items-center gap-2">
-        <span>⚠️ Allégations Environnementales Relevées (${claims.length})</span>
+        <span>⚠️ Signaux détectés dans le scan (${claims.length})</span>
       </h3>
   `;
 
@@ -128,7 +128,7 @@ function renderAuditCards(data) {
       html += `
         <div class="bg-slate-950 border-l-4 border-emerald-500 border-t border-r border-b border-slate-800 rounded-r-xl p-4 text-xs">
           <div class="flex justify-between items-start gap-2 mb-2">
-            <span class="font-bold text-emerald-400 text-sm">« ${c.term || c.quoteInText || 'Allégation'} »</span>
+            <span class="font-bold text-emerald-400 text-sm">« ${c.quoteInText || c.term || 'Signal relevé'} »</span>
             <span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[10px]">${c.lawArticle || 'Green Claims'}</span>
           </div>
           <p class="text-slate-300 mb-2 italic">${c.quoteInText || ''}</p>
