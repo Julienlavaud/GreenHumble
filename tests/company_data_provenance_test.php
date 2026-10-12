@@ -34,7 +34,7 @@ company_provenance_assert(gh_company_provenance_label(null, true) === 'Source no
 $report = (string)file_get_contents(__DIR__ . '/../api/audit-report.php');
 $analysis = (string)file_get_contents(__DIR__ . '/../api/analyse.php');
 $pipeline = (string)file_get_contents(__DIR__ . '/../api/pipeline.php');
-company_provenance_assert(strpos($report, "$target = '/api/analyse.php';") !== false, 'le rapport historique redirige vers le rapport canonique');
+company_provenance_assert(strpos($report, '$target = \'/api/analyse.php\';') !== false, 'le rapport historique redirige vers le rapport canonique');
 foreach (['company-sector-source', 'company-headcount-source', 'company-turnover-source', 'company-siren-source', 'company-naf-source'] as $id) {
     company_provenance_assert(strpos($analysis, 'id="' . $id . '"') !== false, 'le rapport canonique expose la provenance ' . $id);
 }
