@@ -6,6 +6,8 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/app_state.php';
 require_once __DIR__ . '/../includes/auth.php';
 
+const MAX_BULK_RESCANS = 10;
+
 // 1. Authentication
 // Centralize login: this page must not accept a separate hard-coded password.
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true ||
@@ -258,7 +260,7 @@ include __DIR__ . '/../includes/header.php';
                         Sélectionner les scans visibles
                     </label>
                     <div class="flex flex-wrap items-center gap-2">
-                        <button type="button" id="bulk-rescan-scans" class="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50" disabled>Relancer la sélection (10 max)</button>
+                        <button type="button" id="bulk-rescan-scans" class="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50" disabled>Relancer la sélection (<?= MAX_BULK_RESCANS ?> max)</button>
                         <button type="button" id="bulk-delete-scans" class="rounded-xl bg-rose-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50" disabled>Supprimer la sélection</button>
                     </div>
                     <p id="bulk-scan-status" class="w-full text-xs text-slate-500" role="status" aria-live="polite"></p>
@@ -1718,6 +1720,7 @@ async function submitAssignScanner() {
 }
 
 // Scans Centralisés Filtering & Actions
+const MAX_BULK_RESCANS = <?php echo MAX_BULK_RESCANS; ?>;
 function filterScansGrid() {
     const typeVal = document.getElementById('filter_type_scan')?.value || 'all';
     const searchVal = (document.getElementById('filter_url_scan')?.value || '').toLowerCase().trim();
@@ -1848,8 +1851,8 @@ document.getElementById('bulk-rescan-scans')?.addEventListener('click', async ()
     const cards = getSelectedScanCards();
     if (!cards.length) return;
     const status = document.getElementById('bulk-scan-status');
-    if (cards.length > 10) {
-        if (status) status.textContent = 'Pour éviter une longue série d’appels IA, relancez au maximum 10 scans par lot.';
+    if (cards.length > MAX_BULK_RESCANS) {
+        if (status) status.textContent = `Pour éviter une longue série d’appels IA, relancez au maximum ${MAX_BULK_RESCANS} scans par lot.`;
         return;
     }
     if (!confirm(`Relancer ${cards.length} scan(s) ? Les scans d’origine resteront conservés.`)) return;

@@ -34,7 +34,12 @@ admin_workspace_assert(
 );
 admin_workspace_assert(str_contains($admin, 'Team Manager · accès collaborateurs'), 'the agency page identifies its Team Manager section');
 admin_workspace_assert(str_contains($admin, 'aria-label="Supprimer ce collaborateur"'), 'the team delete action is visible and accessible');
-admin_workspace_assert(str_contains($admin, 'Relancer la sélection (10 max)') && str_contains($admin, 'cards.length > 10'), 'bulk rescans are capped at ten selected sites per batch');
+admin_workspace_assert(
+    str_contains($admin, 'const MAX_BULK_RESCANS = 10;')
+        && str_contains($admin, 'Relancer la sélection (<?= MAX_BULK_RESCANS ?> max)')
+        && str_contains($admin, 'cards.length > MAX_BULK_RESCANS'),
+    'bulk rescans use one shared batch-size limit'
+);
 admin_workspace_assert(!str_contains($admin, "['audits', 'missions', 'legal', 'texts', 'team', 'scanner']"), 'unreachable Team-tab export controls are removed');
 admin_workspace_assert(str_contains($admin, "\\uFEFF") && str_contains($admin, "replace(/\"/g, '\"\"')"), 'Scanner CSV exports preserve UTF-8 BOM and quote escaped prompt values');
 admin_workspace_assert(str_contains($header, 'greenhumble-app.css') && str_contains($theme, 'body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"]'), 'standalone admin pages share the AI provider visual system');

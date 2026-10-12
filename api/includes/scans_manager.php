@@ -192,6 +192,10 @@ function mutate_all_scans(callable $mutator, ?array $storagePaths = null) {
         foreach ($targets as $path) {
             $targetDir = dirname($path);
             if (!is_dir($targetDir) || !is_writable($targetDir)) return false;
+        }
+
+        foreach ($targets as $path) {
+            $targetDir = dirname($path);
             $targetLock = null;
             if ($path !== $canonical) {
                 $targetLock = @fopen($path . '.lock', 'c');

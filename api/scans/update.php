@@ -31,8 +31,7 @@ if (empty($id)) {
 }
 
 $updated = false;
-$scans = [];
-$saved = mutate_all_scans(static function (array $currentScans) use ($id, $input, &$updated, &$scans): array {
+$saved = mutate_all_scans(static function (array $currentScans) use ($id, $input, &$updated): array {
     foreach ($currentScans as &$scan) {
         if ((string)($scan['id'] ?? '') !== $id) continue;
         if (isset($input['type_scan']) && in_array($input['type_scan'], ['diagnostic', 'pipeline', 'widget'], true)) {
@@ -45,7 +44,6 @@ $saved = mutate_all_scans(static function (array $currentScans) use ($id, $input
         break;
     }
     unset($scan);
-    $scans = $currentScans;
     return $currentScans;
 });
 
@@ -65,6 +63,5 @@ if (!$updated) {
 
 echo json_encode([
     'success' => true,
-    'message' => 'Scan mis à jour avec succès.',
-    'scans' => $scans
+    'message' => 'Scan mis à jour avec succès.'
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);

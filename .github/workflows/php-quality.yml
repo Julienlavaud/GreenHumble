@@ -54,6 +54,7 @@ jobs:
           php tests/ai_provider_test.php
           php tests/ui_buttons_contract_test.php
           php tests/admin_workspace_contract_test.php
+          php tests/bulk_delete_endpoint_test.php
           php tests/recommended_missions_contract_test.php
           php tests/risk_scoring_test.php
           php tests/green_claims_rules_test.php
