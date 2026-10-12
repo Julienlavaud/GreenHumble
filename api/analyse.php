@@ -9,15 +9,21 @@ require_once __DIR__ . '/includes/app_state.php';
 require_once __DIR__ . '/includes/company_data_provenance.php';
 require_login();
 
-if (isset($_GET['id']) && preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', (string)$_GET['id'])) {
-    header('Location: /api/audit-report.php?id=' . rawurlencode((string)$_GET['id']), true, 303);
-    exit;
-}
-
 $db = get_db_connection();
 $st = load_app_state();
 $msg = null;
 $err = null;
+$requestedAuditRef = trim((string)($_GET['id'] ?? ''));
+$requestedReportAuditId = preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', $requestedAuditRef) ? $requestedAuditRef : '';
+
+function gh_analyse_normalize_url(string $value): string {
+    $value = trim($value);
+    if ($value === '') return '';
+    if (!preg_match('~^https?://~i', $value)) $value = 'https://' . $value;
+    $host = strtolower((string)(parse_url($value, PHP_URL_HOST) ?: ''));
+    $path = trim((string)(parse_url($value, PHP_URL_PATH) ?: ''));
+    return preg_replace('/^www\\./', '', $host) . rtrim($path, '/');
+}
 
 // Auto-create commercial checklist table if needed
 try {
@@ -233,7 +239,29 @@ try {
 } catch (Exception $e) {}
 
 // Détermination de l'audit actif
-$auditId = isset($_GET['id']) ? intval($_GET['id']) : ($allAudits[0]['id'] ?? 1);
+$auditId = ctype_digit($requestedAuditRef) ? (int)$requestedAuditRef : ($allAudits[0]['id'] ?? 1);
+$requestedReportAudit = null;
+if ($requestedReportAuditId !== '') {
+    $storedPath = __DIR__ . '/../data/stored_audits.json';
+    $storedAudits = is_file($storedPath) ? json_decode((string)@file_get_contents($storedPath), true) : [];
+    if (is_array($storedAudits)) {
+        foreach ($storedAudits as $storedAudit) {
+            if (!is_array($storedAudit) || (string)($storedAudit['id'] ?? '') !== $requestedReportAuditId) continue;
+            $requestedReportAudit = $storedAudit;
+            break;
+        }
+    }
+    if (is_array($requestedReportAudit)) {
+        $requestedCanonicalUrl = gh_analyse_normalize_url((string)($requestedReportAudit['url'] ?? ''));
+        foreach ($allAudits as $candidateAudit) {
+            $candidateCanonicalUrl = gh_analyse_normalize_url((string)($candidateAudit['url'] ?? ''));
+            if ($requestedCanonicalUrl !== '' && $candidateCanonicalUrl === $requestedCanonicalUrl) {
+                $auditId = (int)($candidateAudit['id'] ?? 0);
+                break;
+            }
+        }
+    }
+}
 $currentTab = $_GET['tab'] ?? 'diag'; // diag, missio, contact, kit, suivi
 if ($currentTab === 'textes') {
     header('Location: /api/admin/index.php?tab=texts', true, 303);
@@ -320,6 +348,9 @@ if ($audit && !empty($audit['url'])) {
         }
     }
 }
+if ($reportAuditId === '' && $requestedReportAuditId !== '') {
+    $reportAuditId = $requestedReportAuditId;
+}
 
 // Récupération des contacts
 $contacts = [];
@@ -360,7 +391,7 @@ include __DIR__ . '/includes/header.php';
 ?>
 
 <div class="gh-analysis-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <?php if ($reportAuditId !== ''): ?><div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-900"><span>Constats synchronisés avec le rapport d’audit enregistré.</span><a class="font-bold underline" href="/api/audit-report.php?id=<?= rawurlencode($reportAuditId) ?>">Ouvrir le rapport →</a></div><?php endif; ?>
+    <?php if ($reportAuditId !== ''): ?><div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-900"><span>Constats synchronisés avec l’audit enregistré.</span><a class="font-bold underline" href="/api/analyse.php?id=<?= rawurlencode($reportAuditId) ?>&amp;tab=<?= rawurlencode($currentTab) ?>">Rester sur l’analyse complète →</a></div><?php endif; ?>
     <!-- Messages d'alerte -->
     <?php if ($msg): ?>
         <div class="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-2xl font-bold flex items-center space-x-2">
@@ -421,6 +452,13 @@ include __DIR__ . '/includes/header.php';
                     </div>
                 </div>
                 <p class="text-[10px] text-slate-500 mt-4 uppercase tracking-[0.2em] font-black">Changer d'entreprise scannée</p>
+                <div class="mt-4 flex flex-wrap items-center justify-center gap-3">
+                    <button type="button" onclick="openPdfModal()" class="inline-flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-3 text-xs font-black uppercase tracking-widest text-emerald-300 shadow-xl transition hover:bg-emerald-500/20">
+                        <span>🖨️</span>
+                        <span>Imprimer le rapport</span>
+                    </button>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Choix des sections avant impression</span>
+                </div>
             <!-- Scores & Statut (Version PRO) -->
             <div id="section_scores_pro" class="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-10 border-t border-white/10 mt-10">
                 <div class="p-6 rounded-[2rem] bg-white/5 border border-white/10 backdrop-blur-sm group hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all">
@@ -1507,7 +1545,7 @@ function generateAndPrintPdf() {
     const optMissions = document.getElementById('pdf_opt_missions').checked;
     const optTextes = document.getElementById('pdf_opt_textes').checked;
 
-    const elHeader = document.getElementById('section_header');
+    const elHeader = document.getElementById('section_header_pro');
     const elSynthese = document.getElementById('section_synthese');
     const elAllegations = document.getElementById('section_allegations');
     const elSanctions = document.getElementById('section_sanctions');

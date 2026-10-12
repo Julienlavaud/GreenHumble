@@ -152,7 +152,7 @@ require_once __DIR__ . '/../includes/header.php';
           <p class="mt-4 border-t border-white/10 pt-3 text-xs text-slate-500">À confirmer par un collaborateur avant toute conclusion juridique ou proposition client.</p>
           <?php if (!empty($audit['id'])): ?>
             <div class="mt-4">
-              <a class="inline-flex items-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600" href="/api/audit-report.php?id=<?= rawurlencode((string)$audit['id']) ?>">
+              <a class="inline-flex items-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600" href="/api/analyse.php?id=<?= rawurlencode((string)$audit['id']) ?>&tab=diag">
                 Ouvrir le rapport complet →
               </a>
             </div>

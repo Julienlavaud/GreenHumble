@@ -19,7 +19,7 @@ function gh_login_destination(string $candidate, string $role): ?string {
         '/admin/pipeline.php' => '/api/pipeline.php',
         '/admin/scan.php' => '/api/scan.php',
         '/admin/analyse.php' => '/api/analyse.php',
-        '/admin/audit-report.php' => '/api/audit-report.php',
+        '/admin/audit-report.php' => '/api/analyse.php',
         '/admin/index.php' => '/api/admin/index.php',
         '/admin/ai_providers.php' => '/api/admin/ai_providers.php',
         '/admin' => '/api/admin/index.php',
@@ -33,7 +33,11 @@ function gh_login_destination(string $candidate, string $role): ?string {
     if ($internalPath === '/api/audit-report.php') {
         parse_str($query, $params);
         $id = (string)($params['id'] ?? '');
-        return preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', $id) ? ($aliases[$path] ?? $path) . '?id=' . rawurlencode($id) : null;
+        if ($id === '') return '/api/analyse.php';
+        if (preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', $id) || ctype_digit($id)) {
+            return '/api/analyse.php?id=' . rawurlencode($id) . '&tab=diag';
+        }
+        return null;
     }
     if ($internalPath === '/api/analyse.php') {
         parse_str($query, $params);
