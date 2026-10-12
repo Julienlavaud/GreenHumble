@@ -58,6 +58,7 @@ $routes = [
     'scans/assign_group' => 'scans/assign_group.php',
     'scans/by_group' => 'scans/by_group.php',
     'scans/delete' => 'scans/delete.php',
+    'scans/bulk_delete' => 'scans/bulk_delete.php',
     'scans/update' => 'scans/update.php',
 
     'listes/list' => 'listes/list.php',

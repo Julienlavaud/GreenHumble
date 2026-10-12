@@ -20,11 +20,15 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 
 // 2. Data Loading
 $activeTab = $_GET['tab'] ?? 'audits';
+if ($activeTab === 'dossiers') {
+    header('Location: /api/admin/index.php?tab=scans', true, 303);
+    exit;
+}
 if ($activeTab === 'team') {
     header('Location: /api/admin/index.php?tab=agency#organisation-equipe', true, 303);
     exit;
 }
-if (in_array($activeTab, ['dossiers', 'scanner_groups'], true)) {
+if ($activeTab === 'scanner_groups') {
     header('Location: /api/admin/index.php?tab=listes', true, 303);
     exit;
 }
@@ -98,10 +102,12 @@ include __DIR__ . '/../includes/header.php';
         
         <!-- Actions Communes (Flottantes ou Top) -->
         <div class="absolute top-8 right-10 admin-actions z-20">
+            <?php if (in_array($activeTab, ['audits', 'missions', 'legal', 'texts', 'team', 'scanner'], true)): ?>
             <button onclick="exportTabCSV('<?php echo $activeTab; ?>')" class="px-6 py-3 bg-[#242424] hover:bg-[#303030] text-slate-200 text-xs font-black rounded-2xl transition-all flex items-center space-x-2 shadow-sm border border-white/10">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 <span>Exporter CSV</span>
             </button>
+            <?php endif; ?>
             
             <?php if (in_array($activeTab, ['missions', 'legal', 'texts', 'team', 'scanner'])): ?>
                 <label class="cursor-pointer px-6 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black rounded-2xl border border-indigo-100 transition-all flex items-center space-x-2 shadow-sm">
@@ -111,7 +117,7 @@ include __DIR__ . '/../includes/header.php';
                 </label>
             <?php endif; ?>
 
-            <?php if ($activeTab !== 'audits'): ?>
+            <?php if (in_array($activeTab, ['agency', 'missions', 'legal', 'scanner'], true)): ?>
                 <button onclick="saveTab('<?php echo $activeTab; ?>')" class="save-btn px-10 py-3.5 bg-emerald-700 text-white text-sm font-black rounded-[1.5rem] shadow-2xl hover:bg-emerald-800 transition-all flex items-center space-x-2 ring-4 ring-emerald-500/10">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
                     <span>Sauvegarder</span>
@@ -246,6 +252,18 @@ include __DIR__ . '/../includes/header.php';
                     </div>
                 </div>
 
+                <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" aria-label="Actions groupées sur les scans">
+                    <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <input type="checkbox" id="select-all-scans" class="rounded border-slate-300 text-emerald-700 focus:ring-emerald-600">
+                        Sélectionner les scans visibles
+                    </label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" id="bulk-rescan-scans" class="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50" disabled>Relancer la sélection</button>
+                        <button type="button" id="bulk-delete-scans" class="rounded-xl bg-rose-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50" disabled>Supprimer la sélection</button>
+                    </div>
+                    <p id="bulk-scan-status" class="w-full text-xs text-slate-500" role="status" aria-live="polite"></p>
+                </div>
+
                 <!-- Grille des Cartes de Scans -->
                 <div class="grid grid-cols-1 gap-4" id="scans-container">
                     <?php if (empty($allScans)): ?>
@@ -255,7 +273,8 @@ include __DIR__ . '/../includes/header.php';
                     <?php else: ?>
                         <?php foreach ($allScans as $sc): 
                             $scType = $sc['type_scan'] ?? 'diagnostic';
-                            $scRes = is_array($sc['resultat_ia'] ?? null) ? $sc['resultat_ia'] : json_decode($sc['resultat_ia'] ?? '{}', true);
+                            $scRes = is_array($sc['resultat_ia'] ?? null) ? $sc['resultat_ia'] : json_decode((string)($sc['resultat_ia'] ?? '{}'), true);
+                            if (!is_array($scRes)) $scRes = [];
                             $scScore = is_numeric($scRes['score'] ?? ($scRes['riskScore'] ?? null)) ? (float)($scRes['score'] ?? $scRes['riskScore']) : null;
                             $scRisk = $scRes['riskLevel'] ?? ($scScore === null ? 'a_evaluer' : ($scScore >= 70 ? 'eleve' : ($scScore >= 45 ? 'modere' : 'faible')));
                             $scHost = parse_url((string)($sc['url'] ?? ''), PHP_URL_HOST);
@@ -266,6 +285,9 @@ include __DIR__ . '/../includes/header.php';
                             $grpName = $scGrpObj['nom'] ?? 'scanner widget';
                         ?>
                             <div class="card scan-card bg-[#1E1E1E] p-6 rounded-2xl border border-white/10 shadow-lg space-y-4 flex flex-col justify-between"
+                                 data-scan-id="<?php echo htmlspecialchars((string)($sc['id'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>"
+                                 data-scan-url="<?php echo htmlspecialchars((string)($sc['url'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>"
+                                 data-scan-type-audit="<?php echo htmlspecialchars((string)($sc['type_audit'] ?? 'full'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>"
                                  data-type="<?php echo htmlspecialchars($scType); ?>"
                                  data-group="<?php echo htmlspecialchars($sc['group_id'] ?? 'grp_widget_default'); ?>"
                                  data-url="<?php echo htmlspecialchars(strtolower($sc['url'] ?? '')); ?>">
@@ -312,13 +334,23 @@ include __DIR__ . '/../includes/header.php';
                                         <?php echo date('d/m/Y H:i', strtotime($sc['date_scan'] ?? 'now')); ?>
                                     </span>
                                     <div class="flex flex-wrap gap-2">
+                                        <label class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-slate-700">
+                                            <input type="checkbox" class="scan-select rounded border-slate-300 text-emerald-700 focus:ring-emerald-600" value="<?php echo htmlspecialchars((string)($sc['id'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" aria-label="Sélectionner ce scan">
+                                            Sélectionner
+                                        </label>
+                                        <?php $reportId = (string)($scRes['auditId'] ?? ''); ?>
+                                        <?php if (preg_match('/^aud_[A-Za-z0-9_-]{8,80}$/', $reportId)): ?>
+                                        <a href="/api/analyse.php?id=<?php echo rawurlencode($reportId); ?>" class="rounded-lg bg-[#2A7AE2] px-3 py-1.5 font-semibold text-white hover:bg-[#1D5BBF]">Consulter</a>
+                                        <?php endif; ?>
+                                        <button type="button" class="rescan-existing-scan rounded-lg bg-emerald-700 px-3 py-1.5 font-semibold text-white hover:bg-emerald-800">Relancer</button>
                                         <button onclick="addScanToListPrompt('<?php echo htmlspecialchars($sc['id']); ?>')" class="px-3 py-1.5 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white font-semibold rounded-lg transition-all border-none cursor-pointer">
                                             + Liste
                                         </button>
-                                        <button onclick="deleteScanCard('<?php echo htmlspecialchars($sc['id']); ?>')" class="px-3 py-1.5 bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-semibold rounded-lg transition-all border-none cursor-pointer">
+                                        <button type="button" class="delete-existing-scan px-3 py-1.5 bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-semibold rounded-lg transition-all border-none cursor-pointer">
                                             Supprimer
                                         </button>
                                     </div>
+                                    <p class="scan-action-status w-full text-xs text-slate-500" role="status" aria-live="polite"></p>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -652,10 +684,14 @@ include __DIR__ . '/../includes/header.php';
         <?php elseif ($activeTab === 'agency'): ?>
             <div class="p-12 space-y-12">
                 <div>
-                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Identité Agence & Branding</h2>
-                    <p class="text-slate-400 mt-2">Personnalisez votre présence sur tous les rapports et l'interface.</p>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Organisation & équipe</h2>
+                    <p class="text-slate-400 mt-2">Cette page regroupe l’identité de l’agence et le Team Manager pour gérer les accès des collaborateurs.</p>
+                    <nav class="mt-5 flex flex-wrap gap-2" aria-label="Sections Organisation">
+                        <a href="#organisation-identite" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">Identité de l’organisation</a>
+                        <a href="#organisation-equipe" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">Team Manager · accès collaborateurs</a>
+                    </nav>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-6xl">
+                <div id="organisation-identite" class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-6xl scroll-mt-24">
                     <div class="space-y-6">
                         <div class="group">
                             <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3 mb-2">Désignation Officielle</label>
@@ -687,7 +723,7 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             </div>
 
-        <section id="organisation-equipe" class="mt-12 border-t border-slate-200 pt-10">
+        <section id="organisation-equipe" class="mt-12 border-t border-slate-200 pt-10 scroll-mt-24">
                 <p class="mb-6 text-sm font-semibold text-slate-500">ÉQUIPE & ACCÈS</p>
 
             <div class="p-12 space-y-10">
@@ -704,7 +740,7 @@ include __DIR__ . '/../includes/header.php';
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5" id="team-container">
                     <?php foreach ($state['collaborators'] as $idx => $c): ?>
                         <div class="team-card bg-white p-6 rounded-3xl border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center space-y-6 group relative overflow-hidden ring-1 ring-slate-100" data-id="<?php echo $c['id']; ?>">
-                            <button onclick="deleteItem('team', <?php echo $idx; ?>)" class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all">✕</button>
+                            <button type="button" onclick="deleteItem('team', <?php echo $idx; ?>)" aria-label="Supprimer ce collaborateur" class="absolute top-4 right-4 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-sm font-bold text-rose-700 hover:bg-rose-50 transition-all">Supprimer</button>
                             <div class="w-28 h-28 <?php echo $c['avatarColor']; ?> text-white rounded-[3rem] flex items-center justify-center text-4xl font-black mx-auto shadow-2xl group-hover:scale-110 transition-transform ring-4 ring-white">
                                 <?php echo substr($c['name'], 0, 1); ?>
                             </div>
@@ -1699,8 +1735,137 @@ function filterScansGrid() {
         const matchType = typeVal === 'all' || cType === typeVal;
         const matchUrl = !searchVal || cUrl.includes(searchVal);
         card.style.display = matchType && matchUrl ? 'flex' : 'none';
+        if (!matchType || !matchUrl) {
+            const checkbox = card.querySelector('.scan-select');
+            if (checkbox) checkbox.checked = false;
+        }
+    });
+    updateBulkScanControls();
+}
+
+function getSelectedScanCards() {
+    return Array.from(document.querySelectorAll('.scan-card')).filter(card => {
+        const checkbox = card.querySelector('.scan-select');
+        return checkbox?.checked && card.style.display !== 'none';
     });
 }
+
+function updateBulkScanControls() {
+    const count = getSelectedScanCards().length;
+    const rescanButton = document.getElementById('bulk-rescan-scans');
+    const deleteButton = document.getElementById('bulk-delete-scans');
+    if (rescanButton) rescanButton.disabled = count === 0;
+    if (deleteButton) deleteButton.disabled = count === 0;
+    const selectAll = document.getElementById('select-all-scans');
+    const visibleChecks = Array.from(document.querySelectorAll('.scan-card'))
+        .filter(card => card.style.display !== 'none')
+        .map(card => card.querySelector('.scan-select'))
+        .filter(Boolean);
+    if (selectAll) {
+        selectAll.checked = visibleChecks.length > 0 && visibleChecks.every(checkbox => checkbox.checked);
+        selectAll.indeterminate = visibleChecks.some(checkbox => checkbox.checked) && !selectAll.checked;
+    }
+}
+
+async function rescanExistingCard(card) {
+    const status = card.querySelector('.scan-action-status');
+    const button = card.querySelector('.rescan-existing-scan');
+    if (!card.dataset.scanUrl) {
+        if (status) status.textContent = 'URL de scan manquante.';
+        return false;
+    }
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Scan en cours…';
+    }
+    if (status) status.textContent = 'Nouvelle analyse en cours. Le scan d’origine est conservé.';
+    try {
+        const response = await fetch('/api/audit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                url: card.dataset.scanUrl,
+                type_audit: card.dataset.scanTypeAudit || 'full',
+                utilisateur: 'administrateur'
+            })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.status !== 'ok' || !result.scan_id) {
+            throw new Error(result.error || result.message || 'Le scan n’a pas abouti.');
+        }
+        if (status) status.textContent = 'Nouveau scan enregistré. Le scan précédent est conservé.';
+        return true;
+    } catch (error) {
+        if (status) status.textContent = error.message || 'Erreur réseau pendant le scan.';
+        return false;
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = 'Relancer';
+        }
+    }
+}
+
+document.querySelectorAll('.scan-select').forEach(checkbox => {
+    checkbox.addEventListener('change', updateBulkScanControls);
+});
+document.querySelectorAll('.rescan-existing-scan').forEach(button => {
+    button.addEventListener('click', async () => {
+        const card = button.closest('.scan-card');
+        if (card && await rescanExistingCard(card)) window.setTimeout(() => window.location.reload(), 900);
+    });
+});
+document.querySelectorAll('.delete-existing-scan').forEach(button => {
+    button.addEventListener('click', () => deleteScanCard(button.closest('.scan-card')?.dataset.scanId || ''));
+});
+document.getElementById('select-all-scans')?.addEventListener('change', event => {
+    document.querySelectorAll('.scan-card').forEach(card => {
+        if (card.style.display !== 'none') {
+            const checkbox = card.querySelector('.scan-select');
+            if (checkbox) checkbox.checked = event.target.checked;
+        }
+    });
+    updateBulkScanControls();
+});
+document.getElementById('bulk-delete-scans')?.addEventListener('click', async () => {
+    const ids = getSelectedScanCards().map(card => card.dataset.scanId).filter(Boolean);
+    if (!ids.length || !confirm(`Supprimer définitivement les ${ids.length} scans sélectionnés ?`)) return;
+    const status = document.getElementById('bulk-scan-status');
+    const button = document.getElementById('bulk-delete-scans');
+    button.disabled = true;
+    if (status) status.textContent = 'Suppression en cours…';
+    try {
+        const response = await fetch('/api/scans/bulk_delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ ids })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.error || 'Suppression impossible.');
+        if (status) status.textContent = `${result.deleted} scan(s) supprimé(s).`;
+        window.location.reload();
+    } catch (error) {
+        if (status) status.textContent = error.message || 'Erreur réseau.';
+        updateBulkScanControls();
+    }
+});
+document.getElementById('bulk-rescan-scans')?.addEventListener('click', async () => {
+    const cards = getSelectedScanCards();
+    if (!cards.length || !confirm(`Relancer ${cards.length} scan(s) ? Les scans d’origine resteront conservés.`)) return;
+    const status = document.getElementById('bulk-scan-status');
+    const button = document.getElementById('bulk-rescan-scans');
+    button.disabled = true;
+    let completed = 0;
+    for (let index = 0; index < cards.length; index++) {
+        if (status) status.textContent = `Relance ${index + 1}/${cards.length}…`;
+        if (await rescanExistingCard(cards[index])) completed++;
+    }
+    if (status) status.textContent = `${completed}/${cards.length} nouveau(x) scan(s) enregistré(s). Les originaux sont conservés.`;
+    updateBulkScanControls();
+    if (completed > 0) window.setTimeout(() => window.location.reload(), 1400);
+});
 
 async function addScanToListPrompt(scanId) {
     const listes = <?php echo json_encode(load_all_listes(), JSON_UNESCAPED_UNICODE); ?>;

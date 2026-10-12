@@ -92,3 +92,10 @@ body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-
 /* Preserve readable white labels on colored controls after light-theme overrides. */
 body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) :is(button,a,[class*="bg-[#2A7AE2]"],[class*="bg-emerald-"],[class*="bg-rose-"],[class*="bg-indigo-"],[class*="bg-blue-"]).text-white,
 body[data-gh-role=admin] .gh-content>div:is([class*="max-w-7xl"],[class*="max-w-6xl"],[class*="max-w-[1850px]"]) :is(button,a,[class*="bg-[#2A7AE2]"],[class*="bg-emerald-"],[class*="bg-rose-"],[class*="bg-indigo-"],[class*="bg-blue-"]).text-white *{color:#fff!important}
+
+/* Apply the shared provider-console layout to standalone admin tools as well. */
+body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"]{width:100%;max-width:1240px!important;margin:0 auto!important;padding:30px 24px!important;background:transparent!important;color:var(--gh-ink)!important}
+body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"] :is(h1,h2,h3){color:var(--gh-ink)!important;letter-spacing:-.04em}
+body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"] :is(input,select,textarea){border-color:var(--gh-line)!important;border-radius:10px!important;background:#fff!important;color:var(--gh-ink)!important}
+body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"] :is(input,select,textarea)::placeholder{color:#829188!important}
+@media(max-width:680px){body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"]{padding:18px 14px 40px!important}}
