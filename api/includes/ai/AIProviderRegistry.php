@@ -78,9 +78,36 @@ final class AIProviderRegistry
                     'mistral-small-latest'
 
                 ]
-            ]
+            ],
+            'openrouter' => [
+
+    'label' => 'OpenRouter',
+
+    'provider_class' =>
+        'OpenRouterProvider',
+
+    'state_key' =>
+        'openRouterApiKey',
+
+    'env_key' =>
+        'OPENROUTER_API_KEY',
+
+    'default_model' =>
+        'openrouter/free',
+
+    'models' => [
+
+        'openrouter/free',
+
+        'google/gemma-4-26b-a4b-it:free',
+
+        'openai/gpt-oss-20b:free'
+
+    ]
+],
 
         ];
+        
     }
 
     public static function get(
