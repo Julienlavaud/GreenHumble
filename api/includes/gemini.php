@@ -191,7 +191,8 @@ function gemini_call(
         ],
 
         'generationConfig' => [
-            'temperature' => 0.2
+            'temperature' => 0.2,
+            'responseMimeType' => 'application/json'
         ]
 
     ];
