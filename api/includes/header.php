@@ -30,12 +30,12 @@ $adminGroups = [
   'RÉGLAGES' => ['missions' => 'Catalogue métier', 'widgets' => 'Configurer les widgets', 'legal' => 'Références', 'texts' => 'Dictionnaire', 'style' => 'Textes du site']
 ];
 $adminDirectLinks = [
-  'dashboard' => '/admin/dashboard.php',
-  'pipeline' => '/admin/pipeline.php',
-  'scans' => '/admin/scan.php',
-  'exports' => '/admin/export.php',
-  'ai_providers' => '/admin/ai_providers.php',
-  'widgets' => '/admin/widget.php'
+  'dashboard' => '/api/dashboard.php',
+  'pipeline' => '/api/pipeline.php',
+  'scans' => '/api/scan.php',
+  'exports' => '/api/admin/export.php',
+  'ai_providers' => '/api/admin/ai_providers.php',
+  'widgets' => '/api/admin/widget.php'
 ];
 ?>
 <!doctype html>
@@ -106,7 +106,7 @@ $adminDirectLinks = [
             <div class="gh-sidebar__group">
               <p><?= htmlspecialchars($groupLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
               <?php foreach ($groupTabs as $tabId => $tabLabel): ?>
-                <a class="gh-sidebar__sublink <?= $activeTab === $tabId ? 'is-active' : '' ?>" href="<?= htmlspecialchars($adminDirectLinks[$tabId] ?? ('/admin/index.php?tab=' . rawurlencode($tabId)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?= htmlspecialchars($tabLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a>
+                <a class="gh-sidebar__sublink <?= $activeTab === $tabId ? 'is-active' : '' ?>" href="<?= htmlspecialchars($adminDirectLinks[$tabId] ?? ('/api/admin/index.php?tab=' . rawurlencode($tabId)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?= htmlspecialchars($tabLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a>
               <?php endforeach; ?>
             </div>
           <?php endforeach; ?>

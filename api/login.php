@@ -7,7 +7,7 @@ $error = null;
 $next = trim((string)($_POST['next'] ?? $_GET['next'] ?? ''));
 
 function gh_login_destination(string $candidate, string $role): ?string {
-    $defaults = ['admin' => '/admin/dashboard.php', 'collaborator' => '/api/collaborateur/index.php', 'collaborateur' => '/api/collaborateur/index.php', 'pipeline' => '/admin/pipeline.php', 'consultant' => '/api/collaborateur/index.php'];
+    $defaults = ['admin' => '/api/dashboard.php', 'collaborator' => '/api/collaborateur/index.php', 'collaborateur' => '/api/collaborateur/index.php', 'pipeline' => '/api/pipeline.php', 'consultant' => '/api/collaborateur/index.php'];
     if (isset($defaults[$candidate])) $candidate = $defaults[$candidate];
     if ($candidate === '' || str_contains($candidate, chr(13)) || str_contains($candidate, chr(10)) || str_contains($candidate, chr(92))) return null;
     $parts = parse_url($candidate);
@@ -21,6 +21,7 @@ function gh_login_destination(string $candidate, string $role): ?string {
         '/admin/analyse.php' => '/api/analyse.php',
         '/admin/audit-report.php' => '/api/audit-report.php',
         '/admin/index.php' => '/api/admin/index.php',
+        '/admin/ai_providers.php' => '/api/admin/ai_providers.php',
         '/admin' => '/api/admin/index.php',
         '/admin/' => '/api/admin/index.php',
     ];
@@ -46,9 +47,9 @@ function gh_login_destination(string $candidate, string $role): ?string {
         parse_str($query, $params);
         $tab = (string)($params['tab'] ?? 'scans');
         $tabs = ['audits', 'scans', 'dossiers', 'listes', 'agency', 'team', 'scanner_groups', 'scanner', 'missions', 'legal', 'texts', 'style'];
-        return $role === 'admin' && in_array($tab, $tabs, true) ? '/admin/index.php?tab=' . rawurlencode($tab) : null;
+        return $role === 'admin' && in_array($tab, $tabs, true) ? '/api/admin/index.php?tab=' . rawurlencode($tab) : null;
     }
-    if ($internalPath === '/api/admin/ai_providers.php') return $role === 'admin' ? '/admin/ai_providers.php' : null;
+    if ($internalPath === '/api/admin/ai_providers.php') return $role === 'admin' ? '/api/admin/ai_providers.php' : null;
     $allowed = ['/api/index.php', '/api/dashboard.php', '/api/pipeline.php', '/api/scan.php', '/api/collaborateur/index.php'];
     if (!in_array($internalPath, $allowed, true)) return null;
     return $aliases[$path] ?? $path;
@@ -60,7 +61,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if (!$user && $identifier !== '' && $password !== '') $user = gh_authenticate_collaborator($identifier, $password);
     if ($user) {
         $userRole = (string)($user['role'] ?? 'collaborator');
-        $destination = gh_login_destination($next, $userRole) ?: (($userRole === 'admin') ? '/admin/dashboard.php' : '/api/collaborateur/index.php');
+        $destination = gh_login_destination($next, $userRole) ?: (($userRole === 'admin') ? '/api/dashboard.php' : '/api/collaborateur/index.php');
         header('Location: ' . $destination, true, 303);
         exit;
     }

@@ -2,7 +2,7 @@
 
 ## Démarrage rapide (PHP pur, hébergé sur `https://doo.climatlocal.com/`)
 
-1. Générer l'archive : `npm run build:ovh` (aucune compilation front) ou téléverser directement `index.php`, `.htaccess`, `api/` et, pour les anciens liens `/admin/…`, `admin/`.
+1. Générer l'archive : `npm run build:ovh` (aucune compilation front) ou téléverser directement `index.php`, `.htaccess` et `api/` (les anciennes URLs `/admin/…` sont redirigées en 301 vers `/api/admin/…` par `.htaccess`).
 2. Ouvrir `https://votre-domaine/api/install/` et suivre l'assistant (MySQL + compte administrateur). Il se verrouille ensuite.
 3. Le dossier `data/` doit être inscriptible par PHP.
 
