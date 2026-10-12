@@ -88,11 +88,11 @@
         empty.textContent = 'Aucun signal prioritaire remonté par cette pré-analyse. Cela ne garantit pas la conformité du site.';
         list.append(empty);
       } else {
-        claims.slice(0, 20).forEach((claim) => {
+        claims.forEach((claim) => {
           const card = document.createElement('article');
           card.className = 'gh-claim';
           const title = document.createElement('h4');
-          title.textContent = claimText(claim, ['term', 'claim', 'title', 'phrase'], 'Signal à examiner');
+          title.textContent = claimText(claim, ['quoteInText', 'term', 'claim', 'title', 'phrase'], 'Signal relevé');
           card.append(title);
           const evidence = claimText(claim, ['quoteInText', 'quote', 'evidence'], '');
           const reference = claimText(claim, ['lawArticle', 'legalReference'], '');

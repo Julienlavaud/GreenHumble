@@ -178,6 +178,26 @@ try {
     }
 } catch (Exception $e) {}
 
+$recentAuditedCompanies = [];
+try {
+    $recentSql = "
+        SELECT
+            a.id AS audit_id,
+            a.url,
+            a.score,
+            a.riskLevel,
+            a.analyzedAt,
+            c.name AS company_name,
+            c.sector
+        FROM cl_audits a
+        LEFT JOIN cl_companies c ON a.company_id = c.id
+        $scopeWhereSql
+        ORDER BY a.analyzedAt DESC, a.id DESC
+        LIMIT 24
+    ";
+    $recentAuditedCompanies = $db->query($recentSql)->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {}
+
 $page_title = "Tableau de Bord & Indicateurs RSE";
 include __DIR__ . '/includes/header.php';
 ?>
@@ -265,6 +285,74 @@ include __DIR__ . '/includes/header.php';
             <p class="text-[11px] text-emerald-200/80 mt-2">Dossiers à examiner dans le périmètre sélectionné</p>
         </div>
     </div>
+
+    <section class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm mb-10">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-5 border-b border-slate-100">
+            <div>
+                <p class="text-xs font-black uppercase tracking-wider text-emerald-700">Accès rapide</p>
+                <h2 class="mt-1 text-xl font-black text-slate-900">Entreprises scannées à analyser</h2>
+                <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">Retrouvez ici les derniers audits enregistrés et ouvrez directement l’analyse complète d’une entreprise.</p>
+            </div>
+            <span class="shrink-0 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800">
+                <?php echo count($recentAuditedCompanies); ?> audit(s) listé(s)
+            </span>
+        </div>
+        <?php if (empty($recentAuditedCompanies)): ?>
+            <div class="py-8 text-center text-sm text-slate-500">
+                Aucune entreprise scannée n’est encore disponible dans ce périmètre.
+            </div>
+        <?php else: ?>
+            <div class="mt-5 overflow-x-auto">
+                <div class="min-w-[760px]">
+                    <div class="grid grid-cols-[minmax(220px,2fr)_minmax(120px,0.8fr)_minmax(130px,0.9fr)_minmax(180px,1fr)_minmax(150px,0.9fr)] gap-3 px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                        <span>Entreprise / site</span>
+                        <span>Secteur</span>
+                        <span>Risque</span>
+                        <span>Dernier scan</span>
+                        <span class="text-right">Action</span>
+                    </div>
+                    <div class="space-y-3">
+                        <?php foreach ($recentAuditedCompanies as $companyAudit): ?>
+                            <?php
+                            $companyName = (string)($companyAudit['company_name'] ?: preg_replace('#^https?://(www\.)?#i', '', (string)($companyAudit['url'] ?? '')));
+                            $riskLevel = strtolower((string)($companyAudit['riskLevel'] ?? 'a_evaluer'));
+                            $riskClass = $riskLevel === 'critique'
+                                ? 'bg-rose-100 text-rose-800'
+                                : ($riskLevel === 'eleve' || $riskLevel === 'élevé'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : ($riskLevel === 'modere' || $riskLevel === 'modéré'
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : 'bg-emerald-100 text-emerald-800'));
+                            ?>
+                            <div class="grid grid-cols-[minmax(220px,2fr)_minmax(120px,0.8fr)_minmax(130px,0.9fr)_minmax(180px,1fr)_minmax(150px,0.9fr)] gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700 hover:border-emerald-200 hover:bg-white">
+                                <div class="min-w-0">
+                                    <div class="truncate font-bold text-slate-900"><?php echo htmlspecialchars($companyName); ?></div>
+                                    <div class="mt-1 truncate text-xs text-emerald-700"><?php echo htmlspecialchars((string)($companyAudit['url'] ?? '')); ?></div>
+                                </div>
+                                <div class="text-xs text-slate-600">
+                                    <?php echo htmlspecialchars((string)($companyAudit['sector'] ?? 'Non renseigné')); ?>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="rounded-full px-2.5 py-1 text-xs font-bold <?php echo $riskClass; ?>">
+                                        <?php echo htmlspecialchars(ucfirst(str_replace(['_', 'é'], [' ', 'e'], $riskLevel))); ?>
+                                    </span>
+                                    <span class="text-xs font-bold text-slate-900"><?php echo is_numeric($companyAudit['score'] ?? null) ? (int)$companyAudit['score'] . '/100' : '—'; ?></span>
+                                </div>
+                                <div class="text-xs text-slate-600">
+                                    <?php echo !empty($companyAudit['analyzedAt']) ? htmlspecialchars(date('d/m/Y H:i', strtotime((string)$companyAudit['analyzedAt']))) : 'Non daté'; ?>
+                                </div>
+                                <div class="text-right">
+                                    <a href="/api/analyse.php?id=<?php echo rawurlencode((string)$companyAudit['audit_id']); ?>&amp;tab=diag" class="inline-flex items-center rounded-xl bg-emerald-700 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-emerald-600">
+                                        Analyser →
+                                    </a>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+    </section>
 
     <section class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm mb-10">
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-5 border-b border-slate-100">

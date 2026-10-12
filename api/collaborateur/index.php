@@ -101,7 +101,7 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (!$audits): ?>
       <div class="rounded-2xl border border-dashed border-white/20 bg-[#1E1E1E] p-10 text-center">
         <h3 class="text-lg font-semibold">Aucun audit enregistré pour le moment</h3>
-        <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400">Lancez un scan de démonstration sur un site autorisé. Une fois l’analyse validée et sauvegardée, elle apparaîtra ici.</p>
+        <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400">Lancez un premier scan sur un site autorisé. Une fois l’analyse validée et sauvegardée, elle apparaîtra ici.</p>
         <a class="mt-5 inline-block rounded-xl bg-emerald-700 px-5 py-3 font-semibold" href="/api/index.php">Lancer le premier scan</a>
       </div>
     <?php else: ?>
@@ -125,14 +125,19 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
             <div class="flex shrink-0 gap-2">
               <span class="rounded-full border border-white/15 px-3 py-1 text-sm"><?= $score !== null && is_numeric($score) ? 'Score ' . gh_collab_h($score) . '/100' : 'Score à vérifier' ?></span>
-              <span class="rounded-full bg-amber-500/10 px-3 py-1 text-sm text-amber-300"><?= count($claims) ?> signal(aux)</span>
+              <span class="rounded-full bg-amber-500/10 px-3 py-1 text-sm text-amber-300"><?= count($claims) ?> signal(s) détecté(s)</span>
             </div>
           </div>
           <p class="mt-4 text-sm leading-6 text-slate-300"><?= gh_collab_h($summary) ?></p>
           <?php if ($claims): ?>
-            <div class="mt-4"><p class="text-sm font-semibold">Signaux à vérifier</p><ul class="mt-2 grid gap-2 sm:grid-cols-2">
-              <?php foreach (array_slice($claims, 0, 4) as $claim):
-                $claimText = is_array($claim) ? ($claim['claim'] ?? $claim['text'] ?? $claim['phrase'] ?? 'Signal détecté') : $claim;
+            <div class="mt-4"><p class="text-sm font-semibold">Signaux détectés dans le scan</p><ul class="mt-2 grid gap-2 sm:grid-cols-2">
+              <?php foreach ($claims as $claim):
+                if (is_array($claim)) {
+                  $claimText = trim((string)($claim['quoteInText'] ?? $claim['term'] ?? $claim['claim'] ?? $claim['text'] ?? $claim['phrase'] ?? $claim['label'] ?? ''));
+                } else {
+                  $claimText = trim((string)$claim);
+                }
+                if ($claimText === '') $claimText = 'Signal non libellé';
               ?><li class="rounded-xl border border-white/10 bg-[#121212] p-3 text-sm text-slate-300"><?= gh_collab_h($claimText) ?></li><?php endforeach; ?>
             </ul></div>
           <?php endif; ?>
@@ -147,7 +152,7 @@ require_once __DIR__ . '/../includes/header.php';
           <p class="mt-4 border-t border-white/10 pt-3 text-xs text-slate-500">À confirmer par un collaborateur avant toute conclusion juridique ou proposition client.</p>
           <?php if (!empty($audit['id'])): ?>
             <div class="mt-4">
-              <a class="inline-flex items-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600" href="/api/audit-report.php?id=<?= rawurlencode((string)$audit['id']) ?>">
+              <a class="inline-flex items-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600" href="/api/analyse.php?id=<?= rawurlencode((string)$audit['id']) ?>&tab=diag">
                 Ouvrir le rapport complet →
               </a>
             </div>

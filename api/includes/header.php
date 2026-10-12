@@ -23,11 +23,10 @@ if ($activeTab === '') {
   ][$currentPage] ?? '';
 }
 $adminGroups = [
-  'ACTIVITÉ' => ['dashboard' => 'Tableau de bord', 'pipeline' => 'Pipeline', 'scans' => 'Scans'],
-  'DOSSIERS' => ['listes' => 'Listes', 'exports' => 'Exports CSV'],
-  'ORGANISATION' => ['agency' => 'Organisation'],
-  'INTELLIGENCE ARTIFICIELLE' => ['ai_providers' => 'Fournisseurs IA', 'scanner' => 'Prompts & règles'],
-  'RÉGLAGES' => ['missions' => 'Catalogue métier', 'widgets' => 'Configurer les widgets', 'legal' => 'Références', 'texts' => 'Dictionnaire', 'style' => 'Textes du site']
+  'PILOTAGE' => ['dashboard' => 'Tableau de bord', 'pipeline' => 'Pipeline', 'scans' => 'Scans'],
+  'PROSPECTION' => ['dossiers' => 'Dossiers', 'listes' => 'Listes', 'exports' => 'Exports CSV'],
+  'CONSOLE IA' => ['ai_providers' => 'Fournisseurs IA', 'scanner' => 'Prompts & règles', 'texts' => 'Dictionnaire IA', 'legal' => 'Références & conformité'],
+  'CONFIGURATION' => ['agency' => 'Organisation', 'missions' => 'Catalogue métier', 'widgets' => 'Configurer les widgets', 'scanner_groups' => 'Groupes de scanners', 'style' => 'Textes du site']
 ];
 $adminDirectLinks = [
   'dashboard' => '/api/dashboard.php',

@@ -434,8 +434,8 @@ include __DIR__ . '/../includes/header.php';
                             <label class="block text-sm font-semibold text-white" for="bulkCsv">Fichier CSV (facultatif)</label>
                             <input id="bulkCsv" name="csv" type="file" accept=".csv,text/csv" class="w-full text-sm text-[#CCCCCC]">
                             <div class="flex flex-wrap gap-3">
-                                <a href="/api/listes/import_export.php?action=template" class="px-4 py-2 rounded-xl border border-white/20 text-white hover:bg-white/5 text-sm font-semibold">Télécharger le modèle CSV</a>
-                                <a href="/api/listes/import_export.php?action=export" class="px-4 py-2 rounded-xl border border-white/20 text-white hover:bg-white/5 text-sm font-semibold">Exporter toutes les listes</a>
+                                <a href="/api/listes/import_export.php?action=template" class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-semibold shadow-sm">Télécharger le modèle CSV</a>
+                                <a href="/api/listes/import_export.php?action=export" class="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-slate-300 text-slate-800 hover:bg-slate-50 text-sm font-semibold">Exporter toutes les listes</a>
                             </div>
                         </div>
                         <div class="space-y-3">
@@ -461,8 +461,7 @@ include __DIR__ . '/../includes/header.php';
                         ?>
                             <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-white/10 shadow-lg space-y-4 flex flex-col justify-between">
                                 <div class="space-y-3">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-xs font-mono text-[#AAAAAA]">ID: <?php echo htmlspecialchars($lst['id']); ?></span>
+                                    <div class="flex items-center justify-end">
                                         <span class="px-3 py-1 bg-[#2A7AE2]/20 text-[#2A7AE2] font-bold text-xs rounded-full border border-[#2A7AE2]/30">
                                             <?php echo $itemCount; ?> élément(s)
                                         </span>
@@ -480,7 +479,7 @@ include __DIR__ . '/../includes/header.php';
                                                 </div>
                                             <?php endforeach; ?>
                                         </div>
-                                        <a class="inline-flex justify-center px-4 py-2 rounded-xl border border-white/15 text-white hover:bg-white/5 text-sm" href="/api/listes/import_export.php?action=export&amp;list_id=<?php echo rawurlencode($lst['id']); ?>">Exporter cette liste CSV</a>
+                                        <a class="inline-flex justify-center px-4 py-2 rounded-xl border border-slate-300 text-slate-800 hover:bg-slate-50 text-sm font-medium" href="/api/listes/import_export.php?action=export&amp;list_id=<?php echo rawurlencode($lst['id']); ?>">Exporter cette liste CSV</a>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -784,55 +783,86 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
         <?php elseif ($activeTab === 'legal'): ?>
-            <div class="p-12 space-y-12">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Référentiels Juridiques</h2>
-                        <p class="text-slate-400 mt-2">Configurez les arguments de prospection légaux pour les rapports.</p>
-                    </div>
-                    <button onclick="addItem('legal')" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
-                        <span>Nouvelle Loi</span>
-                    </button>
-                </div>
-
-                <!-- Section Références Légales Officielles -->
-                <div class="legal-links p-8 bg-slate-900 text-slate-200 rounded-[2.5rem] border border-slate-800 shadow-xl space-y-4">
-                    <h3 class="text-xl font-bold text-white flex items-center space-x-2">
-                        <span>📜</span>
-                        <span>Textes de loi & Sources Officielles</span>
-                    </h3>
-                    <ul class="flex flex-wrap gap-4 text-sm">
-                        <li><a href="https://www.legifrance.gouv.fr" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl font-semibold transition-all flex items-center gap-2"><span>🇫🇷</span> Legifrance</a></li>
-                        <li><a href="https://eur-lex.europa.eu" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl font-semibold transition-all flex items-center gap-2"><span>🇪🇺</span> EUR-Lex (UE)</a></li>
-                        <li><a href="https://cnil.fr" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl font-semibold transition-all flex items-center gap-2"><span>🔒</span> CNIL - RGPD</a></li>
-                    </ul>
-                </div>
-
-                <div class="space-y-6" id="legal-container">
-                    <?php foreach ($state['legalTexts'] as $idx => $l): ?>
-                        <div class="legal-row flex flex-col lg:flex-row lg:items-center gap-6 p-8 bg-slate-50 rounded-[3rem] border border-slate-200 shadow-sm hover:bg-white hover:shadow-2xl transition-all relative group" data-id="<?php echo $l['id']; ?>">
-                            <button onclick="deleteItem('legal', <?php echo $idx; ?>)" class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all">✕</button>
-                            <div class="flex items-center space-x-6 flex-grow">
-                                <div class="w-16 h-16 bg-white rounded-3xl flex items-center justify-center font-black text-slate-300 text-2xl shadow-sm border border-slate-100"><?php echo $idx+1; ?></div>
-                                <div class="flex-grow space-y-2">
-                                    <input type="text" value="<?php echo htmlspecialchars($l['title']); ?>" class="l-title w-full bg-transparent font-black text-slate-900 text-lg border-none p-0 focus:ring-0 placeholder-slate-300" placeholder="Titre de la loi (ex: CSRD)">
-                                    <textarea class="l-desc w-full bg-transparent text-sm text-slate-500 border-none p-0 focus:ring-0 italic h-12 resize-none placeholder-slate-300" placeholder="Description courte pour le rapport..."><?php echo htmlspecialchars($l['description']); ?></textarea>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-8 bg-white/50 p-6 rounded-[2rem] border border-slate-200 shadow-inner">
-                                <div class="text-center w-24">
-                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Impact Risque</label>
-                                    <input type="number" value="<?php echo $l['weight']; ?>" class="l-weight w-full bg-transparent text-center font-black text-indigo-700 border-none p-0 text-xl focus:ring-0">
-                                </div>
-                                <div class="h-10 w-px bg-slate-200"></div>
-                                <div class="text-center w-24">
-                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Activer</label>
-                                    <input type="checkbox" <?php echo $l['isActive'] ? 'checked' : ''; ?> class="l-active w-8 h-8 text-emerald-600 rounded-xl border-slate-300 cursor-pointer shadow-sm">
-                                </div>
-                            </div>
+            <div class="p-12 space-y-8">
+                <section class="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+                    <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="max-w-3xl">
+                            <p class="text-xs font-bold uppercase tracking-widest text-emerald-700">Conformité & argumentaire</p>
+                            <h2 class="mt-2 text-3xl font-black text-slate-900 tracking-tight">Références & conformité</h2>
+                            <p class="mt-2 text-sm text-slate-600">Centralisez ici les références juridiques et messages de conformité utilisés dans les audits, les recommandations et la prospection.</p>
                         </div>
-                    <?php endforeach; ?>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <span class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                                <?php echo count($state['legalTexts'] ?? []); ?> référence(s) configurée(s)
+                            </span>
+                            <button onclick="addItem('legal')" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                                <span>Ajouter une référence</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="grid gap-4 lg:grid-cols-3">
+                    <article class="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                        <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Usage</p>
+                        <p class="mt-3 text-sm leading-6 text-slate-700">Chaque référence nourrit les audits, le score de risque et les arguments du kit commercial.</p>
+                    </article>
+                    <article class="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                        <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Bon réflexe</p>
+                        <p class="mt-3 text-sm leading-6 text-slate-700">Préférez des formulations prudentes, datées et vérifiables plutôt que des conclusions automatiques.</p>
+                    </article>
+                    <article class="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                        <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Synchronisation</p>
+                        <p class="mt-3 text-sm leading-6 text-slate-700">Les modifications sont partagées entre l’audit, les recommandations IA et la prospection.</p>
+                    </article>
+                </div>
+
+                <div class="space-y-12">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-2xl font-black text-slate-900 tracking-tight">Référentiels juridiques</h3>
+                            <p class="text-slate-500 mt-2 text-sm">Configurez les fondements légaux, leur poids et leur activation.</p>
+                        </div>
+                    </div>
+
+                    <div class="legal-links p-8 bg-slate-900 text-slate-200 rounded-[2.5rem] border border-slate-800 shadow-xl space-y-4">
+                        <h3 class="text-xl font-bold text-white flex items-center space-x-2">
+                            <span>📜</span>
+                            <span>Textes de loi & Sources Officielles</span>
+                        </h3>
+                        <ul class="flex flex-wrap gap-4 text-sm">
+                            <li><a href="https://www.legifrance.gouv.fr" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl font-semibold transition-all flex items-center gap-2"><span>🇫🇷</span> Legifrance</a></li>
+                            <li><a href="https://eur-lex.europa.eu" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl font-semibold transition-all flex items-center gap-2"><span>🇪🇺</span> EUR-Lex (UE)</a></li>
+                            <li><a href="https://cnil.fr" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl font-semibold transition-all flex items-center gap-2"><span>🔒</span> CNIL - RGPD</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="space-y-6" id="legal-container">
+                        <?php foreach ($state['legalTexts'] as $idx => $l): ?>
+                            <div class="legal-row flex flex-col lg:flex-row lg:items-center gap-6 p-8 bg-slate-50 rounded-[3rem] border border-slate-200 shadow-sm hover:bg-white hover:shadow-2xl transition-all relative group" data-id="<?php echo $l['id']; ?>">
+                                <button onclick="deleteItem('legal', <?php echo $idx; ?>)" class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all">✕</button>
+                                <div class="flex items-center space-x-6 flex-grow">
+                                    <div class="w-16 h-16 bg-white rounded-3xl flex items-center justify-center font-black text-slate-300 text-2xl shadow-sm border border-slate-100"><?php echo $idx+1; ?></div>
+                                    <div class="flex-grow space-y-2">
+                                        <input type="text" value="<?php echo htmlspecialchars($l['title']); ?>" class="l-title w-full bg-transparent font-black text-slate-900 text-lg border-none p-0 focus:ring-0 placeholder-slate-300" placeholder="Titre de la loi (ex: CSRD)">
+                                        <textarea class="l-desc w-full bg-transparent text-sm text-slate-500 border-none p-0 focus:ring-0 italic h-12 resize-none placeholder-slate-300" placeholder="Description courte pour le rapport..."><?php echo htmlspecialchars($l['description']); ?></textarea>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-8 bg-white/50 p-6 rounded-[2rem] border border-slate-200 shadow-inner">
+                                    <div class="text-center w-24">
+                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Impact Risque</label>
+                                        <input type="number" value="<?php echo $l['weight']; ?>" class="l-weight w-full bg-transparent text-center font-black text-indigo-700 border-none p-0 text-xl focus:ring-0">
+                                    </div>
+                                    <div class="h-10 w-px bg-slate-200"></div>
+                                    <div class="text-center w-24">
+                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Activer</label>
+                                        <input type="checkbox" <?php echo $l['isActive'] ? 'checked' : ''; ?> class="l-active w-8 h-8 text-emerald-600 rounded-xl border-slate-300 cursor-pointer shadow-sm">
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
 
@@ -1019,39 +1049,61 @@ include __DIR__ . '/../includes/header.php';
             </div>
 
         <?php elseif ($activeTab === 'texts'): ?>
-            <div class="p-12 space-y-12">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Dictionnaire IA</h2>
-                        <p class="text-slate-600 mt-2">Ajoutez et modifiez ici les mots-clés utilisés par le moteur IA. Ces réglages sont partagés entre les audits.</p>
+            <?php $dbTexts = $db->query("SELECT * FROM cl_texts WHERE category = 'mots_bannis' ORDER BY text_key ASC")->fetchAll(); ?>
+            <div class="p-12 space-y-8">
+                <section class="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+                    <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="max-w-3xl">
+                            <p class="text-xs font-bold uppercase tracking-widest text-emerald-700">Réglages de langage</p>
+                            <h2 class="mt-2 text-3xl font-black text-slate-900 tracking-tight">Dictionnaire IA</h2>
+                            <p class="mt-2 text-sm text-slate-600">Gérez ici les termes, formulations et contenus réutilisés par le moteur IA. Ces réglages sont partagés entre les audits et les écrans de recommandation.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <span class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                                <?php echo count($dbTexts); ?> entrée(s) active(s)
+                            </span>
+                            <button onclick="addDbText()" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                                <span>Nouvelle entrée</span>
+                            </button>
+                        </div>
                     </div>
-                    <button onclick="addDbText()" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
-                        <span>Nouveau Texte</span>
-                    </button>
+                </section>
+
+                <div class="grid gap-4 lg:grid-cols-3">
+                    <article class="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                        <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Repérage</p>
+                        <p class="mt-3 text-sm leading-6 text-slate-700">Ajoutez les termes sensibles, variantes lexicales et formulations à surveiller pendant les scans.</p>
+                    </article>
+                    <article class="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                        <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Qualité</p>
+                        <p class="mt-3 text-sm leading-6 text-slate-700">Gardez des intitulés courts et un contenu explicite pour que l’équipe comprenne chaque réglage au premier coup d’œil.</p>
+                    </article>
+                    <article class="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                        <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Harmonisation</p>
+                        <p class="mt-3 text-sm leading-6 text-slate-700">Ces formulations complètent les prompts, les références juridiques et le catalogue métier dans la console.</p>
+                    </article>
                 </div>
-                
+
                 <div class="grid grid-cols-1 gap-6" id="db-texts-container">
-                    <?php 
-                    $dbTexts = $db->query("SELECT * FROM cl_texts WHERE category = 'mots_bannis' ORDER BY text_key ASC")->fetchAll();
-                    foreach ($dbTexts as $t): ?>
-                        <div class="db-text-row p-8 bg-slate-50 rounded-[3rem] border border-slate-200 shadow-sm hover:bg-white hover:shadow-2xl transition-all relative group">
-                            <div class="flex flex-col lg:flex-row lg:items-start gap-8">
-                                <div class="w-full lg:w-1/4 space-y-4">
+                    <?php foreach ($dbTexts as $t): ?>
+                        <div class="db-text-row rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm transition hover:border-emerald-200 hover:shadow-md">
+                            <div class="flex flex-col gap-6 xl:flex-row xl:items-start">
+                                <div class="w-full xl:w-72 space-y-4">
                                     <div>
-                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Clé Unique (ID)</label>
-                                        <input type="text" value="<?php echo htmlspecialchars($t['text_key']); ?>" class="t-key w-full bg-white px-4 py-2 rounded-xl border border-slate-200 font-mono text-xs text-emerald-700" readonly>
+                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Clé technique</label>
+                                        <input type="text" value="<?php echo htmlspecialchars($t['text_key']); ?>" class="t-key w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-xs text-emerald-700" readonly>
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Titre</label>
-                                        <input type="text" value="<?php echo htmlspecialchars($t['title']); ?>" class="t-title w-full bg-white px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-900 text-sm">
+                                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Libellé</label>
+                                        <input type="text" value="<?php echo htmlspecialchars($t['title']); ?>" class="t-title w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-bold text-slate-900 text-sm">
                                     </div>
                                 </div>
                                 <div class="flex-grow">
-                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contenu (Liste de mots, instructions...)</label>
-                                    <textarea class="t-content w-full h-32 bg-white px-6 py-4 rounded-2xl border border-slate-200 text-xs font-mono leading-relaxed focus:ring-4 focus:ring-emerald-500/10"><?php echo htmlspecialchars($t['content']); ?></textarea>
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contenu</label>
+                                    <textarea class="t-content h-32 w-full rounded-2xl border border-slate-200 bg-slate-50 px-6 py-4 text-xs font-mono leading-relaxed text-slate-700 focus:ring-4 focus:ring-emerald-500/10"><?php echo htmlspecialchars($t['content']); ?></textarea>
                                 </div>
-                                <div class="flex lg:flex-col gap-2">
+                                <div class="flex gap-2 xl:flex-col">
                                     <button onclick="saveDbText('<?php echo $t['text_key']; ?>', this)" class="px-6 py-3 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-xl hover:bg-emerald-700 hover:text-white transition-all uppercase tracking-widest">Enregistrer</button>
                                     <button onclick="deleteDbText('<?php echo $t['text_key']; ?>')" class="px-6 py-3 bg-red-50 text-red-700 text-[10px] font-black rounded-xl hover:bg-red-700 hover:text-white transition-all uppercase tracking-widest">Supprimer</button>
                                 </div>
@@ -1086,7 +1138,7 @@ const appState = <?php echo json_encode($clientState, JSON_HEX_TAG | JSON_HEX_AM
 // --- Unification de la Synchronisation ---
 async function syncState(type, data, isBatch = false) {
     const btns = document.querySelectorAll('.save-btn');
-    btns.forEach(b => { b.disabled = true; b.innerHTML = '⏳ Synchronisation...'; });
+    btns.forEach(b => { if (!b.dataset.label) b.dataset.label = b.innerHTML; b.disabled = true; b.innerHTML = '⏳ Synchronisation...'; });
 
     const payload = isBatch ? { batch: data } : { type, data };
 
@@ -1101,12 +1153,12 @@ async function syncState(type, data, isBatch = false) {
         if (!response.ok || !res.success) throw new Error(res.error || 'Le serveur a refusé la sauvegarde (HTTP ' + response.status + ').');
         {
             btns.forEach(b => { 
-                b.innerHTML = '✨ Mise à jour réussie'; 
+                b.innerHTML = '✅ Modification réussie'; 
                 b.classList.replace('bg-emerald-700', 'bg-indigo-600');
             });
             setTimeout(() => {
                 btns.forEach(b => { 
-                    b.innerHTML = 'Sauvegarder'; 
+                    b.innerHTML = b.dataset.label || 'Sauvegarder'; 
                     b.classList.replace('bg-indigo-600', 'bg-emerald-700');
                     b.disabled = false;
                 });
@@ -1115,7 +1167,7 @@ async function syncState(type, data, isBatch = false) {
         }
     } catch (e) {
         alert(e.message || 'Échec de la sauvegarde. Vérifiez la connexion puis réessayez.');
-        btns.forEach(b => { b.disabled = false; b.innerHTML = 'Sauvegarder'; });
+        btns.forEach(b => { b.disabled = false; b.innerHTML = b.dataset.label || 'Sauvegarder'; });
     }
     return false;
 }
@@ -1144,7 +1196,6 @@ function saveAgency() {
     return syncState('agency', appState.agency);
 }
 
-async 
 // Keep the compact service summaries in sync while editing their expanded fields.
 document.querySelectorAll('#missions-container > .mission-card').forEach(card => {
     const title = card.querySelector('.m-title');
