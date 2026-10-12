@@ -49,7 +49,22 @@ function update_state_by_type($state, $type, $data) {
             $state['cabinets'] = $data;
             break;
         case 'collaborators':
+            if (!is_array($data)) break;
             $state['collaborators'] = $data;
+            if (!isset($state['passwordsMap']) || !is_array($state['passwordsMap'])) {
+                $state['passwordsMap'] = [];
+            }
+            $collaboratorIds = [];
+            foreach ($data as $collaborator) {
+                if (is_array($collaborator) && isset($collaborator['id']) && is_string($collaborator['id'])) {
+                    $collaboratorIds[$collaborator['id']] = true;
+                }
+            }
+            foreach (($state['passwordsMap'] ?? []) as $id => $_passwordHash) {
+                if (!isset($collaboratorIds[(string)$id])) {
+                    unset($state['passwordsMap'][$id]);
+                }
+            }
             break;
         case 'serviceOpps':
             $state['serviceOpps'] = $data;

@@ -18,6 +18,8 @@ $bulkDelete = (string)file_get_contents(__DIR__ . '/../api/scans/bulk_delete.php
 $analyse = (string)file_get_contents(__DIR__ . '/../api/analyse.php');
 $analyseJs = (string)file_get_contents(__DIR__ . '/../api/assets/js/analyse.js');
 $workflow = (string)file_get_contents(__DIR__ . '/../.github/workflows/php-quality.yml');
+$saveState = (string)file_get_contents(__DIR__ . '/../api/admin/save_state.php');
+$passwordEndpoint = (string)file_get_contents(__DIR__ . '/../api/admin/set_collaborator_password.php');
 
 admin_workspace_assert(
     str_contains($admin, "if (\$activeTab === 'dossiers')") && str_contains($admin, '?tab=scans'),
@@ -51,7 +53,24 @@ admin_workspace_assert(
     'the common Save button is only exposed on supported configuration tabs'
 );
 admin_workspace_assert(str_contains($admin, 'Team Manager · accès collaborateurs'), 'the agency page identifies its Team Manager section');
-admin_workspace_assert(str_contains($admin, 'aria-label="Supprimer ce collaborateur"'), 'the team delete action is visible and accessible');
+admin_workspace_assert(
+    str_contains($admin, 'submitCollaboratorForm(event)')
+        && str_contains($admin, 'saveCollaboratorCard(this)')
+        && str_contains($admin, 'deleteCollaboratorCard(this)')
+        && str_contains($admin, '/api/admin/set_collaborator_password.php'),
+    'the account manager can create, edit, remove, and provision collaborator logins'
+);
+admin_workspace_assert(
+    str_contains($saveState, "unset(\$state['passwordsMap'][\$id])"),
+    'deleting a collaborator also revokes and removes its stored password hash'
+);
+admin_workspace_assert(
+    str_contains($admin, 'id="collaborator-modal"')
+        && str_contains($admin, 'minlength="12"')
+        && str_contains($admin, 'collaborator-status')
+        && str_contains($passwordEndpoint, "preg_match_all('/./us', \$password)"),
+    'account creation requires a secure password and provides accessible feedback'
+);
 admin_workspace_assert(
     str_contains($admin, 'const MAX_BULK_RESCANS = 10;')
         && str_contains($admin, 'bulkRescanButton.textContent = `Relancer la sélection (${MAX_BULK_RESCANS} max)`')
@@ -61,6 +80,11 @@ admin_workspace_assert(
 admin_workspace_assert(!str_contains($admin, "['audits', 'missions', 'legal', 'texts', 'team', 'scanner']"), 'unreachable Team-tab export controls are removed');
 admin_workspace_assert(str_contains($admin, "\\uFEFF") && str_contains($admin, "replace(/\"/g, '\"\"')"), 'Scanner CSV exports preserve UTF-8 BOM and quote escaped prompt values');
 admin_workspace_assert(str_contains($header, 'greenhumble-app.css') && str_contains($theme, 'body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"]'), 'standalone admin pages share the AI provider visual system');
+admin_workspace_assert(
+    str_contains((string)file_get_contents(__DIR__ . '/../api/scan.php'), 'gh-scan-panel')
+        && str_contains($theme, 'gh-scan-admin .gh-scan-panel'),
+    'the scan workspace uses the dedicated light dashboard panel design'
+);
 admin_workspace_assert(
     str_contains($apiGuard, "if (!headers_sent())")
         && str_contains($apiGuard, "header('Cache-Control: no-store"),

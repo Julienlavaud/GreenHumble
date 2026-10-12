@@ -532,12 +532,19 @@ include __DIR__ . '/includes/header.php';
             $headcountValue = $auditPayload['entreprise_salaries'] ?? ($audit['headcount'] ?? ($audit['comp_headcount'] ?? null));
             $turnoverValue = $auditPayload['entreprise_ca'] ?? ($audit['turnover'] ?? ($audit['comp_turnover'] ?? null));
             $sectorValue = $auditPayload['entreprise_secteur'] ?? ($audit['sector'] ?? null);
+            $sirenValue = $companyProvenance['siren'] ?? ($audit['siren'] ?? null);
+            $nafValue = $companyProvenance['naf'] ?? ($audit['naf_code'] ?? null);
             $displayHeadcount = trim((string)$headcountValue) !== '' ? (string)$headcountValue : 'Non communiqué';
             $displayTurnover = trim((string)$turnoverValue) !== '' ? (string)$turnoverValue : 'Non communiqué';
             $displaySector = trim((string)$sectorValue) !== '' ? (string)$sectorValue : 'Non renseigné';
+            $displaySiren = trim((string)$sirenValue) !== '' ? (string)$sirenValue : 'Non communiqué';
+            $displayNaf = trim((string)$nafValue) !== '' ? (string)$nafValue : 'Non communiqué';
+            $registrySource = !empty($companyProvenance['provider']) ? 'registre_public_insee' : null;
             $headcountSource = gh_company_provenance_label($companyProvenance['headcountSource'] ?? null, $displayHeadcount !== 'Non communiqué');
             $turnoverSource = gh_company_provenance_label($companyProvenance['turnoverSource'] ?? null, $displayTurnover !== 'Non communiqué');
             $sectorSource = gh_company_provenance_label($companyProvenance['sectorSource'] ?? null, $displaySector !== 'Non renseigné');
+            $sirenSource = gh_company_provenance_label($companyProvenance['sirenSource'] ?? $registrySource, $displaySiren !== 'Non communiqué');
+            $nafSource = gh_company_provenance_label($companyProvenance['nafSource'] ?? $registrySource, $displayNaf !== 'Non communiqué');
             $headcountYear = trim((string)($companyProvenance['headcountYear'] ?? ''));
             $turnoverPeriod = trim((string)($companyProvenance['turnoverPeriod'] ?? ''));
             ?>
@@ -547,17 +554,18 @@ include __DIR__ . '/includes/header.php';
                         <span class="text-xs font-bold uppercase text-emerald-700 tracking-wider">Identité & Profil Entreprise</span>
                         <h2 class="text-xl font-black text-slate-900 mt-0.5"><?php echo htmlspecialchars($audit['company_name'] ?? 'Entreprise'); ?></h2>
                     </div>
-                    <span class="px-3 py-1 bg-slate-100 text-slate-800 rounded-full text-xs font-bold border border-slate-200">
-                        SIREN : <?php echo htmlspecialchars($audit['siren'] ?? 'N/C'); ?>
+                    <span class="px-3 py-1 bg-slate-100 text-slate-800 rounded-xl text-xs font-bold border border-slate-200 flex flex-col">
+                        <span>SIREN : <?php echo htmlspecialchars($displaySiren); ?></span>
+                        <span id="company-siren-source" class="text-[10px] font-normal text-slate-500">Source : <?php echo htmlspecialchars($sirenSource); ?></span>
                     </span>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 pt-6">
                     <div class="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-100 flex items-center space-x-3">
                         <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg">👥</div>
                         <div>
                             <span class="text-[10px] font-black uppercase tracking-wider text-emerald-800">Nombre de salariés</span>
                             <div class="text-base font-black text-slate-900"><?php echo htmlspecialchars($displayHeadcount); ?></div>
-                            <div class="text-[10px] text-slate-500">Source : <?php echo htmlspecialchars($headcountSource); ?><?php echo $headcountYear !== '' ? ' · année ' . htmlspecialchars($headcountYear) : ''; ?></div>
+                            <div id="company-headcount-source" class="text-[10px] text-slate-500">Source : <?php echo htmlspecialchars($headcountSource); ?><?php echo $headcountYear !== '' ? ' · année ' . htmlspecialchars($headcountYear) : ''; ?></div>
                         </div>
                     </div>
 
@@ -566,7 +574,7 @@ include __DIR__ . '/includes/header.php';
                         <div>
                             <span class="text-[10px] font-black uppercase tracking-wider text-teal-800">Chiffre d'Affaires (CA)</span>
                             <div class="text-base font-black text-slate-900"><?php echo htmlspecialchars($displayTurnover); ?></div>
-                            <div class="text-[10px] text-slate-500">Source : <?php echo htmlspecialchars($turnoverSource); ?><?php echo $turnoverPeriod !== '' ? ' · période ' . htmlspecialchars($turnoverPeriod) : ''; ?></div>
+                            <div id="company-turnover-source" class="text-[10px] text-slate-500">Source : <?php echo htmlspecialchars($turnoverSource); ?><?php echo $turnoverPeriod !== '' ? ' · période ' . htmlspecialchars($turnoverPeriod) : ''; ?></div>
                         </div>
                     </div>
 
@@ -575,7 +583,16 @@ include __DIR__ . '/includes/header.php';
                         <div>
                             <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Secteur d'activité</span>
                             <div class="text-base font-black text-slate-900 truncate max-w-[200px]"><?php echo htmlspecialchars($displaySector); ?></div>
-                            <div class="text-[10px] text-slate-500">Source : <?php echo htmlspecialchars($sectorSource); ?></div>
+                            <div id="company-sector-source" class="text-[10px] text-slate-500">Source : <?php echo htmlspecialchars($sectorSource); ?></div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-slate-200 text-slate-800 flex items-center justify-center font-bold text-lg">🏷️</div>
+                        <div>
+                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Code NAF</span>
+                            <div class="text-base font-black text-slate-900"><?php echo htmlspecialchars($displayNaf); ?></div>
+                            <div id="company-naf-source" class="text-[10px] text-slate-500">Source : <?php echo htmlspecialchars($nafSource); ?></div>
                         </div>
                     </div>
                 </div>

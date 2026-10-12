@@ -22,7 +22,8 @@ gh_require_same_origin_mutation();
 $input = json_decode((string)file_get_contents('php://input'), true);
 $id = is_array($input) ? trim((string)($input['id'] ?? '')) : '';
 $password = is_array($input) ? (string)($input['password'] ?? '') : '';
-if ($id === '' || strlen($password) < 12) {
+$passwordLength = preg_match_all('/./us', $password);
+if ($id === '' || $passwordLength === false || $passwordLength < 12) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Identifiant collaborateur requis et mot de passe de 12 caractères minimum.']);
     exit;
