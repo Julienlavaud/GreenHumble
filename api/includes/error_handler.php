@@ -30,7 +30,8 @@ function gh_render_error(int $status, string $detail = ''): void
     $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
     $wantsJson = strpos($accept, 'application/json') !== false
         || strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest';
-    $show = GH_DEBUG && $detail !== '';
+    $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true && ($_SESSION['role'] ?? '') === 'admin';
+    $show = (GH_DEBUG || $isAdmin) && $detail !== '';
     if ($wantsJson) {
         if (!headers_sent()) {
             header('Content-Type: application/json; charset=utf-8');
