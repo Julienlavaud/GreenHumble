@@ -108,7 +108,7 @@ $page_title = "Scanner d'Allégations RSE & Diagnostic";
 include __DIR__ . '/includes/header.php';
 ?>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10 bg-[#121212] text-[#E0E0E0]">
+<div class="gh-scan-admin max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 bg-[#121212] text-[#E0E0E0]">
     <?php if (($_GET['error'] ?? '') === 'audit_not_saved'): ?>
         <div class="rounded-xl border border-rose-400/30 bg-rose-950/40 px-5 py-4 text-sm text-rose-100" role="alert">L’audit n’a pas pu être enregistré. Aucun ancien résultat n’a été ouvert ; vérifiez les droits d’écriture et réessayez.</div>
     <?php endif; ?>
@@ -222,7 +222,7 @@ include __DIR__ . '/includes/header.php';
 
         <!-- Sidebar Listes & Groupes -->
         <div class="space-y-6">
-            <div class="bg-[#1E1E1E] p-6 rounded-3xl border border-white/10 shadow-lg space-y-4">
+            <div class="gh-scan-panel bg-[#1E1E1E] p-6 rounded-3xl border border-white/10 shadow-lg space-y-4">
                 <div class="flex items-center justify-between border-b border-white/10 pb-3">
                     <h3 class="text-base font-bold text-white flex items-center gap-2">
                         <span>📋</span> Listes de Travail (<?php echo count($allListes); ?>)
@@ -263,7 +263,7 @@ include __DIR__ . '/includes/header.php';
                 </div>
             </div>
 
-            <div class="bg-[#1E1E1E] p-6 rounded-3xl border border-white/10 shadow-lg space-y-3">
+            <div class="gh-scan-panel bg-[#1E1E1E] p-6 rounded-3xl border border-white/10 shadow-lg space-y-3">
                 <h3 class="text-base font-bold text-white">Groupes de Scanners Actifs</h3>
                 <div class="space-y-2">
                     <?php foreach ($allGroups as $grp): ?>
@@ -280,7 +280,7 @@ include __DIR__ . '/includes/header.php';
     </div>
 
     <!-- Scans Récents avec Boutons Listes & Groupes -->
-    <div class="bg-[#1E1E1E] rounded-3xl border border-white/10 shadow-lg p-6 sm:p-8 space-y-6">
+    <div class="gh-scan-panel bg-[#1E1E1E] rounded-3xl border border-white/10 shadow-lg p-6 sm:p-8 space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
             <div>
                 <h2 class="text-xl font-bold text-white">Derniers scores par site (<?php echo count($latestScans); ?>)</h2>
@@ -311,7 +311,7 @@ include __DIR__ . '/includes/header.php';
                         $scAuditRef = (string)$scRes['auditId'];
                     }
                 ?>
-                    <div class="bg-[#121212] p-5 rounded-2xl border border-white/10 space-y-4 flex flex-col justify-between">
+                    <div class="gh-latest-card bg-[#121212] p-5 rounded-2xl border border-white/10 space-y-4 flex flex-col justify-between">
                         <div class="space-y-3">
                             <div class="flex items-center justify-between">
                                 <span class="px-2.5 py-1 bg-[#2A7AE2]/20 text-[#2A7AE2] rounded-md text-[11px] font-bold uppercase">

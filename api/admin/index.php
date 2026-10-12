@@ -731,40 +731,77 @@ include __DIR__ . '/../includes/header.php';
                 <p class="mb-6 text-sm font-semibold text-slate-500">ÉQUIPE & ACCÈS</p>
 
             <div class="p-12 space-y-10">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Accès & Consultants</h2>
-                        <p class="text-slate-400 mt-2">Gérez les auditeurs autorisés à piloter les scans.</p>
+                        <h2 class="text-3xl font-black text-slate-900 tracking-tight">Comptes utilisateurs</h2>
+                        <p class="text-slate-500 mt-2">Créez et gérez les accès à l’espace collaborateur. Les mots de passe sont hachés avant stockage.</p>
                     </div>
-                    <button onclick="addItem('team')" class="px-6 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-xl hover:bg-emerald-900 transition-all flex items-center space-x-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
-                        <span>Nouveau Collaborateur</span>
+                    <button type="button" onclick="openCollaboratorModal()" class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2A7AE2] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1D5BBF]">
+                        <span aria-hidden="true">＋</span><span>Créer un compte</span>
                     </button>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5" id="team-container">
-                    <?php foreach ($state['collaborators'] as $idx => $c): ?>
-                        <div class="team-card bg-white p-6 rounded-3xl border border-slate-100 shadow-xl hover:shadow-2xl transition-all text-center space-y-6 group relative overflow-hidden ring-1 ring-slate-100" data-id="<?php echo $c['id']; ?>">
-                            <button type="button" onclick="deleteItem('team', <?php echo $idx; ?>)" aria-label="Supprimer ce collaborateur" class="absolute top-4 right-4 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-sm font-bold text-rose-700 hover:bg-rose-50 transition-all">Supprimer</button>
-                            <div class="w-28 h-28 <?php echo $c['avatarColor']; ?> text-white rounded-[3rem] flex items-center justify-center text-4xl font-black mx-auto shadow-2xl group-hover:scale-110 transition-transform ring-4 ring-white">
-                                <?php echo substr($c['name'], 0, 1); ?>
-                            </div>
-                            <div class="space-y-2">
-                                <input type="text" value="<?php echo htmlspecialchars($c['name']); ?>" class="t-name w-full bg-transparent text-center font-black text-slate-900 text-lg border-none p-0 focus:ring-0" placeholder="Nom complet">
-                                <div class="flex justify-center">
-                                    <input type="text" value="<?php echo htmlspecialchars($c['role']); ?>" class="t-role px-4 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full inline-block uppercase tracking-widest italic border-none text-center focus:ring-0 w-32" placeholder="Rôle">
+                <p id="collaborator-status" class="min-h-5 text-sm text-slate-500" role="status" aria-live="polite"></p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5" id="team-container">
+                    <?php foreach (($state['collaborators'] ?? []) as $c):
+                        $collaboratorId = (string)($c['id'] ?? '');
+                        $collaboratorName = (string)($c['name'] ?? '');
+                    ?>
+                        <article class="team-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md" data-id="<?php echo htmlspecialchars($collaboratorId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>">
+                            <div class="flex items-start gap-4">
+                                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-lg font-extrabold text-emerald-800">
+                                    <?php echo htmlspecialchars(function_exists('mb_substr') ? mb_substr($collaboratorName, 0, 1) : substr($collaboratorName, 0, 1), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>
+                                </div>
+                                <div class="min-w-0 flex-1 space-y-3">
+                                    <label class="block text-xs font-semibold text-slate-600">Nom complet
+                                        <input type="text" value="<?php echo htmlspecialchars($collaboratorName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" class="t-name mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900" maxlength="120" required>
+                                    </label>
+                                    <label class="block text-xs font-semibold text-slate-600">Adresse e-mail
+                                        <input type="email" value="<?php echo htmlspecialchars((string)($c['email'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" class="t-email mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900" maxlength="254" required>
+                                    </label>
+                                    <label class="block text-xs font-semibold text-slate-600">Fonction
+                                        <input type="text" value="<?php echo htmlspecialchars((string)($c['role'] ?? 'Collaborateur'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>" class="t-role mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900" maxlength="80" required>
+                                    </label>
                                 </div>
                             </div>
-                            <div class="space-y-1">
-                                <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Email Contact</label>
-                                <input type="text" value="<?php echo htmlspecialchars($c['email']); ?>" type="email" class="t-email w-full min-w-0 bg-slate-50 text-center text-sm text-slate-700 border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-200 font-medium" placeholder="Email contact">
+                            <div class="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4">
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" onclick="saveCollaboratorCard(this)" class="collaborator-save rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-800">Enregistrer</button>
+                                    <button type="button" onclick="setCollaboratorPassword(this.closest('.team-card').dataset.id)" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Réinitialiser le mot de passe</button>
+                                </div>
+                                <button type="button" onclick="deleteCollaboratorCard(this)" class="rounded-lg px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">Supprimer le compte</button>
                             </div>
-                            <div class="space-y-1 pt-2 border-t border-slate-50">
-                                <label class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Mot de passe</label>
-                                <p class="text-xs text-slate-500">Mot de passe non affiché pour des raisons de sécurité.</p>
-                                <button type="button" onclick="setCollaboratorPassword('<?php echo htmlspecialchars((string)$c['id'], ENT_QUOTES, 'UTF-8'); ?>')" class="mt-2 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-600">Créer / réinitialiser l’accès</button>
-                            </div>
-                        </div>
+                        </article>
                     <?php endforeach; ?>
+                    <?php if (empty($state['collaborators'])): ?>
+                        <p class="col-span-full rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">Aucun compte collaborateur. Créez un compte pour donner accès à l’espace.</p>
+                    <?php endif; ?>
+                </div>
+                <div id="collaborator-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="collaborator-modal-title">
+                    <form id="collaborator-form" onsubmit="submitCollaboratorForm(event)" class="w-full max-w-lg space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-emerald-700">Nouvel accès</p>
+                            <h3 id="collaborator-modal-title" class="mt-1 text-xl font-extrabold text-slate-900">Créer un compte utilisateur</h3>
+                            <p class="mt-1 text-sm text-slate-500">L’adresse e-mail servira d’identifiant de connexion.</p>
+                        </div>
+                        <label class="block text-sm font-semibold text-slate-700">Nom complet
+                            <input id="new-collaborator-name" type="text" maxlength="120" required autocomplete="name" class="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-3 text-sm text-slate-900">
+                        </label>
+                        <label class="block text-sm font-semibold text-slate-700">Adresse e-mail
+                            <input id="new-collaborator-email" type="email" maxlength="254" required autocomplete="email" class="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-3 text-sm text-slate-900">
+                        </label>
+                        <label class="block text-sm font-semibold text-slate-700">Fonction
+                            <input id="new-collaborator-role" type="text" maxlength="80" value="Collaborateur" required class="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-3 text-sm text-slate-900">
+                        </label>
+                        <label class="block text-sm font-semibold text-slate-700">Mot de passe initial
+                            <input id="new-collaborator-password" type="password" minlength="12" required autocomplete="new-password" class="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-3 text-sm text-slate-900">
+                            <span class="mt-1 block text-xs font-normal text-slate-500">12 caractères minimum. Le mot de passe est stocké sous forme hachée.</span>
+                        </label>
+                        <p id="collaborator-form-error" class="hidden rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert"></p>
+                        <div class="flex justify-end gap-2">
+                            <button type="button" onclick="closeCollaboratorModal()" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Annuler</button>
+                            <button type="submit" class="rounded-xl bg-[#2A7AE2] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#1D5BBF]">Créer le compte</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         
@@ -1218,9 +1255,7 @@ async function syncState(type, data, isBatch = false) {
 // --- Dispatcher de Sauvegarde par Onglet ---
 async function saveTab(tab) {
     if (tab === 'agency') {
-        const saved = await saveAgency();
-        if (saved) return saveTeam(false);
-        return false;
+        return saveAgency();
     }
     if (tab === 'missions') return saveMissions();
     if (tab === 'legal') return saveLegal();
@@ -1339,32 +1374,128 @@ async function setCollaboratorPassword(id) {
     }
 }
 
-function saveTeam(showNotice = true) {
-    const items = [];
+function openCollaboratorModal() {
+    const modal = document.getElementById('collaborator-modal');
+    const form = document.getElementById('collaborator-form');
+    const error = document.getElementById('collaborator-form-error');
+    if (form) form.reset();
+    if (error) {
+        error.textContent = '';
+        error.classList.add('hidden');
+    }
+    modal?.classList.remove('hidden');
+    modal?.classList.add('flex');
+    document.getElementById('new-collaborator-name')?.focus();
+}
 
-    document.querySelectorAll('#team-container > .team-card').forEach((c, i) => {
-        const id = c.dataset.id || 'collab_' + Date.now() + i;
-        const name = c.querySelector('.t-name').value;
-        const email = c.querySelector('.t-email').value;
-        const role = c.querySelector('.t-role').value;
+function closeCollaboratorModal() {
+    const modal = document.getElementById('collaborator-modal');
+    modal?.classList.add('hidden');
+    modal?.classList.remove('flex');
+}
 
-        items.push({
-            id,
-            name,
-            email,
-            role,
-            avatarColor: c.dataset.avatarColor || 'bg-indigo-700',
-            assignedProspectsCount: Number(c.dataset.assignedProspectsCount || 0)
+async function submitCollaboratorForm(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const error = document.getElementById('collaborator-form-error');
+    const name = document.getElementById('new-collaborator-name').value.trim();
+    const email = document.getElementById('new-collaborator-email').value.trim();
+    const role = document.getElementById('new-collaborator-role').value.trim();
+    const password = document.getElementById('new-collaborator-password').value;
+    const normalizedEmail = email.toLocaleLowerCase();
+    const showError = message => {
+        error.textContent = message;
+        error.classList.remove('hidden');
+    };
+    if (!name || !email || !role || password.length < 12) {
+        showError('Renseignez tous les champs et choisissez un mot de passe d’au moins 12 caractères.');
+        return;
+    }
+    if ((appState.collaborators || []).some(member => String(member.email || '').trim().toLocaleLowerCase() === normalizedEmail)) {
+        showError('Un compte utilise déjà cette adresse e-mail.');
+        return;
+    }
+    const id = 'collab_' + (window.crypto?.randomUUID ? crypto.randomUUID() : Date.now() + '_' + Math.random().toString(36).slice(2));
+    const member = { id, name, email, role, avatarColor: 'bg-emerald-700', assignedProspectsCount: 0 };
+    if (!Array.isArray(appState.collaborators)) appState.collaborators = [];
+    appState.collaborators.unshift(member);
+    const submit = form.querySelector('button[type="submit"]');
+    if (submit) {
+        submit.disabled = true;
+        submit.textContent = 'Création…';
+    }
+    try {
+        if (!await syncState('collaborators', appState.collaborators)) {
+            appState.collaborators = appState.collaborators.filter(item => item.id !== id);
+            return;
+        }
+        const response = await fetch('/api/admin/set_collaborator_password.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ id, password })
         });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) {
+            appState.collaborators = appState.collaborators.filter(item => item.id !== id);
+            await syncState('collaborators', appState.collaborators);
+            throw new Error(result.error || 'Impossible de créer le mot de passe du compte.');
+        }
+        closeCollaboratorModal();
+        window.location.reload();
+    } catch (exception) {
+        showError(exception.message || 'Impossible de créer ce compte.');
+    } finally {
+        if (submit) {
+            submit.disabled = false;
+            submit.textContent = 'Créer le compte';
+        }
+    }
+}
 
-    });
-    
-    appState.collaborators = items;
-    return syncState('collaborators', appState.collaborators)
-    .then((saved) => {
-        if (saved && showNotice) alert('Équipe enregistrée.');
-        return saved;
-    });
+async function saveCollaboratorCard(button) {
+    const card = button.closest('.team-card');
+    const id = card?.dataset.id || '';
+    const member = (appState.collaborators || []).find(item => String(item.id) === id);
+    const name = card?.querySelector('.t-name')?.value.trim() || '';
+    const email = card?.querySelector('.t-email')?.value.trim() || '';
+    const role = card?.querySelector('.t-role')?.value.trim() || '';
+    const status = document.getElementById('collaborator-status');
+    if (!member) return;
+    if (!name || !email || !role || !card.querySelector('.t-email').checkValidity()) {
+        status.textContent = 'Nom, fonction et adresse e-mail valide sont obligatoires.';
+        status.className = 'min-h-5 text-sm text-rose-700';
+        return;
+    }
+    if ((appState.collaborators || []).some(item => String(item.id) !== id && String(item.email || '').trim().toLocaleLowerCase() === email.toLocaleLowerCase())) {
+        status.textContent = 'Un autre compte utilise déjà cette adresse e-mail.';
+        status.className = 'min-h-5 text-sm text-rose-700';
+        return;
+    }
+    const previous = { name: member.name, email: member.email, role: member.role };
+    Object.assign(member, { name, email, role });
+    const saved = await syncState('collaborators', appState.collaborators);
+    if (saved) {
+        status.textContent = 'Compte utilisateur enregistré.';
+        status.className = 'min-h-5 text-sm text-emerald-700';
+        const avatar = card.querySelector('.h-12.w-12');
+        if (avatar) avatar.textContent = name.slice(0, 1);
+    } else {
+        Object.assign(member, previous);
+    }
+}
+
+async function deleteCollaboratorCard(button) {
+    const card = button.closest('.team-card');
+    const id = card?.dataset.id || '';
+    if (!id || !confirm('Supprimer définitivement ce compte et révoquer son accès ?')) return;
+    const original = appState.collaborators || [];
+    appState.collaborators = original.filter(item => String(item.id) !== id);
+    if (await syncState('collaborators', appState.collaborators)) {
+        window.location.reload();
+    } else {
+        appState.collaborators = original;
+    }
 }
 
 function generatePass(btn) {
@@ -1383,10 +1514,8 @@ async function addItem(type) {
         appState.serviceOpps.unshift({ id, serviceKey: 'service_' + id, serviceTitle: 'Nouveau métier', description: '', defaultBudget: '', subsidyAmount: '', isActive: true });
     } else if (type === 'legal') {
         appState.legalTexts.unshift({ id, title: 'Nouveau Référentiel', description: '', weight: 5, isActive: true });
-    } else if (type === 'team') {
-        appState.collaborators.unshift({ id, name: 'Nouveau Membre', email: '', role: 'Consultant', avatarColor: 'bg-slate-700' });
     }
-    const key = type === 'missions' ? 'serviceOpps' : type === 'legal' ? 'legalTexts' : 'collaborators';
+    const key = type === 'missions' ? 'serviceOpps' : 'legalTexts';
     const saved = await syncState(key, appState[key]);
     if (saved) window.location.reload();
 }
@@ -1395,8 +1524,6 @@ function deleteItem(type, idx) {
     if(!confirm('Confirmer la suppression définitive ?')) return;
     if (type === 'missions') appState.serviceOpps.splice(idx, 1);
     else if (type === 'legal') appState.legalTexts.splice(idx, 1);
-    else if (type === 'team') appState.collaborators.splice(idx, 1);
-    
     syncState(type === 'missions' ? 'serviceOpps' : (type === 'legal' ? 'legalTexts' : 'collaborators'), 
               type === 'missions' ? appState.serviceOpps : (type === 'legal' ? appState.legalTexts : appState.collaborators))
     .then((saved) => { if (saved) window.location.reload(); });

@@ -99,3 +99,9 @@ body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"] :is(h1,h2,h3
 body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"] :is(input,select,textarea){border-color:var(--gh-line)!important;border-radius:10px!important;background:#fff!important;color:var(--gh-ink)!important}
 body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"] :is(input,select,textarea)::placeholder{color:#829188!important}
 @media(max-width:680px){body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"]{padding:18px 14px 40px!important}}
+body[data-gh-role=admin] .gh-content>.gh-scan-admin{padding:28px 24px 56px!important}
+body[data-gh-role=admin] .gh-content>.gh-scan-admin .gh-scan-panel{border:1px solid var(--gh-line)!important;border-radius:18px!important;background:#fff!important;box-shadow:0 8px 25px rgba(19,54,37,.055)!important}
+body[data-gh-role=admin] .gh-content>.gh-scan-admin .gh-latest-card{min-height:280px;border:1px solid var(--gh-line)!important;border-radius:17px!important;background:#fff!important;box-shadow:0 8px 22px rgba(19,54,37,.055)!important}
+body[data-gh-role=admin] .gh-content>.gh-scan-admin .gh-scan-panel h2,body[data-gh-role=admin] .gh-content>.gh-scan-admin .gh-scan-panel h3,body[data-gh-role=admin] .gh-content>.gh-scan-admin .gh-latest-card h3{color:var(--gh-ink)!important}
+body[data-gh-role=admin] .gh-content>.gh-scan-admin .gh-latest-card p,body[data-gh-role=admin] .gh-content>.gh-scan-admin [class*="text-[#AAAAAA]"]{color:var(--gh-muted)!important}
+@media(max-width:680px){body[data-gh-role=admin] .gh-content>.gh-scan-admin{padding:18px 14px 38px!important}.gh-scan-admin .gh-latest-card{min-height:0}}
