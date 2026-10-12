@@ -1,29 +1,28 @@
 <?php
+
 declare(strict_types=1);
 
 /**
  * GreenHumble Router
- * Compatible OVH Mutualisé
+ * Compatible OVH mutualisé
  */
 
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 
-$path = parse_url($requestUri, PHP_URL_PATH) ?? '/';
-$path = trim($path, '/');
+$path = parse_url($*equestUri, PHP_URL_PATH) ?? '/';
+$*ath = trim($path, '/');
 
 /**
- * Cas particuliers :
+ * Co*patibilité avec :
  * /api/scan
- * /api/admin
- *
- * => scan
- * => admin
+ * *api/admin
+ * /api/export/raw
  */
-if (strpos($path, 'api/') === 0) {
-    $path = substr($path, 4);
+i* (strpos($path, 'api/') === 0) {
+ *  $path = substr($path, 4);
 }
 
-$routes = [
+$ro*tes = [
 
     '' => 'index.php',
     'index' => 'index.php',
@@ -33,11 +32,13 @@ $routes = [
 
     'audit' => 'audit.php',
     'prospec' => 'prospec.php',
+
     'scan' => 'scan.php',
     'scan/process' => 'scan_process.php',
 
     'analyse' => 'analyse.php',
     'pipeline' => 'pipeline.php',
+
     'dashboard' => 'dashboard.php',
     'state' => 'state.php',
 
@@ -78,30 +79,27 @@ $routes = [
     'admin/widget' => 'admin/widget.php',
 ];
 
-/**
- * Routes déclarées
- */
 if (isset($routes[$path])) {
 
-    $target = __DIR__ . '/' . $routes[$path];
+    $targetFile = __DIR__ . '/' . $routes[$path];
 
-    if (is_file($target)) {
-        require $target;
+    if (is_file($targetFile)) {
+        require $targetFile;
         exit;
     }
 }
 
 /**
- * Fallback fichier direct
- * Exemple :
- * /api/test
- * => test.php
+ * Fallback : /truc => truc.php
  */
-$directFile = __DIR__ . '/' . $path . '.php';
+if ($path !== '') {
 
-if ($path !== '' && is_file($directFile)) {
-    require $directFile;
-    exit;
+    $directFile = __DIR__ . '/' . $path . '.php';
+
+    if (is_file($directFile)) {
+        require $directFile;
+        exit;
+    }
 }
 
 /**
