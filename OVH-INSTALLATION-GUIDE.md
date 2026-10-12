@@ -1,6 +1,6 @@
 # Installation GreenHumble sur OVH Pro — sans SSH
 
-## Démarrage rapide (sans Node ni React)
+## Démarrage rapide (PHP pur, hébergé sur `https://doo.climatlocal.com/`)
 
 1. Générer l'archive : `npm run build:ovh` (aucune compilation front) ou téléverser directement `index.php`, `.htaccess`, `api/` et, pour les anciens liens `/admin/…`, `admin/`.
 2. Ouvrir `https://votre-domaine/api/install/` et suivre l'assistant (MySQL + compte administrateur). Il se verrouille ensuite.
