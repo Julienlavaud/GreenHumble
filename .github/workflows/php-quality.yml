@@ -64,6 +64,7 @@ jobs:
           php tests/list_single_scan_status_test.php
           php tests/company_data_provenance_test.php
           php tests/scan_storage_integration_test.php
+          php tests/cache_refresh_contract_test.php
   mysql-integration:
     name: Intégration MySQL 8.0
     runs-on: ubuntu-latest

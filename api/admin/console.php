@@ -45,15 +45,6 @@ switch ($method) {
             case 'ping':
                 echo json_encode(['success' => true, 'message' => 'Console active', 'timestamp' => date('c')], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
                 break;
-            case 'flush_cache':
-                if (function_exists('opcache_reset')) {
-                    opcache_reset();
-                    echo json_encode(['success' => true, 'message' => 'Cache flushé'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                } else {
-                    http_response_code(501);
-                    echo json_encode(['success' => false, 'error' => 'OPcache non disponible'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                }
-                break;
             default:
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => "Action inconnue: $action"]);

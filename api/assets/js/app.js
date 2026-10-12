@@ -22,7 +22,7 @@
     endpoints: {
       audit: '/api/audit',
       prospec: '/api/prospec',
-      flush: '/flush.php',
+      flush: '/api/flush.php',
       userStyle: '/api/user-style',
       diagnostic: '/api/server/diagnostic'
     },
@@ -414,7 +414,7 @@
           btn.innerHTML = '⏳ Purge OPcache...';
 
           try {
-            const res = await fetch(AppConfig.endpoints.flush);
+            const res = await fetch(AppConfig.endpoints.flush, { method: 'POST' });
             const data = await res.json();
             alert(data.message || 'OPcache vidé avec succès.');
           } catch (err) {

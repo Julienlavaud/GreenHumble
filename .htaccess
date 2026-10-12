@@ -80,7 +80,7 @@ Options -Indexes
 #################################################
 
 <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|css|js|woff|woff2)$">
-    Header set Cache-Control "public,max-age=2592000"
+    Header always set Cache-Control "public,max-age=2592000"
 </FilesMatch>
 
 #################################################
@@ -88,5 +88,5 @@ Options -Indexes
 #################################################
 
 <FilesMatch "\.php$">
-    Header set Cache-Control "no-store,no-cache,must-revalidate,max-age=0"
+    Header always set Cache-Control "no-store,no-cache,must-revalidate,max-age=0"
 </FilesMatch>

@@ -1477,5 +1477,5 @@ include __DIR__ . '/includes/header.php';
 }
 </style>
 
-<script src="/api/assets/js/analyse.js?v=1" defer></script>
+<script src="/api/assets/js/analyse.js?v=<?= gh_asset_version('assets/js/analyse.js') ?>" defer></script>
 <?php include __DIR__ . '/includes/footer.php'; ?>

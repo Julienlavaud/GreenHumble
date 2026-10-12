@@ -67,5 +67,5 @@ require_once __DIR__ . '/includes/header.php';
   </section>
   <section class="gh-bottom-cta"><div><p class="gh-eyebrow">Espace professionnel</p><h2>Retrouvez vos dossiers et outils de travail.</h2></div><a href="/api/login.php">Connexion à mon espace <span aria-hidden="true">→</span></a></section>
 </main>
-<script src="/api/assets/js/public-audit.js?v=2" defer></script>
+<script src="/api/assets/js/public-audit.js?v=<?= gh_asset_version('assets/js/public-audit.js') ?>" defer></script>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
