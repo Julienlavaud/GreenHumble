@@ -6,6 +6,7 @@ require_once __DIR__ . '/AIProviderRegistry.php';
 require_once __DIR__ . '/providers/GeminiProvider.php';
 require_once __DIR__ . '/providers/GroqProvider.php';
 require_once __DIR__ . '/providers/MistralProvider.php';
+require_once __DIR__ . '/providers/OpenRouterProvider.php';
 
 final class AIProviderFactory
 {
