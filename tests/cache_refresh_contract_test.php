@@ -26,9 +26,19 @@ $auth = (string)file_get_contents(__DIR__ . '/../api/includes/auth.php');
 $console = (string)file_get_contents(__DIR__ . '/../api/admin/console.php');
 $admin = (string)file_get_contents(__DIR__ . '/../api/admin/index.php');
 $workflow = (string)file_get_contents(__DIR__ . '/../.github/workflows/build-ovh-deployment.yml');
+$rootIndex = (string)file_get_contents(__DIR__ . '/../index.php');
 
 cache_assert(str_contains($header, "header('Cache-Control: no-store"), 'dynamic application pages disable browser caching');
-cache_assert(str_contains($rootHtaccess, 'Header always set Cache-Control "public,max-age=2592000"'), 'versioned static assets retain shared-cache efficiency');
+cache_assert(
+    str_contains($rootHtaccess, 'Header always set Cache-Control "no-cache, must-revalidate, max-age=0"')
+        && str_contains($rootHtaccess, 'Header always set Cache-Control "no-store,no-cache,must-revalidate,max-age=0"'),
+    'browser and proxy caches revalidate assets and never store PHP responses'
+);
+cache_assert(
+    str_contains($rootIndex, "header('Location: /api/index.php', true, 302)")
+        && !str_contains($rootIndex, '301'),
+    'legacy root redirect is temporary so browsers do not pin an outdated destination'
+);
 cache_assert(
     str_contains($flush, "require_once __DIR__ . '/includes/auth.php';")
         && str_contains($auth, 'function gh_require_same_origin_mutation()')
