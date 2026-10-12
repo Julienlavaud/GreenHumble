@@ -233,7 +233,7 @@ try {
 $auditId = isset($_GET['id']) ? intval($_GET['id']) : ($allAudits[0]['id'] ?? 1);
 $currentTab = $_GET['tab'] ?? 'diag'; // diag, missio, contact, kit, suivi
 if ($currentTab === 'textes') {
-    header('Location: /admin/index.php?tab=texts', true, 303);
+    header('Location: /api/admin/index.php?tab=texts', true, 303);
     exit;
 }
 
