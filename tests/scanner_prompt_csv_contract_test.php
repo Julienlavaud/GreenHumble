@@ -36,9 +36,8 @@ scanner_prompt_assert(
     'CSV imports reject stale or mismatched column layouts'
 );
 scanner_prompt_assert(
-    str_contains($admin, "if (p.length !== 2)")
-        && str_contains($admin, "Chaque ligne Scanner doit contenir exactement une clé et une consigne."),
-    'Scanner CSV imports reject rows with extra or missing columns'
+    str_contains($admin, 'parsedRow.length !== expectedHeaders.length'),
+    'CSV imports reject rows with extra or missing columns'
 );
 scanner_prompt_assert(
     str_contains($export, "['text_key', 'title', 'content'], ';', '\"', ''")

@@ -125,6 +125,7 @@ function mutate_all_scans(callable $mutator, ?array $storagePaths = null, ?calla
     $storagePaths = $storagePaths ?? get_scan_storage_paths();
     if ($storagePaths === []) return false;
     $replaceFile = $replaceFile ?? static fn(string $temporary, string $path): bool => @rename($temporary, $path);
+    // A custom path set always starts with its canonical storage file.
     $canonical = get_scan_storage_paths() === $storagePaths ? get_scans_file_path() : $storagePaths[0];
     $dir = dirname($canonical);
     if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) return false;

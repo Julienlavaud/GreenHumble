@@ -1565,19 +1565,18 @@ function importTabCSV(tab, input) {
             input.value = '';
             return;
         }
+        if (lines.slice(1).some(parsedRow => parsedRow.length !== expectedHeaders.length)) {
+            alert('Une ou plusieurs lignes du CSV ne contiennent pas le nombre de colonnes attendu.');
+            input.value = '';
+            return;
+        }
         const imports = [];
         for(let i=1; i<lines.length; i++) {
             const p = lines[i];
             if (tab === 'scanner') {
-                if (p.length !== 2) {
-                    alert('Chaque ligne Scanner doit contenir exactement une clé et une consigne.');
-                    input.value = '';
-                    return;
-                }
                 imports.push({ key: p[0].trim(), value: p[1] });
                 continue;
             }
-            if (p.length < 3) continue;
             if (tab === 'missions') {
                 imports.push({ id: p[0], serviceKey: p[1], serviceTitle: p[2], defaultBudget: p[3], subsidyAmount: p[4], description: p[5], isActive: p[6] === '1' });
             } else if (tab === 'legal') {
