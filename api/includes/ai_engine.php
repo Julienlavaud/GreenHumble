@@ -217,13 +217,42 @@ if (
     $model =
         $providerConfig['default_model'];
 }
-    }
-    if (empty($apiKey)) $apiKey = $scanVars['aiApiKey'] ?? null;
+
+$providerKeyName = [
+    'gemini'     => 'geminiApiKey',
+    'groq'       => 'groqApiKey',
+    'mistral'    => 'mistralApiKey',
+    'openrouter' => 'openRouterApiKey'
+][$provider] ?? '';
+
+$apiKey = $overrideApiKey;
+
+if (
+    empty($apiKey)
+    && $providerKeyName !== ''
+) {
+    $apiKey =
+        $scanVars[$providerKeyName]
+        ?? null;
+}
+
+if (empty($apiKey)) {
+    $apiKey =
+        $scanVars['aiApiKey']
+        ?? null;
+}
 
     // 2. Scraping du contenu réel
-    $webContent = is_string($providedWebContent)
-        ? $providedWebContent
-        : ((strpos($url, 'https://') === 0 || strpos($url, 'http://') === 0) ? ai_engine_scrape_website_content($url) : '');
+   $webContent = is_string($providedWebContent)
+    ? $providedWebContent
+    : (
+        preg_match(
+            '~^https?://~i',
+            (string)$url
+        )
+            ? ai_engine_scrape_website_content($url)
+            : ''
+    );
 
     $canonicalUrl = gh_ai_canonical_url((string)$url) ?? (string)$url;
     $corpus = gh_ai_corpus_pages_from_text($canonicalUrl, (string)$webContent);
@@ -353,16 +382,30 @@ if (
 
     // 8. Dispatch vers le fournisseur IA avec fallback automatique
     $aiResponse = '';
-    if ($provider === 'groq') {
-        $model = $model ?: 'llama-3.3-70b-versatile';
-        $aiResponse = groq_call($prompt, $systemInstruction, $model, $apiKey);
-    } elseif ($provider === 'mistral') {
-        $model = $model ?: 'mistral-small-latest';
-        $aiResponse = mistral_call($prompt, $systemInstruction, $model, $apiKey);
-    } else {
-        $model = $model ?: 'gemini-2.5-flash';
-        $aiResponse = gemini_call($prompt, $systemInstruction, $model, $apiKey);
-    }
+
+try {
+
+    $providerInstance =
+        AIProviderFactory::make(
+            $provider
+        );
+
+    $aiResponse =
+        $providerInstance->generate(
+            $prompt,
+            $systemInstruction,
+            $model
+        );
+
+} catch (Throwable $e) {
+
+    error_log(
+        'AI Provider Error: '
+        . $e->getMessage()
+    );
+
+    $aiResponse = '';
+}
 
     // Le contrat exige un objet JSON brut, complet et conforme au schéma.
     $decodedResponse = gh_ai_validate_response($aiResponse);
