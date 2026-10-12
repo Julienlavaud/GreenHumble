@@ -120,6 +120,10 @@ function append_scan_to_json_path($path, $sourcePaths, $newScan) {
  * puis synchronise les emplacements historiques avant de libérer le verrou canonique.
  * Tous les écrivains multi-fichiers verrouillent le canonique avant les copies historiques;
  * append_scan_to_json_path ne verrouille que le canonique.
+ * Le callback facultatif de remplacement doit retourner un booléen et laisser le temporaire
+ * intact en cas d'échec; le helper le supprime alors lui-même.
+ *
+ * @param callable|null $replaceFile Remplacement atomique temporaire→destination.
  */
 function mutate_all_scans(callable $mutator, ?array $storagePaths = null, ?callable $replaceFile = null) {
     $storagePaths = $storagePaths ?? get_scan_storage_paths();

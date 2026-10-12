@@ -22,6 +22,7 @@ cache_assert(gh_asset_version('../data/scans.json') === '1', 'asset versioning c
 $header = (string)file_get_contents(__DIR__ . '/../api/includes/header.php');
 $rootHtaccess = (string)file_get_contents(__DIR__ . '/../.htaccess');
 $flush = (string)file_get_contents(__DIR__ . '/../api/flush.php');
+$auth = (string)file_get_contents(__DIR__ . '/../api/includes/auth.php');
 $console = (string)file_get_contents(__DIR__ . '/../api/admin/console.php');
 $admin = (string)file_get_contents(__DIR__ . '/../api/admin/index.php');
 $adminFooter = (string)file_get_contents(__DIR__ . '/../api/includes/footer.php');
@@ -31,7 +32,13 @@ $workflow = (string)file_get_contents(__DIR__ . '/../.github/workflows/build-ovh
 
 cache_assert(str_contains($header, "header('Cache-Control: no-store"), 'dynamic application pages disable browser caching');
 cache_assert(str_contains($rootHtaccess, 'Header always set Cache-Control "public,max-age=2592000"'), 'versioned static assets retain shared-cache efficiency');
-cache_assert(str_contains($flush, "get_current_role() !== 'admin'") && str_contains($flush, 'gh_require_same_origin_mutation();'), 'the canonical OPcache purge requires admin authorization and CSRF');
+cache_assert(
+    str_contains($flush, "require_once __DIR__ . '/includes/auth.php';")
+        && str_contains($auth, 'function gh_require_same_origin_mutation()')
+        && str_contains($flush, "get_current_role() !== 'admin'")
+        && str_contains($flush, 'gh_require_same_origin_mutation();'),
+    'the canonical OPcache purge loads its auth/CSRF helper and requires admin authorization'
+);
 cache_assert(str_contains($console, "'flush_cache'") === false, 'OPcache purge is implemented through one endpoint');
 cache_assert(str_contains($admin, 'class="btn-flush-opcache') && str_contains($adminFooter, "assets/js/app.js"), 'administrators can trigger the protected OPcache purge from the Style tab');
 foreach ([$appJs, $adminAppJs] as $flushUi) {

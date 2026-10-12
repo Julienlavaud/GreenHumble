@@ -1874,12 +1874,18 @@ document.getElementById('bulk-rescan-scans')?.addEventListener('click', async ()
     const button = document.getElementById('bulk-rescan-scans');
     button.disabled = true;
     let completed = 0;
-    for (let index = 0; index < cards.length; index++) {
-        if (status) status.textContent = `Relance ${index + 1}/${cards.length}…`;
-        if (await rescanExistingCard(cards[index])) completed++;
+    try {
+        for (let index = 0; index < cards.length; index++) {
+            if (status) status.textContent = `Relance ${index + 1}/${cards.length}…`;
+            if (await rescanExistingCard(cards[index])) completed++;
+        }
+        if (status) status.textContent = `${completed}/${cards.length} nouveau(x) scan(s) enregistré(s). Les originaux sont conservés.`;
+    } catch (error) {
+        if (status) status.textContent = error.message || 'Une erreur a interrompu la relance des scans.';
+    } finally {
+        updateBulkScanControls();
+        if (button && getSelectedScanCards().length > 0) button.disabled = false;
     }
-    if (status) status.textContent = `${completed}/${cards.length} nouveau(x) scan(s) enregistré(s). Les originaux sont conservés.`;
-    updateBulkScanControls();
     if (completed > 0) window.setTimeout(() => window.location.reload(), 1400);
 });
 

@@ -45,6 +45,10 @@ scanner_prompt_assert(
     'text exports use the same semicolon-delimited schema as imports'
 );
 scanner_prompt_assert(
+    str_contains($admin, "row.map(csvCell).join(';')"),
+    'missions, legal, and Scanner exports use the importer semicolon delimiter'
+);
+scanner_prompt_assert(
     str_contains($admin, "String(value ?? '').replace(/\"/g, '\"\"')")
         && str_contains($admin, "else if (!quoted && (char === '\\n' || char === '\\r'))"),
     'CSV exports quote multiline cells and imports preserve quoted newlines'
