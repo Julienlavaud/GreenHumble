@@ -16,13 +16,19 @@ final class OpenRouterProvider implements AIProviderInterface
 
     public function getLabel(): string
     {
-        return 'OpenRouter';
+        $config = AIProviderRegistry::get(
+            $this->getName()
+        );
+
+        return
+            $config['label']
+            ?? 'OpenRouter';
     }
 
     public function getDefaultModel(): string
     {
         $config = AIProviderRegistry::get(
-            'openrouter'
+            $this->getName()
         );
 
         return
@@ -33,7 +39,7 @@ final class OpenRouterProvider implements AIProviderInterface
     public function getModels(): array
     {
         $config = AIProviderRegistry::get(
-            'openrouter'
+            $this->getName()
         );
 
         return
@@ -128,6 +134,17 @@ final class OpenRouterProvider implements AIProviderInterface
             $model
             ?: $this->getDefaultModel();
 
+        if (
+            !in_array(
+                $selectedModel,
+                $this->getModels(),
+                true
+            )
+        ) {
+            $selectedModel =
+                $this->getDefaultModel();
+        }
+
         $payload = [
 
             'model' =>
@@ -216,6 +233,7 @@ final class OpenRouterProvider implements AIProviderInterface
         curl_close($ch);
 
         if (!empty($error)) {
+
             return
                 'Erreur OpenRouter : '
                 . $error;
