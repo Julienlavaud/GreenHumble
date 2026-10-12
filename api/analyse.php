@@ -34,7 +34,10 @@ try {
 
 // 1. Traitement des formulaires POST
 try {
-    $db->exec("ALTER TABLE cl_audits ADD COLUMN IF NOT EXISTS kit_json LONGTEXT NULL AFTER notes");
+    $hasKitJson = $db->query("SHOW COLUMNS FROM cl_audits LIKE 'kit_json'")->fetch();
+    if (!$hasKitJson) {
+        $db->exec("ALTER TABLE cl_audits ADD COLUMN kit_json LONGTEXT NULL");
+    }
 } catch (Exception $e) {}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
