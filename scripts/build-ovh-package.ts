@@ -39,6 +39,7 @@ async function buildPackage() {
 
   // 1. Fichiers racine indispensables
   const rootFiles = [
+    'index.php',
     'install.php',
     'flush.php',
     '.htaccess',
