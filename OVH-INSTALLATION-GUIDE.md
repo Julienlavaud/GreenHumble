@@ -72,4 +72,8 @@ Le paquet contient le code PHP et les fichiers nécessaires à l’application. 
 5. **Ne pas supprimer les fichiers JSON déjà présents sur OVH**, ne pas téléverser dans la racine WordPress et ne pas remplacer les fichiers de données par des exemples.
 6. Tester dans cet ordre : `/api/index.php`, `/api/login.php`, `/api/admin/index.php`, puis le parcours de scan public et le rapport d’audit.
 
+Les pages dynamiques ne sont pas mises en cache par le navigateur et les URL des fichiers CSS/JavaScript changent automatiquement lorsque leur fichier change. Après un transfert FTP, les collaborateurs voient donc les nouveaux assets au prochain rechargement. GitHub Actions prépare le ZIP à chaque mise à jour de la branche de livraison, mais ne le déploie pas sur OVH : le transfert reste manuel.
+
+OVH peut conserver des scripts PHP dans OPcache après le transfert. Une fois les fichiers PHP envoyés, un administrateur peut ouvrir **Administration → Style** et cliquer sur **Purger OPcache**. Sans hook de déploiement OVH configuré, cette purge serveur ne peut pas être déclenchée automatiquement depuis GitHub.
+
 Si le workflow n’a pas réussi, ne pas déployer ce ZIP : corriger les contrôles d’abord.

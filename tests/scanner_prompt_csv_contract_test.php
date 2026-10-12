@@ -55,5 +55,9 @@ foreach ([
 }
 
 scanner_prompt_assert(str_contains($engine, '$state    = load_app_state();'), 'the AI engine reads the current saved application state for each run');
+scanner_prompt_assert(
+    str_contains($engine, 'CONSIGNE SPÉCIFIQUE À CET AUDIT') && str_contains($engine, '$baseUserPrompt . "\\n\\nCONSIGNE SPÉCIFIQUE À CET AUDIT :\\n" . $customPrompt'),
+    'request-specific prompts supplement rather than replace the configured user prompt'
+);
 
 echo "OK: Scanner prompt CSV import/export and AI engine contract\n";

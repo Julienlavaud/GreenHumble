@@ -521,6 +521,9 @@ include __DIR__ . '/../includes/header.php';
                         <span class="px-3 py-1 bg-[#1E1E1E] text-slate-300 text-xs font-semibold rounded-md border border-white/10">
                             Fichier : /data/user_style.json
                         </span>
+                        <button type="button" class="btn-flush-opcache px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-lg transition-colors">
+                            Purger OPcache
+                        </button>
                     </div>
                 </div>
 
