@@ -434,8 +434,8 @@ include __DIR__ . '/../includes/header.php';
                             <label class="block text-sm font-semibold text-white" for="bulkCsv">Fichier CSV (facultatif)</label>
                             <input id="bulkCsv" name="csv" type="file" accept=".csv,text/csv" class="w-full text-sm text-[#CCCCCC]">
                             <div class="flex flex-wrap gap-3">
-                                <a href="/api/listes/import_export.php?action=template" class="px-4 py-2 rounded-xl border border-white/20 text-white hover:bg-white/5 text-sm font-semibold">Télécharger le modèle CSV</a>
-                                <a href="/api/listes/import_export.php?action=export" class="px-4 py-2 rounded-xl border border-white/20 text-white hover:bg-white/5 text-sm font-semibold">Exporter toutes les listes</a>
+                                <a href="/api/listes/import_export.php?action=template" class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-semibold shadow-sm">Télécharger le modèle CSV</a>
+                                <a href="/api/listes/import_export.php?action=export" class="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-slate-300 text-slate-800 hover:bg-slate-50 text-sm font-semibold">Exporter toutes les listes</a>
                             </div>
                         </div>
                         <div class="space-y-3">
@@ -461,8 +461,7 @@ include __DIR__ . '/../includes/header.php';
                         ?>
                             <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-white/10 shadow-lg space-y-4 flex flex-col justify-between">
                                 <div class="space-y-3">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-xs font-mono text-[#AAAAAA]">ID: <?php echo htmlspecialchars($lst['id']); ?></span>
+                                    <div class="flex items-center justify-end">
                                         <span class="px-3 py-1 bg-[#2A7AE2]/20 text-[#2A7AE2] font-bold text-xs rounded-full border border-[#2A7AE2]/30">
                                             <?php echo $itemCount; ?> élément(s)
                                         </span>
@@ -480,7 +479,7 @@ include __DIR__ . '/../includes/header.php';
                                                 </div>
                                             <?php endforeach; ?>
                                         </div>
-                                        <a class="inline-flex justify-center px-4 py-2 rounded-xl border border-white/15 text-white hover:bg-white/5 text-sm" href="/api/listes/import_export.php?action=export&amp;list_id=<?php echo rawurlencode($lst['id']); ?>">Exporter cette liste CSV</a>
+                                        <a class="inline-flex justify-center px-4 py-2 rounded-xl border border-slate-300 text-slate-800 hover:bg-slate-50 text-sm font-medium" href="/api/listes/import_export.php?action=export&amp;list_id=<?php echo rawurlencode($lst['id']); ?>">Exporter cette liste CSV</a>
                                     <?php endif; ?>
                                 </div>
                             </div>
