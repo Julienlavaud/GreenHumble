@@ -11,6 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+require_once __DIR__ . '/../includes/api_guard.php';
+gh_api_guard(true);
+
 require_once __DIR__ . '/../includes/dossiers_manager.php';
 
 $raw = file_get_contents('php://input');

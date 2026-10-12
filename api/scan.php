@@ -450,6 +450,7 @@ async function addScanToListPrompt(scanId) {
 
 async function reassignScanGroupPrompt(scanId) {
     const groups = <?php echo json_encode($allGroups, JSON_UNESCAPED_UNICODE); ?>;
+    if (!groups || groups.length === 0) return alert('Aucun groupe de scanners disponible.');
     let groupPromptText = "Sélectionnez l'ID du groupe pour ce scan :\n\n";
     groups.forEach(g => {
         groupPromptText += `- ID: "${g.id}" => ${g.nom}\n`;

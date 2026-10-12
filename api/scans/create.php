@@ -11,6 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+require_once __DIR__ . '/../includes/api_guard.php';
+gh_api_guard(true);
+
 require_once __DIR__ . '/../includes/scans_manager.php';
 
 $raw = file_get_contents('php://input');
@@ -29,7 +32,13 @@ if (empty($url)) {
     exit;
 }
 
-$newScan = record_scan($url, $type_scan, $resultat_ia, $group_id, $utilisateur, $statut);
+try {
+    $newScan = record_scan($url, $type_scan, $resultat_ia, 'full', [], $utilisateur, $statut);
+} catch (InvalidArgumentException $e) {
+    http_response_code(422);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 echo json_encode([
     'success' => true,

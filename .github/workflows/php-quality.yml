@@ -52,6 +52,7 @@ jobs:
           php tests/ai_engine_reference_test.php
           php tests/ai_contract_test.php
           php tests/ai_provider_test.php
+          php tests/ui_buttons_contract_test.php
           php tests/risk_scoring_test.php
           php tests/green_claims_rules_test.php
           php tests/commercial_engine_test.php

@@ -11,6 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+require_once __DIR__ . '/../includes/api_guard.php';
+gh_api_guard(true);
+
 require_once __DIR__ . '/../includes/scanner_groups.php';
 
 $inputRaw = file_get_contents('php://input');

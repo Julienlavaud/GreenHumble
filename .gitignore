@@ -27,3 +27,7 @@ api/data/*.json
 api/config/.env
 api/config/.env.*
 !api/config/.env.example
+
+# Runtime data
+data/dossiers.json
+data/*.lock

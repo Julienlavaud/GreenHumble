@@ -6,6 +6,9 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
+require_once __DIR__ . '/../includes/api_guard.php';
+gh_api_guard(false);
+
 require_once __DIR__ . '/../includes/scans_manager.php';
 require_once __DIR__ . '/../includes/dossiers_manager.php';
 require_once __DIR__ . '/../includes/listes_manager.php';

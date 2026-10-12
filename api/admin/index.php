@@ -334,6 +334,14 @@ include __DIR__ . '/../includes/header.php';
             require_once __DIR__ . '/../includes/scans_manager.php';
             $allDossiers = load_all_dossiers();
             $allScans = load_all_scans();
+            $latestAuditByDomain = [];
+            try {
+                foreach ($db->query("SELECT id, clean_url, url FROM cl_audits ORDER BY analyzedAt DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC) as $dosAudit) {
+                    $dosHost = parse_url(trim((string)($dosAudit['clean_url'] ?? '')), PHP_URL_HOST) ?: parse_url((string)($dosAudit['url'] ?? ''), PHP_URL_HOST);
+                    $dosDomain = strtolower(preg_replace('/^www\\./i', '', trim((string)($dosHost ?: ($dosAudit['clean_url'] ?? '')))));
+                    if ($dosDomain !== '' && !isset($latestAuditByDomain[$dosDomain])) $latestAuditByDomain[$dosDomain] = (int)$dosAudit['id'];
+                }
+            } catch (Throwable $e) {}
             ?>
             <div class="p-8 sm:p-12 space-y-10 bg-[#121212] text-[#E0E0E0] min-h-[650px] rounded-[3rem]">
                 <div class="flex flex-wrap items-center justify-between gap-6 border-b border-white/10 pb-8">
@@ -376,9 +384,14 @@ include __DIR__ . '/../includes/header.php';
                                 </div>
 
                                 <div class="pt-3 border-t border-white/10 flex flex-wrap gap-2">
-                                    <a href="/admin/analyse.php?domain=<?php echo urlencode($dos['domaine']); ?>" class="px-3.5 py-2 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white text-xs font-bold rounded-xl transition-all">
-                                        Consulter le dossier →
+                                    <?php $dosAuditId = $latestAuditByDomain[strtolower(preg_replace('/^www\\./i', '', (string)($dos['domaine'] ?? '')))] ?? null; ?>
+                                    <?php if ($dosAuditId !== null): ?>
+                                    <a href="/api/analyse.php?id=<?php echo (int)$dosAuditId; ?>" class="px-3.5 py-2 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white text-xs font-bold rounded-xl transition-all">
+                                        Consulter le dernier audit →
                                     </a>
+                                    <?php else: ?>
+                                    <span class="px-3.5 py-2 bg-white/5 text-[#AAAAAA] text-xs rounded-xl" title="Aucun audit enregistré pour ce domaine.">Aucun audit</span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
