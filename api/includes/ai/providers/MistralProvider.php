@@ -88,38 +88,20 @@ final class MistralProvider implements AIProviderInterface
 
     public function testConnection(): bool
     {
-        $apiKey =
-            $this->getApiKey();
-
-        if (empty($apiKey)) {
-            return false;
-        }
-
         try {
 
-            $reply = call_mistral(
-                [
-                    'model' =>
-                        $this->getDefaultModel(),
-
-                    'messages' => [
-                        [
-                            'role' => 'user',
-                            'content' =>
-                                'Réponds uniquement OK'
-                        ]
-                    ],
-
-                    'temperature' => 0
-                ],
-                $apiKey
-            );
+            $response =
+                $this->generate(
+                    'Réponds uniquement OK',
+                    'Réponds uniquement OK',
+                    $this->getDefaultModel()
+                );
 
             return
-                is_string($reply)
-                && trim($reply) !== ''
-                && stripos($reply, 'erreur') !== 0
-                && stripos($reply, 'http ') === false;
+                is_string($response)
+                && trim($response) !== ''
+                && stripos($response, 'Erreur') !== 0
+                && stripos($response, 'HTTP ') === false;
 
         } catch (Throwable $e) {
 
@@ -163,12 +145,23 @@ final class MistralProvider implements AIProviderInterface
 
         try {
 
-            return mistral_call(
-                $prompt,
-                $systemPrompt,
-                $selectedModel,
-                $apiKey
-            );
+            $response =
+                mistral_call(
+                    $prompt,
+                    $systemPrompt,
+                    $selectedModel,
+                    $apiKey
+                );
+
+            if (
+                !is_string($response)
+                || trim($response) === ''
+            ) {
+                return
+                    'Erreur Mistral : réponse vide.';
+            }
+
+            return trim($response);
 
         } catch (Throwable $e) {
 
