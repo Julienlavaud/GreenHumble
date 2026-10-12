@@ -1144,7 +1144,6 @@ function saveAgency() {
     return syncState('agency', appState.agency);
 }
 
-async 
 // Keep the compact service summaries in sync while editing their expanded fields.
 document.querySelectorAll('#missions-container > .mission-card').forEach(card => {
     const title = card.querySelector('.m-title');
