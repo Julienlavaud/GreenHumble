@@ -31,3 +31,5 @@ api/config/.env.*
 # Runtime data
 data/dossiers.json
 data/*.lock
+api/assets/css/tailwind-compiled.css
+greenhumble-v1.1-full-ovh.zip

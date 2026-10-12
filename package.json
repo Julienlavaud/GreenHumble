@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build:ovh": "tsx scripts/build-ovh-package.ts"
+    "build:ovh": "npm run build:css && tsx scripts/build-ovh-package.ts",
+    "build:css": "tailwindcss -c tailwind.config.cjs -i api/assets/css/tailwind-input.css -o api/assets/css/tailwind-compiled.css --minify"
   },
   "dependencies": {
     "jszip": "^3.10.1"
@@ -12,6 +13,7 @@
   "devDependencies": {
     "@types/node": "^22.13.4",
     "tsx": "^4.19.3",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "tailwindcss": "3.4.17"
   }
 }
