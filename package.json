@@ -7,7 +7,7 @@
     "dev": "tsx server.ts",
     "build": "vite build",
     "build:static": "vite build --base=./ && tsx scripts/react2static.ts",
-    "build:ovh": "vite build && tsx scripts/react2static.ts && tsx scripts/build-ovh-package.ts",
+    "build:ovh": "tsx scripts/build-ovh-package.ts",
     "build:html-zip": "tsx scripts/build-html-zip.ts",
     "react2static": "tsx scripts/react2static.ts",
     "start": "node server.ts",

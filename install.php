@@ -37,7 +37,7 @@ $response['checks']['php_version'] = [
     'passed' => $phpVersionOk
 ];
 
-$requiredExtensions = ['curl', 'json', 'mbstring'];
+$requiredExtensions = ['curl', 'json', 'mbstring', 'pdo_mysql'];
 $extensionsCheck = [];
 foreach ($requiredExtensions as $ext) {
     $loaded = extension_loaded($ext);

@@ -70,12 +70,6 @@ async function buildPackage() {
     await addDirectoryToZip(zip, path.resolve('.'), 'data');
   }
 
-  // 5. Dossier dist/ (build statique)
-  if (fs.existsSync(path.resolve('dist'))) {
-    console.log('  + Ajout de dist/...');
-    await addDirectoryToZip(zip, path.resolve('.'), 'dist');
-  }
-
   // 5. Générer le fichier ZIP physique
   const buffer = await zip.generateAsync({
     type: 'nodebuffer',
@@ -111,8 +105,7 @@ async function buildPackage() {
       ".htaccess (Règles Apache 2.4, Force HTTPS, Anti-cache et masquage .env)",
       "schema.sql (Base de données MySQL avec headcount, turnover, secteurs, audits et litiges)",
       "api/ (API REST complète : router, audit, prospec, scan, analyse, cascade IA Gemini 3.8/2.5/2.0 + Groq)",
-      "admin/ (Cockpit d'administration simplifié aux couleurs de la charte)",
-      "dist/ (Interface React compilée prête pour production)"
+      "admin/ (Anciennes URL /admin redirigées vers /api/admin)"
     ],
     installation: [
       "1. Téléversez le contenu de l'archive dans le dossier /www ou racine de votre hébergement OVH.",
