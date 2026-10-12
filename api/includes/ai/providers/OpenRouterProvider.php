@@ -121,11 +121,14 @@ final class OpenRouterProvider implements AIProviderInterface
     public function generate(
         string $prompt,
         string $systemPrompt,
-        ?string $model = null
+        ?string $model = null,
+        ?string $apiKey = null
     ): string {
 
         $apiKey =
-            $this->getApiKey();
+            !empty($apiKey)
+                ? (string)$apiKey
+                : $this->getApiKey();
 
         if (empty($apiKey)) {
             return

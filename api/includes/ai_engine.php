@@ -242,6 +242,14 @@ if (empty($apiKey)) {
         ?? null;
 }
 
+if (empty($apiKey)) {
+    try {
+        $apiKey = AIProviderFactory::make($provider)->getApiKey();
+    } catch (Throwable $e) {
+        error_log('AI Provider key lookup failed: ' . $e->getMessage());
+    }
+}
+
     // 2. Scraping du contenu réel
    $webContent = is_string($providedWebContent)
     ? $providedWebContent
@@ -394,7 +402,8 @@ try {
         $providerInstance->generate(
             $prompt,
             $systemInstruction,
-            $model
+            $model,
+            $apiKey
         );
 
 } catch (Throwable $e) {
@@ -480,7 +489,7 @@ try {
 }
 
     $failureCode = 'response_not_json';
-    if (is_string($aiResponse) && stripos(trim($aiResponse), 'Erreur') === 0) {
+    if (is_string($aiResponse) && (stripos(trim($aiResponse), 'Erreur') === 0 || stripos(trim($aiResponse), 'HTTP ') === 0)) {
         $failureCode = 'provider_request_failed';
     } elseif (in_array(($decodedResponse['code'] ?? ''), ['schema_invalid', 'analysis_incomplete'], true)) {
         $failureCode = $decodedResponse['code'];
