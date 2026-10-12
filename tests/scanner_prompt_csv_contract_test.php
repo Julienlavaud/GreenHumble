@@ -25,7 +25,7 @@ $promptKeys = [
 ];
 
 scanner_prompt_assert(
-    str_contains($admin, "['missions', 'legal', 'texts', 'team', 'scanner']"),
+    str_contains($admin, "['missions', 'legal', 'texts', 'scanner']"),
     'the Scanner tab exposes the shared CSV import action'
 );
 scanner_prompt_assert(str_contains($admin, "tab === 'scanner'"), 'Scanner CSV import and export handlers are available');

@@ -102,14 +102,14 @@ include __DIR__ . '/../includes/header.php';
         
         <!-- Actions Communes (Flottantes ou Top) -->
         <div class="absolute top-8 right-10 admin-actions z-20">
-            <?php if (in_array($activeTab, ['audits', 'missions', 'legal', 'texts', 'team', 'scanner'], true)): ?>
+            <?php if (in_array($activeTab, ['audits', 'missions', 'legal', 'texts', 'scanner'], true)): ?>
             <button onclick="exportTabCSV('<?php echo $activeTab; ?>')" class="px-6 py-3 bg-[#242424] hover:bg-[#303030] text-slate-200 text-xs font-black rounded-2xl transition-all flex items-center space-x-2 shadow-sm border border-white/10">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 <span>Exporter CSV</span>
             </button>
             <?php endif; ?>
             
-            <?php if (in_array($activeTab, ['missions', 'legal', 'texts', 'team', 'scanner'])): ?>
+            <?php if (in_array($activeTab, ['missions', 'legal', 'texts', 'scanner'])): ?>
                 <label class="cursor-pointer px-6 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black rounded-2xl border border-indigo-100 transition-all flex items-center space-x-2 shadow-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                     <span>Importer CSV</span>
@@ -258,7 +258,7 @@ include __DIR__ . '/../includes/header.php';
                         Sélectionner les scans visibles
                     </label>
                     <div class="flex flex-wrap items-center gap-2">
-                        <button type="button" id="bulk-rescan-scans" class="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50" disabled>Relancer la sélection</button>
+                        <button type="button" id="bulk-rescan-scans" class="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50" disabled>Relancer la sélection (10 max)</button>
                         <button type="button" id="bulk-delete-scans" class="rounded-xl bg-rose-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50" disabled>Supprimer la sélection</button>
                     </div>
                     <p id="bulk-scan-status" class="w-full text-xs text-slate-500" role="status" aria-live="polite"></p>
@@ -1221,7 +1221,6 @@ async function saveTab(tab) {
     if (tab === 'missions') return saveMissions();
     if (tab === 'legal') return saveLegal();
     if (tab === 'scanner') return saveScanner();
-    if (tab === 'team') return saveTeam();
     return false;
 }
 
@@ -1417,9 +1416,6 @@ function exportTabCSV(tab) {
     } else if (tab === 'texts') {
         window.location.href = '/api/admin/export.php?download=texts';
         return;
-    } else if (tab === 'team') {
-        window.location.href = '/api/admin/export.php?download=team';
-        return;
     } else if (tab === 'scanner') {
         const promptKeys = [
             'aiKeywordInstructions', 'aiAnalysisInstructions', 'aiEvidenceInstructions', 'aiRiskInstructions',
@@ -1572,8 +1568,6 @@ function importTabCSV(tab, input) {
                 imports.push({ id: p[0], title: p[1], weight: parseInt(p[2]), description: p[3], isActive: p[4] === '1' });
             } else if (tab === 'texts') {
                 imports.push({ text_key: p[0], title: p[1], content: p[2] });
-            } else if (tab === 'team') {
-                imports.push({ id: p[0], name: p[1], email: p[2], role: p[3], avatarColor: 'bg-emerald-600' });
             }
         }
         if (tab === 'scanner') {
@@ -1613,7 +1607,6 @@ function importTabCSV(tab, input) {
                 setTimeout(() => window.location.reload(), 2000);
                 return;
             }
-            else if (tab === 'team') { appState.collaborators = imports; syncState('collaborators', appState.collaborators); }
             
             setTimeout(() => window.location.reload(), 1000);
         }
@@ -1853,8 +1846,13 @@ document.getElementById('bulk-delete-scans')?.addEventListener('click', async ()
 });
 document.getElementById('bulk-rescan-scans')?.addEventListener('click', async () => {
     const cards = getSelectedScanCards();
-    if (!cards.length || !confirm(`Relancer ${cards.length} scan(s) ? Les scans d’origine resteront conservés.`)) return;
+    if (!cards.length) return;
     const status = document.getElementById('bulk-scan-status');
+    if (cards.length > 10) {
+        if (status) status.textContent = 'Pour éviter une longue série d’appels IA, relancez au maximum 10 scans par lot.';
+        return;
+    }
+    if (!confirm(`Relancer ${cards.length} scan(s) ? Les scans d’origine resteront conservés.`)) return;
     const button = document.getElementById('bulk-rescan-scans');
     button.disabled = true;
     let completed = 0;
