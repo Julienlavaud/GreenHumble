@@ -69,8 +69,9 @@ final class GroqProvider implements AIProviderInterface
             return GROQ_API_KEY;
         }
 
-        $env =
-            getenv('GROQ_API_KEY');
+        $env = getenv(
+            'GROQ_API_KEY'
+        );
 
         if (!empty($env)) {
             return $env;
@@ -88,38 +89,20 @@ final class GroqProvider implements AIProviderInterface
 
     public function testConnection(): bool
     {
-        $apiKey =
-            $this->getApiKey();
-
-        if (empty($apiKey)) {
-            return false;
-        }
-
         try {
 
-            $reply = call_groq(
-                [
-                    'model' =>
-                        $this->getDefaultModel(),
-
-                    'messages' => [
-                        [
-                            'role' => 'user',
-                            'content' =>
-                                'Réponds uniquement OK'
-                        ]
-                    ],
-
-                    'temperature' => 0
-                ],
-                $apiKey
-            );
+            $response =
+                $this->generate(
+                    'Réponds uniquement OK',
+                    'Réponds uniquement OK',
+                    $this->getDefaultModel()
+                );
 
             return
-                is_string($reply)
-                && trim($reply) !== ''
-                && stripos($reply, 'erreur') !== 0
-                && stripos($reply, 'http ') === false;
+                is_string($response)
+                && trim($response) !== ''
+                && stripos($response, 'Erreur') !== 0
+                && stripos($response, 'HTTP ') === false;
 
         } catch (Throwable $e) {
 
@@ -163,12 +146,23 @@ final class GroqProvider implements AIProviderInterface
 
         try {
 
-            return groq_call(
-                $prompt,
-                $systemPrompt,
-                $selectedModel,
-                $apiKey
-            );
+            $response =
+                groq_call(
+                    $prompt,
+                    $systemPrompt,
+                    $selectedModel,
+                    $apiKey
+                );
+
+            if (
+                !is_string($response)
+                || trim($response) === ''
+            ) {
+                return
+                    'Erreur Groq : réponse vide.';
+            }
+
+            return trim($response);
 
         } catch (Throwable $e) {
 
