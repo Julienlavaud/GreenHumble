@@ -217,41 +217,6 @@ if (
     $model =
         $providerConfig['default_model'];
 }
-    if (isset($providerModelCatalog[$provider]) && !in_array($model, $providerModelCatalog[$provider]['models'], true)) {
-        $model = $providerModelCatalog[$provider]['default'];
-    }
-    
-    // Priorité : clé explicitement passée, puis clé chiffrée/configurée en console,
-    // puis variables d'environnement, puis ancienne clé générique pour compatibilité.
-    $apiKey = $overrideApiKey;
-    $providerKeyName = ['gemini' => 'geminiApiKey', 'mistral' => 'mistralApiKey', 'groq' => 'groqApiKey'][$provider] ?? '';
-    if (empty($apiKey) && $providerKeyName !== '' && !empty($scanVars[$providerKeyName])) {
-        $apiKey = $scanVars[$providerKeyName];
-    }
-    if (empty($apiKey)) {
-       try {
-
-    $providerInstance =
-        AIProviderFactory::make(
-            $provider
-        );
-
-    $aiResponse =
-        $providerInstance->generate(
-            $prompt,
-            $systemInstruction,
-            $model
-        );
-
-} catch (Throwable $e) {
-
-    error_log(
-        'AI Provider Error: '
-        . $e->getMessage()
-    );
-
-    $aiResponse = '';
-}
     }
     if (empty($apiKey)) $apiKey = $scanVars['aiApiKey'] ?? null;
 
