@@ -33,14 +33,17 @@ cache_assert(
     str_contains($flush, "require_once __DIR__ . '/includes/auth.php';")
         && str_contains($auth, 'function gh_require_same_origin_mutation()')
         && str_contains($flush, "get_current_role() !== 'admin'")
-        && str_contains($flush, 'gh_require_same_origin_mutation();'),
+        && str_contains($flush, 'gh_require_same_origin_mutation();')
+        && str_contains($flush, "\$response['success'] = \$resetOk;")
+        && str_contains($flush, "http_response_code(503);")
+        && str_contains($flush, "\$response['error'] = 'OPcache est disponible"),
     'the canonical OPcache purge loads its auth/CSRF helper and requires admin authorization'
 );
 cache_assert(str_contains($console, "'flush_cache'") === false, 'OPcache purge is implemented through one endpoint');
 cache_assert(
     str_contains($admin, 'id="admin-clear-cache"')
         && str_contains($admin, "fetch('/api/flush.php'")
-        && str_contains($admin, '!response.ok || result.success === false')
+        && str_contains($admin, '!response.ok || result.success !== true || result.opcache_reset !== true')
         && str_contains($admin, 'admin-clear-cache-status'),
     'administrators can trigger the protected cache purge from every console tab and see its result'
 );

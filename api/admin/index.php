@@ -2053,7 +2053,7 @@ document.getElementById('admin-clear-cache')?.addEventListener('click', async ev
             credentials: 'same-origin'
         });
         const result = await response.json().catch(() => ({}));
-        if (!response.ok || result.success === false) {
+        if (!response.ok || result.success !== true || result.opcache_reset !== true) {
             throw new Error(result.error || result.message || 'La purge du cache a échoué.');
         }
         if (status) status.textContent = result.message || 'Cache PHP vidé.';

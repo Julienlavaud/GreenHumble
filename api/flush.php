@@ -30,6 +30,7 @@ gh_require_same_origin_mutation();
 $response = [
     'timestamp' => date('c'),
     'system' => 'GreenHumble v1.1 Cache Purger',
+    'success' => false,
     'opcache_reset' => false,
     'message' => ''
 ];
@@ -37,11 +38,18 @@ $response = [
 if (function_exists('opcache_reset')) {
     $resetOk = @opcache_reset();
     $response['opcache_reset'] = $resetOk;
-    $response['message'] = $resetOk 
-        ? 'Mémoire OPcache vidée avec succès. Tous les fichiers PHP ont été rechargés.'
-        : 'La fonction opcache_reset() a été exécutée.';
+    $response['success'] = $resetOk;
+    if ($resetOk) {
+        $response['message'] = 'Mémoire OPcache vidée avec succès. Tous les fichiers PHP ont été rechargés.';
+    } else {
+        http_response_code(503);
+        $response['error'] = 'OPcache est disponible, mais le serveur a refusé sa réinitialisation.';
+        $response['message'] = $response['error'];
+    }
 } else {
-    $response['message'] = 'La fonction opcache_reset() n’est pas disponible sur cet hébergement PHP.';
+    http_response_code(503);
+    $response['error'] = 'La fonction opcache_reset() n’est pas disponible sur cet hébergement PHP.';
+    $response['message'] = $response['error'];
 }
 
 $response['versioning_timestamp'] = floor(time() / 60) * 60;
