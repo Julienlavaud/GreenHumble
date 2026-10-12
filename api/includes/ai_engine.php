@@ -413,6 +413,7 @@ try {
         . $e->getMessage()
     );
 
+    $providerErrorDetail = $e->getMessage();
     $aiResponse = '';
 }
 
@@ -488,7 +489,15 @@ try {
     }
 }
 
+    $providerErrorDetail = isset($providerErrorDetail) ? $providerErrorDetail : '';
+    if ($providerErrorDetail === '' && is_string($aiResponse) && (stripos(trim($aiResponse), 'Erreur') === 0 || stripos(trim($aiResponse), 'HTTP ') === 0)) {
+        $providerErrorDetail = trim($aiResponse);
+    }
+    $providerErrorDetail = preg_replace('/(key=|AIza|gsk_|sk-|Bearer\s+)[A-Za-z0-9_\-]+/i', '$1***', mb_substr($providerErrorDetail, 0, 300));
     $failureCode = 'response_not_json';
+    if ($providerErrorDetail !== '' && ($aiResponse === '' || $aiResponse === null)) {
+        $failureCode = 'provider_request_failed';
+    }
     if (is_string($aiResponse) && (stripos(trim($aiResponse), 'Erreur') === 0 || stripos(trim($aiResponse), 'HTTP ') === 0)) {
         $failureCode = 'provider_request_failed';
     } elseif (in_array(($decodedResponse['code'] ?? ''), ['schema_invalid', 'analysis_incomplete'], true)) {
@@ -510,6 +519,7 @@ try {
         'claims' => [],
         'prospection' => null,
         'financialImpact' => null,
+        'providerError' => $providerErrorDetail !== '' ? $providerErrorDetail : null,
         'limitations' => ['Réponse IA absente, invalide ou non structurée en JSON'],
         'aiMetadata' => $runMetadata
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
