@@ -19,7 +19,9 @@ RewriteEngine On
 # Redirections d'anciennes pages vers l'API REST v1.1
 RewriteRule ^scan\.php$ api/scan.php [L,R=301]
 RewriteRule ^scan_process\.php$ api/audit.php [L,R=301]
+# URL canonique de l'administration : /api/admin/ (anciennes URLs /admin/* redirigées en 301)
 RewriteRule ^admin/?$ api/admin/index.php [L,R=301]
+RewriteRule ^admin/(.+)$ api/admin/$1 [L,R=301]
 
 # Si la requête est adressée à l'API et n'est pas un fichier statique réel
 RewriteCond %{REQUEST_URI} ^/api/

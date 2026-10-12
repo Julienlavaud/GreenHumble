@@ -110,14 +110,14 @@ async function buildPackage() {
       ".htaccess (Règles Apache 2.4, Force HTTPS, Anti-cache et masquage .env)",
       "schema.sql (Base de données MySQL avec headcount, turnover, secteurs, audits et litiges)",
       "api/ (API REST complète : router, audit, prospec, scan, analyse, cascade IA Gemini 3.8/2.5/2.0 + Groq)",
-      "admin/ (Cockpit d'administration simplifié aux couleurs de la charte)",
+      "api/admin/ (Cockpit d'administration simplifié aux couleurs de la charte)",
       "dist/ (Interface React compilée prête pour production)"
     ],
     installation: [
       "1. Téléversez le contenu de l'archive dans le dossier /www ou racine de votre hébergement OVH.",
       "2. Ouvrez votre navigateur sur https://votredomaine.com/install.php",
       "3. Renseignez votre clé GEMINI_API_KEY dans /api/config/.env",
-      "4. Accédez à l'administration sur https://votredomaine.com/admin"
+      "4. Accédez à l'administration sur https://votredomaine.com/api/admin"
     ]
   };
 
