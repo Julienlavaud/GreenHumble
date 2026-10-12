@@ -69,6 +69,44 @@ try {
     scan_storage_assert(($stored[0]['resultat_ia']['companyRegistry']['headcountSource'] ?? null) === 'registre_public_insee', 'la provenance entreprise survit à la persistance');
     scan_storage_assert(($stored[0]['resultat_ia']['riskLevel'] ?? null) === $audit['riskLevel'], 'le niveau de risque validé survit à la persistance');
 
+    $mutationSaved = mutate_all_scans(static function (array $scans): array {
+        foreach ($scans as &$item) {
+            if (($item['id'] ?? '') === 'scan-legacy') $item['reviewed'] = true;
+        }
+        unset($item);
+        return $scans;
+    }, [$primary, $legacy]);
+    $afterUpdate = read_scans_from_paths([$primary], true);
+    $updatedLegacyScan = array_values(array_filter($afterUpdate ?: [], static fn($item) => ($item['id'] ?? '') === 'scan-legacy'));
+    scan_storage_assert($mutationSaved, 'la mutation atomique met à jour l’historique sous verrou');
+    scan_storage_assert(
+        !empty($updatedLegacyScan[0]['reviewed']),
+        'la mutation atomique synchronise les données du chemin historique'
+    );
+
+    scan_storage_assert(
+        append_scan_to_json_path($primary, [$primary, $legacy], ['id' => 'scan-parallel-add', 'url' => 'https://nouveau.fr']),
+        'un nouveau scan peut être ajouté après une mutation atomique'
+    );
+    $deletedDuringMutation = 0;
+    $deleteSaved = mutate_all_scans(static function (array $scans) use (&$deletedDuringMutation): array {
+        return array_values(array_filter($scans, static function ($item) use (&$deletedDuringMutation): bool {
+            if (($item['id'] ?? '') === 'scan-existing') {
+                $deletedDuringMutation++;
+                return false;
+            }
+            return true;
+        }));
+    }, [$primary, $legacy]);
+    $afterMutation = read_scans_from_paths([$primary, $legacy], true);
+    scan_storage_assert($deleteSaved && $deletedDuringMutation === 1, 'la suppression atomique ne cible que les scans demandés');
+    scan_storage_assert(
+        is_array($afterMutation)
+            && !in_array('scan-existing', array_column($afterMutation, 'id'), true)
+            && in_array('scan-parallel-add', array_column($afterMutation, 'id'), true),
+        'une suppression conserve les scans ajoutés pendant des opérations voisines et synchronise les anciennes copies'
+    );
+
     $beforeCorruptWrite = (string)file_get_contents($primary);
     file_put_contents($legacy, '{json invalide');
     scan_storage_assert(!append_scan_to_json_path($primary, [$primary, $legacy], ['id' => 'must-not-write']), 'un historique invalide bloque une nouvelle écriture');
@@ -84,7 +122,7 @@ try {
 
     echo "Tests d’intégration du stockage des scans réussis.\n";
 } finally {
-    foreach ([$primary, $legacy, $primary . '.lock'] as $file) {
+    foreach ([$primary, $legacy, $primary . '.lock', $legacy . '.lock'] as $file) {
         if (is_file($file)) unlink($file);
     }
     rmdir($directory);

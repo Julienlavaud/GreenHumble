@@ -159,6 +159,73 @@ function save_all_scans($scans) {
     return true;
 }
 
+/**
+ * Applique une modification à l'historique courant sous le même verrou que les ajouts,
+ * puis synchronise les emplacements historiques avant de libérer le verrou canonique.
+ */
+function mutate_all_scans(callable $mutator, ?array $storagePaths = null) {
+    $storagePaths = $storagePaths ?? get_scan_storage_paths();
+    if ($storagePaths === []) return false;
+    $canonical = get_scan_storage_paths() === $storagePaths ? get_scans_file_path() : $storagePaths[0];
+    $dir = dirname($canonical);
+    if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) return false;
+    if (!is_writable($dir)) return false;
+
+    $lock = @fopen($canonical . '.lock', 'c');
+    if ($lock === false) return false;
+
+    try {
+        if (!flock($lock, LOCK_EX)) return false;
+        $paths = array_merge([$canonical], array_values(array_filter($storagePaths, static fn($path) => $path !== $canonical)));
+        $scans = read_scans_from_paths($paths, true);
+        if (!is_array($scans)) return false;
+
+        $updatedScans = $mutator($scans);
+        if (!is_array($updatedScans)) return false;
+        $json = json_encode(array_values($updatedScans), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $targets = [];
+        foreach ($paths as $path) {
+            if ($path !== $canonical && is_file($path)) $targets[] = $path;
+        }
+        $targets[] = $canonical;
+
+        foreach ($targets as $path) {
+            $targetDir = dirname($path);
+            if (!is_dir($targetDir) || !is_writable($targetDir)) return false;
+            $targetLock = null;
+            if ($path !== $canonical) {
+                $targetLock = @fopen($path . '.lock', 'c');
+                if ($targetLock === false) return false;
+                if (!flock($targetLock, LOCK_EX)) {
+                    fclose($targetLock);
+                    return false;
+                }
+            }
+
+            $tmp = tempnam($targetDir, '.gh-scans-');
+            $written = $tmp !== false && @file_put_contents($tmp, $json, LOCK_EX) === strlen($json);
+            if ($written) {
+                @chmod($tmp, 0640);
+                $written = @rename($tmp, $path);
+            }
+            if (!$written && $tmp !== false) @unlink($tmp);
+            if ($targetLock !== null) {
+                @flock($targetLock, LOCK_UN);
+                @fclose($targetLock);
+            }
+            if (!$written) return false;
+            @chmod($path, 0640);
+        }
+        return true;
+    } catch (Throwable $e) {
+        error_log('GreenHumble: échec de modification atomique des scans.');
+        return false;
+    } finally {
+        @flock($lock, LOCK_UN);
+        @fclose($lock);
+    }
+}
+
 function appendScanToJson($newScan) {
     return append_scan_to_json_path(get_scans_file_path(), get_scan_storage_paths(), $newScan);
 }

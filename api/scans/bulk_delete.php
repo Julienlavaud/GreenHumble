@@ -23,26 +23,27 @@ if ($selectedIds === []) {
     exit;
 }
 
-$scans = load_all_scans();
-$remainingScans = [];
 $deletedCount = 0;
-foreach ($scans as $scan) {
-    $id = (string)($scan['id'] ?? '');
-    if (isset($selectedIds[$id])) {
-        $deletedCount++;
-        continue;
+$saved = mutate_all_scans(static function (array $scans) use ($selectedIds, &$deletedCount): array {
+    $remainingScans = [];
+    foreach ($scans as $scan) {
+        $id = (string)($scan['id'] ?? '');
+        if (isset($selectedIds[$id])) {
+            $deletedCount++;
+            continue;
+        }
+        $remainingScans[] = $scan;
     }
-    $remainingScans[] = $scan;
+    return $remainingScans;
+});
+if (!$saved) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Enregistrement impossible (droits d’écriture du dossier data).'], JSON_UNESCAPED_UNICODE);
+    exit;
 }
-
 if ($deletedCount === 0) {
     http_response_code(404);
     echo json_encode(['success' => false, 'error' => 'Aucun scan sélectionné n’a été trouvé.'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-if (!save_all_scans($remainingScans)) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Enregistrement impossible (droits d’écriture du dossier data).'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
