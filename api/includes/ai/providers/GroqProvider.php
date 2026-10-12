@@ -14,32 +14,52 @@ final class GroqProvider implements AIProviderInterface
 
     public function getLabel(): string
     {
-        return 'Groq';
+        $config = AIProviderRegistry::get(
+            $this->getName()
+        );
+
+        return
+            $config['label']
+            ?? 'Groq';
     }
 
     public function getDefaultModel(): string
     {
-        $config = AIProviderRegistry::get('groq');
+        $config = AIProviderRegistry::get(
+            $this->getName()
+        );
 
-        return $config['default_model']
+        return
+            $config['default_model']
             ?? 'openai/gpt-oss-120b';
     }
 
     public function getModels(): array
     {
-        $config = AIProviderRegistry::get('groq');
+        $config = AIProviderRegistry::get(
+            $this->getName()
+        );
 
-        return $config['models']
+        return
+            $config['models']
             ?? [];
     }
 
     public function getApiKey(): ?string
     {
         $state = load_app_state();
-        $scanVars = $state['scanVars'] ?? [];
 
-        if (!empty($scanVars['groqApiKey'])) {
-            return (string)$scanVars['groqApiKey'];
+        $scanVars =
+            $state['scanVars']
+            ?? [];
+
+        if (
+            !empty(
+                $scanVars['groqApiKey']
+            )
+        ) {
+            return (string)
+                $scanVars['groqApiKey'];
         }
 
         if (
@@ -49,8 +69,11 @@ final class GroqProvider implements AIProviderInterface
             return GROQ_API_KEY;
         }
 
-        if (!empty(getenv('GROQ_API_KEY'))) {
-            return getenv('GROQ_API_KEY');
+        $env =
+            getenv('GROQ_API_KEY');
+
+        if (!empty($env)) {
+            return $env;
         }
 
         return null;
@@ -58,36 +81,55 @@ final class GroqProvider implements AIProviderInterface
 
     public function hasApiKey(): bool
     {
-        return !empty($this->getApiKey());
+        return !empty(
+            $this->getApiKey()
+        );
     }
 
     public function testConnection(): bool
     {
-        $apiKey = $this->getApiKey();
+        $apiKey =
+            $this->getApiKey();
 
         if (empty($apiKey)) {
             return false;
         }
 
-        $reply = call_groq(
-            [
-                'model' => $this->getDefaultModel(),
-                'messages' => [
-                    [
-                        'role' => 'user',
-                        'content' => 'Réponds uniquement OK'
-                    ]
-                ],
-                'temperature' => 0
-            ],
-            $apiKey
-        );
+        try {
 
-        return
-            is_string($reply)
-            && trim($reply) !== ''
-            && stripos($reply, 'erreur') !== 0
-            && stripos($reply, 'http ') === false;
+            $reply = call_groq(
+                [
+                    'model' =>
+                        $this->getDefaultModel(),
+
+                    'messages' => [
+                        [
+                            'role' => 'user',
+                            'content' =>
+                                'Réponds uniquement OK'
+                        ]
+                    ],
+
+                    'temperature' => 0
+                ],
+                $apiKey
+            );
+
+            return
+                is_string($reply)
+                && trim($reply) !== ''
+                && stripos($reply, 'erreur') !== 0
+                && stripos($reply, 'http ') === false;
+
+        } catch (Throwable $e) {
+
+            error_log(
+                'GroqProvider test failed: '
+                . $e->getMessage()
+            );
+
+            return false;
+        }
     }
 
     public function generate(
@@ -96,21 +138,48 @@ final class GroqProvider implements AIProviderInterface
         ?string $model = null
     ): string {
 
-        $apiKey = $this->getApiKey();
+        $apiKey =
+            $this->getApiKey();
 
         if (empty($apiKey)) {
-            return 'Erreur : clé API Groq absente.';
+            return
+                'Erreur : clé API Groq absente.';
         }
 
         $selectedModel =
             $model
             ?: $this->getDefaultModel();
 
-        return groq_call(
-            $prompt,
-            $systemPrompt,
-            $selectedModel,
-            $apiKey
-        );
+        if (
+            !in_array(
+                $selectedModel,
+                $this->getModels(),
+                true
+            )
+        ) {
+            $selectedModel =
+                $this->getDefaultModel();
+        }
+
+        try {
+
+            return groq_call(
+                $prompt,
+                $systemPrompt,
+                $selectedModel,
+                $apiKey
+            );
+
+        } catch (Throwable $e) {
+
+            error_log(
+                'GroqProvider generate failed: '
+                . $e->getMessage()
+            );
+
+            return
+                'Erreur Groq : '
+                . $e->getMessage();
+        }
     }
 }
