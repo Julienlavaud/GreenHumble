@@ -145,10 +145,10 @@ if (isset($_GET['download']) && $_GET['download'] === 'texts') {
     header('Content-Disposition: attachment; filename="climatlocal_texts_' . date('Y-m-d') . '.csv"');
     $output = fopen('php://output', 'w');
     fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
-    fputcsv($output, ['Key', 'Title', 'Content']);
+    fputcsv($output, ['text_key', 'title', 'content'], ';', '"', '');
     $texts = $db->query("SELECT text_key, title, content FROM cl_texts ORDER BY text_key ASC")->fetchAll();
     foreach ($texts as $row) {
-        fputcsv($output, array_map('gh_export_csv_cell', [$row['text_key'], $row['title'], $row['content']]));
+        fputcsv($output, array_map('gh_export_csv_cell', [$row['text_key'], $row['title'], $row['content']]), ';', '"', '');
     }
     fclose($output);
     exit;

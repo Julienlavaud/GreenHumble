@@ -11,6 +11,7 @@ function scanner_prompt_assert(bool $condition, string $message): void
 
 $admin = (string)file_get_contents(__DIR__ . '/../api/admin/index.php');
 $engine = (string)file_get_contents(__DIR__ . '/../api/includes/ai_engine.php');
+$export = (string)file_get_contents(__DIR__ . '/../api/admin/export.php');
 $promptKeys = [
     'aiKeywordInstructions',
     'aiAnalysisInstructions',
@@ -27,6 +28,22 @@ $promptKeys = [
 scanner_prompt_assert(
     str_contains($admin, "['missions', 'legal', 'texts', 'scanner']"),
     'the Scanner tab exposes the shared CSV import action'
+);
+scanner_prompt_assert(
+    str_contains($admin, "'Clé métier (serviceKey)'")
+        && str_contains($admin, "missions: ['ID', 'Clé métier (serviceKey)'")
+        && str_contains($admin, "JSON.stringify(lines[0]) !== JSON.stringify(expectedHeaders)"),
+    'CSV imports reject stale or mismatched column layouts'
+);
+scanner_prompt_assert(
+    str_contains($export, "['text_key', 'title', 'content'], ';', '\"', ''")
+        && str_contains($admin, "texts: ['text_key', 'title', 'content']"),
+    'text exports use the same semicolon-delimited schema as imports'
+);
+scanner_prompt_assert(
+    str_contains($admin, "String(value ?? '').replace(/\"/g, '\"\"')")
+        && str_contains($admin, "else if (!quoted && (char === '\\n' || char === '\\r'))"),
+    'CSV exports quote multiline cells and imports preserve quoted newlines'
 );
 scanner_prompt_assert(str_contains($admin, "tab === 'scanner'"), 'Scanner CSV import and export handlers are available');
 scanner_prompt_assert(str_contains($admin, "syncState('scanVars', appState.scanVars)"), 'imported Scanner prompts are saved to application state');

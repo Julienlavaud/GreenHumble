@@ -5,9 +5,11 @@
  * l'origine identique et le jeton CSRF (envoyé automatiquement par le script de header.php).
  */
 require_once __DIR__ . '/auth.php';
-header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 function gh_api_guard(bool $mutation = true, array $roles = ['admin', 'pipeline', 'collaborator', 'collaborateur', 'consultant']): void {
+    if (!headers_sent()) {
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    }
     $role = get_current_role();
     if (!in_array($role, $roles, true)) {
         http_response_code(403);

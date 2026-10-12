@@ -6,8 +6,6 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/app_state.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-const MAX_BULK_RESCANS = 10;
-
 // 1. Authentication
 // Centralize login: this page must not accept a separate hard-coded password.
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true ||
@@ -260,7 +258,7 @@ include __DIR__ . '/../includes/header.php';
                         Sélectionner les scans visibles
                     </label>
                     <div class="flex flex-wrap items-center gap-2">
-                        <button type="button" id="bulk-rescan-scans" class="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50" disabled>Relancer la sélection (<?= MAX_BULK_RESCANS ?> max)</button>
+                        <button type="button" id="bulk-rescan-scans" class="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50" disabled>Relancer la sélection</button>
                         <button type="button" id="bulk-delete-scans" class="rounded-xl bg-rose-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50" disabled>Supprimer la sélection</button>
                     </div>
                     <p id="bulk-scan-status" class="w-full text-xs text-slate-500" role="status" aria-live="polite"></p>
@@ -1406,7 +1404,7 @@ function exportTabCSV(tab) {
     let filename = 'climat_local_' + tab + '.csv';
     const csvCell = value => '"' + String(value ?? '').replace(/"/g, '""') + '"';
     if (tab === 'missions') {
-        rows = [['ID', 'Clé métier', 'Titre', 'Budget', 'Subvention', 'Description', 'Actif'],
+        rows = [['ID', 'Clé métier (serviceKey)', 'Titre', 'Budget', 'Subvention', 'Description', 'Actif'],
             ...(Array.isArray(appState.serviceOpps) ? appState.serviceOpps : []).map(m => [
                 m.id, m.serviceKey, m.serviceTitle, m.defaultBudget, m.subsidyAmount, m.description, m.isActive ? 1 : 0
             ])];
@@ -1543,6 +1541,17 @@ function importTabCSV(tab, input) {
                 if (char === '\r' && text[i + 1] === '\n') i++;
                 row.push(cell);
                 if (row.some(value => value !== '')) lines.push(row);
+                const expectedHeaders = {
+                    missions: ['ID', 'Clé métier (serviceKey)', 'Titre', 'Budget', 'Subvention', 'Description', 'Actif'],
+                    legal: ['ID', 'Titre', 'Poids', 'Description', 'Actif'],
+                    texts: ['text_key', 'title', 'content'],
+                    scanner: ['Clé', 'Consigne']
+                }[tab];
+                if (!expectedHeaders || JSON.stringify(lines[0]) !== JSON.stringify(expectedHeaders)) {
+                    alert('Les en-têtes du CSV ne correspondent pas au format attendu pour cet onglet.');
+                    input.value = '';
+                    return;
+                }
                 row = [];
                 cell = '';
             } else {
@@ -1720,7 +1729,9 @@ async function submitAssignScanner() {
 }
 
 // Scans Centralisés Filtering & Actions
-const MAX_BULK_RESCANS = <?php echo MAX_BULK_RESCANS; ?>;
+const MAX_BULK_RESCANS = 10;
+const bulkRescanButton = document.getElementById('bulk-rescan-scans');
+if (bulkRescanButton) bulkRescanButton.textContent = `Relancer la sélection (${MAX_BULK_RESCANS} max)`;
 function filterScansGrid() {
     const typeVal = document.getElementById('filter_type_scan')?.value || 'all';
     const searchVal = (document.getElementById('filter_url_scan')?.value || '').toLowerCase().trim();

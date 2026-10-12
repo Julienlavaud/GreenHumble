@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../api/includes/scans_manager.php';
+
 function bulk_delete_assert(bool $condition, string $message): void
 {
     if (!$condition) {
@@ -87,10 +89,10 @@ try {
     }
     if (!$connected) throw new RuntimeException('Le serveur PHP de test n’a pas démarré: ' . (string)file_get_contents($serverLog));
 
-    $tooMany = bulk_delete_request($port, 'admin', ['ids' => array_map('strval', range(1, 501))], $adminToken);
+    $tooMany = bulk_delete_request($port, 'admin', ['ids' => array_map('strval', range(1, MAX_BULK_DELETE_SCANS + 1))], $adminToken);
     bulk_delete_assert($tooMany['status'] === 400, '501 selected ids are rejected');
 
-    $atLimit = bulk_delete_request($port, 'admin', ['ids' => array_map('strval', range(1, 500))], $adminToken);
+    $atLimit = bulk_delete_request($port, 'admin', ['ids' => array_map('strval', range(1, MAX_BULK_DELETE_SCANS))], $adminToken);
     bulk_delete_assert(
         $atLimit['status'] === 404,
         '500 selected ids are accepted for processing (received ' . $atLimit['status'] . ': ' . json_encode($atLimit['body']) . ')'

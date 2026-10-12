@@ -6,9 +6,9 @@ require_once __DIR__ . '/../includes/scans_manager.php';
 
 $input = json_decode((string)file_get_contents('php://input'), true);
 $ids = is_array($input) ? ($input['ids'] ?? null) : null;
-if (!is_array($ids) || $ids === [] || count($ids) > 500) {
+if (!is_array($ids) || $ids === [] || count($ids) > MAX_BULK_DELETE_SCANS) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Sélectionnez entre 1 et 500 scans.'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['success' => false, 'error' => 'Sélectionnez entre 1 et ' . MAX_BULK_DELETE_SCANS . ' scans.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

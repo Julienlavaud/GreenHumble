@@ -11,6 +11,7 @@ function admin_workspace_assert(bool $condition, string $message): void
 
 $admin = (string)file_get_contents(__DIR__ . '/../api/admin/index.php');
 $header = (string)file_get_contents(__DIR__ . '/../api/includes/header.php');
+$apiGuard = (string)file_get_contents(__DIR__ . '/../api/includes/api_guard.php');
 $theme = (string)file_get_contents(__DIR__ . '/../api/assets/css/greenhumble-app.css');
 $router = (string)file_get_contents(__DIR__ . '/../api/router.php');
 $bulkDelete = (string)file_get_contents(__DIR__ . '/../api/scans/bulk_delete.php');
@@ -36,13 +37,18 @@ admin_workspace_assert(str_contains($admin, 'Team Manager · accès collaborateu
 admin_workspace_assert(str_contains($admin, 'aria-label="Supprimer ce collaborateur"'), 'the team delete action is visible and accessible');
 admin_workspace_assert(
     str_contains($admin, 'const MAX_BULK_RESCANS = 10;')
-        && str_contains($admin, 'Relancer la sélection (<?= MAX_BULK_RESCANS ?> max)')
+        && str_contains($admin, 'bulkRescanButton.textContent = `Relancer la sélection (${MAX_BULK_RESCANS} max)`')
         && str_contains($admin, 'cards.length > MAX_BULK_RESCANS'),
     'bulk rescans use one shared batch-size limit'
 );
 admin_workspace_assert(!str_contains($admin, "['audits', 'missions', 'legal', 'texts', 'team', 'scanner']"), 'unreachable Team-tab export controls are removed');
 admin_workspace_assert(str_contains($admin, "\\uFEFF") && str_contains($admin, "replace(/\"/g, '\"\"')"), 'Scanner CSV exports preserve UTF-8 BOM and quote escaped prompt values');
 admin_workspace_assert(str_contains($header, 'greenhumble-app.css') && str_contains($theme, 'body[data-gh-role=admin] .gh-content>:is(div,main)[class*="max-w-"]'), 'standalone admin pages share the AI provider visual system');
+admin_workspace_assert(
+    str_contains($apiGuard, "if (!headers_sent())")
+        && str_contains($apiGuard, "header('Cache-Control: no-store"),
+    'API no-store headers are emitted safely when a guarded endpoint runs'
+);
 admin_workspace_assert(str_contains($admin, "isset(\$_SESSION['role']) || \$_SESSION['role'] !== 'admin'") && str_contains($admin, "fetch('/api/audit'"), 'bulk actions are only shown on the admin-guarded page, whose same-origin fetch calls receive CSRF protection from the shared header');
 admin_workspace_assert(
     str_contains($analyse, 'assets/js/analyse.js')
