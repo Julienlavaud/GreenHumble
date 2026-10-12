@@ -67,11 +67,11 @@ $dirsToCreate = [
     __DIR__ . '/api/includes',
     __DIR__ . '/api/data',
     __DIR__ . '/api/groups',
-    __DIR__ . '/api/admin',
-    __DIR__ . '/api/admin/assets/css',
-    __DIR__ . '/api/admin/assets/js',
-    __DIR__ . '/api/admin/assets/img',
-    __DIR__ . '/api/admin/components'
+    __DIR__ . '/admin',
+    __DIR__ . '/admin/assets/css',
+    __DIR__ . '/admin/assets/js',
+    __DIR__ . '/admin/assets/img',
+    __DIR__ . '/admin/components'
 ];
 
 foreach ($dirsToCreate as $dir) {
@@ -247,7 +247,7 @@ $response['summary'] = [
     'headline' => '🚀 Installation de GreenHumble v1.1 terminée avec succès sur OVH !',
     'next_steps' => [
         '1. Éditer le fichier /api/config/.env pour renseigner votre GEMINI_API_KEY officielle.',
-        '2. Accéder à l’interface d’administration : https://' . ($_SERVER['HTTP_HOST'] ?? 'votre-domaine.com') . '/api/admin/index.php',
+        '2. Accéder à l’interface d’administration : https://' . ($_SERVER['HTTP_HOST'] ?? 'votre-domaine.com') . '/admin/index.php',
         '3. Exécuter un audit test via la route REST POST /api/audit.'
     ]
 ];
@@ -267,7 +267,7 @@ if ($isBrowser) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/api/admin/assets/css/styles.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="/admin/assets/css/styles.css?v=<?php echo time(); ?>">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F9F9F9; color: #333333; line-height: 1.5; letter-spacing: 0.3px; }
         .card { background: #FFFFFF; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 24px; margin: 16px 0; border: 1px solid rgba(0,0,0,0.05); }
@@ -333,7 +333,7 @@ if ($isBrowser) {
                 Renseignez votre clé <code>GEMINI_API_KEY</code> dans <code>/api/config/.env</code>, puis accédez à votre console d'administration.
             </p>
             <div class="flex items-center justify-center gap-4 pt-2">
-                <a href="/api/admin/index.php" class="btn-primary">Accéder au Cockpit Admin</a>
+                <a href="/admin/index.php" class="btn-primary">Accéder au Cockpit Admin</a>
                 <a href="/api/audit.php" class="btn-secondary">Lancer un Audit REST</a>
             </div>
         </div>

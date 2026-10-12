@@ -3410,10 +3410,9 @@ async function startServer() {
   });
 
   // Static Assets mapping for Admin & CSS styles
-  const adminAssetsPath = path.resolve(__dirname, 'api', 'admin', 'assets');
+  const adminAssetsPath = path.resolve(__dirname, 'admin', 'assets');
   if (fs.existsSync(adminAssetsPath)) {
-    app.use('/api/admin/assets', express.static(adminAssetsPath));
-    app.use('/admin/assets', (req, res) => res.redirect(301, '/api/admin/assets' + req.url));
+    app.use('/admin/assets', express.static(adminAssetsPath));
     app.use('/api/assets', express.static(adminAssetsPath));
     app.use('/assets', express.static(adminAssetsPath));
   }
