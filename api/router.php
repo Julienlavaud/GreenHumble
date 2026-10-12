@@ -31,7 +31,9 @@ $routes = [
     'logout' => 'logout.php',
 
     'audit' => 'audit.php',
-    'prospec' => 'prospec.php',
+    'audit-report' => 'audit-report.php',
+    'prospec' => 'prospect.php',
+    'prospect' => 'prospect.php',
 
     'scan' => 'scan.php',
     'scan/process' => 'scan_process.php',
@@ -74,6 +76,11 @@ $routes = [
 
     'admin' => 'admin/index.php',
     'admin/index' => 'admin/index.php',
+    'admin/dashboard' => 'dashboard.php',
+    'admin/pipeline' => 'pipeline.php',
+    'admin/scan' => 'scan.php',
+    'admin/analyse' => 'analyse.php',
+    'admin/audit-report' => 'audit-report.php',
     'admin/companies' => 'admin/companies.php',
     'admin/texts' => 'admin/texts.php',
     'admin/widget' => 'admin/widget.php',
