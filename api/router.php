@@ -9,20 +9,20 @@ declare(strict_types=1);
 
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 
-$path = parse_url($*equestUri, PHP_URL_PATH) ?? '/';
-$*ath = trim($path, '/');
+$path = parse_url($requestUri, PHP_URL_PATH) ?? '/';
+$path = trim($path, '/');
 
 /**
- * Co*patibilité avec :
+ * Compatibilité avec :
  * /api/scan
- * *api/admin
+ * /api/admin
  * /api/export/raw
  */
-i* (strpos($path, 'api/') === 0) {
- *  $path = substr($path, 4);
+if (strpos($path, 'api/') === 0) {
+    $path = substr($path, 4);
 }
 
-$ro*tes = [
+$routes = [
 
     '' => 'index.php',
     'index' => 'index.php',
@@ -92,7 +92,7 @@ if (isset($routes[$path])) {
 /**
  * Fallback : /truc => truc.php
  */
-if ($path !== '') {
+if ($path !== '' && preg_match('#^[A-Za-z0-9_\-]+(/[A-Za-z0-9_\-]+)*$#', $path)) {
 
     $directFile = __DIR__ . '/' . $path . '.php';
 
