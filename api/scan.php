@@ -211,7 +211,7 @@ include __DIR__ . '/includes/header.php';
                         <button type="submit" class="flex-1 px-6 py-3.5 bg-[#2A7AE2] hover:bg-[#1D5BBF] text-white font-bold rounded-xl text-sm transition-all border-none cursor-pointer flex items-center justify-center gap-2">
                             <span>Lancer l'Audit Global</span>
                         </button>
-                        <button type="button" onclick="openCreateListModal()" class="px-4 py-3.5 bg-[#121212] hover:bg-white/10 text-white font-bold rounded-xl text-sm border border-white/15 transition-all cursor-pointer">
+                        <button type="button" onclick="openCreateListModal()" class="px-4 py-3.5 bg-white hover:bg-slate-50 text-[#17352c] font-bold rounded-xl text-sm border border-slate-300 transition-all cursor-pointer">
                             Créer une liste
                         </button>
                     </div>
