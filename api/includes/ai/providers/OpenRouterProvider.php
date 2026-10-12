@@ -33,7 +33,7 @@ final class OpenRouterProvider implements AIProviderInterface
 
         return
             $config['default_model']
-            ?? 'openrouter/free';
+            ?? 'google/gemma-4-26b-a4b-it:free';
     }
 
     public function getModels(): array
@@ -103,7 +103,9 @@ final class OpenRouterProvider implements AIProviderInterface
 
             return
                 is_string($response)
-                && trim($response) !== '';
+                && trim($response) !== ''
+                && stripos($response, 'Erreur') !== 0
+                && stripos($response, 'HTTP ') === false;
 
         } catch (Throwable $e) {
 
@@ -262,10 +264,26 @@ final class OpenRouterProvider implements AIProviderInterface
                 'Erreur OpenRouter : réponse JSON invalide.';
         }
 
-        return
-            (string) (
-                $json['choices'][0]['message']['content']
-                ?? ''
-            );
+        if (
+            isset($json['error']['message'])
+        ) {
+            return
+                'Erreur OpenRouter : '
+                . $json['error']['message'];
+        }
+
+        $content =
+            $json['choices'][0]['message']['content']
+            ?? '';
+
+        if (
+            !is_string($content)
+            || trim($content) === ''
+        ) {
+            return
+                'Erreur OpenRouter : réponse vide.';
+        }
+
+        return trim($content);
     }
 }
