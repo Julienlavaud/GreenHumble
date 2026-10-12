@@ -493,6 +493,16 @@ try {
     if ($providerErrorDetail === '' && is_string($aiResponse) && (stripos(trim($aiResponse), 'Erreur') === 0 || stripos(trim($aiResponse), 'HTTP ') === 0)) {
         $providerErrorDetail = trim($aiResponse);
     }
+    if ($providerErrorDetail === '' && ($decodedResponse['code'] ?? '') === 'schema_invalid' && is_array($decodedResponse['data'] ?? null)) {
+        $sd = $decodedResponse['data'];
+        $providerErrorDetail = 'schema_invalid; normalizer=' . (function_exists('gh_ai_normalize') ? 'oui' : 'non')
+            . '; cles=' . implode(',', array_slice(array_map('strval', array_keys($sd)), 0, 20))
+            . '; score=' . (isset($sd['score']) ? gettype($sd['score']) : 'absent')
+            . '; riskLevel=' . (isset($sd['riskLevel']) && is_string($sd['riskLevel']) ? substr($sd['riskLevel'], 0, 20) : 'absent')
+            . '; summary=' . (isset($sd['summary']) ? gettype($sd['summary']) : 'absent')
+            . '; claims=' . (isset($sd['claims']) ? gettype($sd['claims']) : 'absent')
+            . '; prospection=' . (array_key_exists('prospection', $sd) ? gettype($sd['prospection']) : 'absent');
+    }
     $providerErrorDetail = preg_replace('/(key=|AIza|gsk_|sk-|Bearer\s+)[A-Za-z0-9_\-]+/i', '$1***', substr($providerErrorDetail, 0, 300));
     $failureCode = 'response_not_json';
     if ($providerErrorDetail !== '' && ($aiResponse === '' || $aiResponse === null)) {
