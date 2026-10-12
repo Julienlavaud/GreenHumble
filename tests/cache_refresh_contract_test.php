@@ -12,13 +12,14 @@ function cache_assert(bool $condition, string $message): void
 }
 
 $assetPath = __DIR__ . '/../api/assets/js/analyse.js';
-$expectedVersion = dechex((int)filemtime($assetPath)) . '-' . dechex((int)filesize($assetPath));
+$expectedVersion = hash_file('sha256', $assetPath);
 cache_assert(
     gh_asset_version('assets/js/analyse.js') === $expectedVersion,
-    'asset URLs use the current file timestamp and size'
+    'asset URLs use a content hash'
 );
 cache_assert(gh_asset_version('../data/scans.json') === '1', 'asset versioning cannot expose files outside the assets directory');
 
+$installer = (string)file_get_contents(__DIR__ . '/../install.php');
 $header = (string)file_get_contents(__DIR__ . '/../api/includes/header.php');
 $rootHtaccess = (string)file_get_contents(__DIR__ . '/../.htaccess');
 $flush = (string)file_get_contents(__DIR__ . '/../api/flush.php');
@@ -38,6 +39,12 @@ cache_assert(
     str_contains($rootIndex, "header('Location: /api/index.php', true, 302)")
         && !str_contains($rootIndex, '301'),
     'legacy root redirect is temporary so browsers do not pin an outdated destination'
+);
+cache_assert(
+    str_contains($installer, "gh_asset_version('assets/css/styles.css')")
+        && !str_contains($installer, 'api/admin/assets/css/styles.css')
+        && !str_contains($installer, 'time()'),
+    'installer uses the canonical stylesheet with deterministic content-based versioning'
 );
 cache_assert(
     str_contains($flush, "require_once __DIR__ . '/includes/auth.php';")
