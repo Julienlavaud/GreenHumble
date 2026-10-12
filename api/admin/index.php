@@ -1541,17 +1541,6 @@ function importTabCSV(tab, input) {
                 if (char === '\r' && text[i + 1] === '\n') i++;
                 row.push(cell);
                 if (row.some(value => value !== '')) lines.push(row);
-                const expectedHeaders = {
-                    missions: ['ID', 'Clé métier (serviceKey)', 'Titre', 'Budget', 'Subvention', 'Description', 'Actif'],
-                    legal: ['ID', 'Titre', 'Poids', 'Description', 'Actif'],
-                    texts: ['text_key', 'title', 'content'],
-                    scanner: ['Clé', 'Consigne']
-                }[tab];
-                if (!expectedHeaders || JSON.stringify(lines[0]) !== JSON.stringify(expectedHeaders)) {
-                    alert('Les en-têtes du CSV ne correspondent pas au format attendu pour cet onglet.');
-                    input.value = '';
-                    return;
-                }
                 row = [];
                 cell = '';
             } else {
@@ -1565,6 +1554,17 @@ function importTabCSV(tab, input) {
         }
         row.push(cell);
         if (row.some(value => value !== '')) lines.push(row);
+        const expectedHeaders = {
+            missions: ['ID', 'Clé métier (serviceKey)', 'Titre', 'Budget', 'Subvention', 'Description', 'Actif'],
+            legal: ['ID', 'Titre', 'Poids', 'Description', 'Actif'],
+            texts: ['text_key', 'title', 'content'],
+            scanner: ['Clé', 'Consigne']
+        }[tab];
+        if (!expectedHeaders || JSON.stringify(lines[0]) !== JSON.stringify(expectedHeaders)) {
+            alert('Les en-têtes du CSV ne correspondent pas au format attendu pour cet onglet.');
+            input.value = '';
+            return;
+        }
         const imports = [];
         for(let i=1; i<lines.length; i++) {
             const p = lines[i];

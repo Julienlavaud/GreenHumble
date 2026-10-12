@@ -122,52 +122,19 @@ function append_scan_to_json_path($path, $sourcePaths, $newScan) {
  */
 function save_all_scans($scans) {
     if (!is_array($scans)) return false;
-    try {
-        $json = json_encode(array_values($scans), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-    } catch (Throwable $e) {
-        error_log('GreenHumble: encodage JSON des scans impossible.');
-        return false;
-    }
-    $canonical = get_scans_file_path();
-    $targets = [$canonical];
-    foreach (get_scan_storage_paths() as $path) {
-        if ($path !== $canonical && is_file($path)) $targets[] = $path;
-    }
-    foreach ($targets as $path) {
-        $dir = dirname($path);
-        if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) return false;
-        if (!is_writable($dir)) return false;
-        $lock = @fopen($path . '.lock', 'c');
-        if ($lock === false) return false;
-        $ok = false;
-        try {
-            if (flock($lock, LOCK_EX)) {
-                $tmp = tempnam($dir, '.gh-scans-');
-                if ($tmp !== false) {
-                    $ok = @file_put_contents($tmp, $json, LOCK_EX) === strlen($json);
-                    if ($ok) {
-                        @chmod($tmp, 0640);
-                        $ok = @rename($tmp, $path);
-                    }
-                    if (!$ok) @unlink($tmp);
-                }
-            }
-        } finally {
-            @flock($lock, LOCK_UN);
-            @fclose($lock);
-        }
-        if (!$ok) return false;
-    }
-    return true;
+    return mutate_all_scans(static fn(array $currentScans): array => array_values($scans));
 }
 
 /**
  * Applique une modification à l'historique courant sous le même verrou que les ajouts,
  * puis synchronise les emplacements historiques avant de libérer le verrou canonique.
+ * Tous les écrivains multi-fichiers verrouillent le canonique avant les copies historiques;
+ * append_scan_to_json_path ne verrouille que le canonique.
  */
-function mutate_all_scans(callable $mutator, ?array $storagePaths = null) {
+function mutate_all_scans(callable $mutator, ?array $storagePaths = null, ?callable $replaceFile = null) {
     $storagePaths = $storagePaths ?? get_scan_storage_paths();
     if ($storagePaths === []) return false;
+    $replaceFile = $replaceFile ?? static fn(string $temporary, string $path): bool => @rename($temporary, $path);
     $canonical = get_scan_storage_paths() === $storagePaths ? get_scans_file_path() : $storagePaths[0];
     $dir = dirname($canonical);
     if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) return false;
@@ -231,7 +198,7 @@ function mutate_all_scans(callable $mutator, ?array $storagePaths = null) {
 
         $committed = [];
         foreach ($targets as $path) {
-            if (!@rename($staged[$path], $path)) {
+            if (!$replaceFile($staged[$path], $path)) {
                 foreach (array_reverse($committed) as $rollbackPath) {
                     $previous = $originalContents[$rollbackPath];
                     if ($previous === null) {

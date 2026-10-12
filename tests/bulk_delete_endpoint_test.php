@@ -11,7 +11,7 @@ function bulk_delete_assert(bool $condition, string $message): void
     }
 }
 
-function bulk_delete_request(int $port, string $role, array $payload, string $adminToken): array
+function scan_endpoint_request(int $port, string $endpoint, string $role, array $payload, string $adminToken): array
 {
     $headers = ['Content-Type: application/json'];
     if ($role === 'admin') $headers[] = 'Authorization: Bearer ' . $adminToken;
@@ -22,7 +22,7 @@ function bulk_delete_request(int $port, string $role, array $payload, string $ad
         'ignore_errors' => true,
         'timeout' => 5,
     ]]);
-    $bodyText = file_get_contents("http://127.0.0.1:{$port}/api/scans/bulk_delete.php", false, $context);
+    $bodyText = file_get_contents("http://127.0.0.1:{$port}/api/scans/{$endpoint}.php", false, $context);
     $statusLine = $http_response_header[0] ?? '';
     if (!is_string($bodyText) || preg_match('/\s(\d{3})\s/', $statusLine, $matches) !== 1) {
         throw new RuntimeException('Réponse HTTP de test invalide: ' . $statusLine . ' ' . (string)$bodyText);
@@ -47,8 +47,9 @@ $repository = dirname(__DIR__);
 foreach (['api_guard.php', 'auth.php', 'scans_manager.php'] as $file) {
     copy($repository . '/api/includes/' . $file, $includes . DIRECTORY_SEPARATOR . $file);
 }
-$endpoint = $scans . DIRECTORY_SEPARATOR . 'bulk_delete.php';
-copy($repository . '/api/scans/bulk_delete.php', $endpoint);
+foreach (['bulk_delete.php', 'delete.php', 'update.php'] as $file) {
+    copy($repository . '/api/scans/' . $file, $scans . DIRECTORY_SEPARATOR . $file);
+}
 
 $storage = $root . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'scans.json';
 $original = [
@@ -89,34 +90,49 @@ try {
     }
     if (!$connected) throw new RuntimeException('Le serveur PHP de test n’a pas démarré: ' . (string)file_get_contents($serverLog));
 
-    $tooMany = bulk_delete_request($port, 'admin', ['ids' => array_map('strval', range(1, MAX_BULK_DELETE_SCANS + 1))], $adminToken);
+    $tooMany = scan_endpoint_request($port, 'bulk_delete', 'admin', ['ids' => array_map('strval', range(1, MAX_BULK_DELETE_SCANS + 1))], $adminToken);
     bulk_delete_assert($tooMany['status'] === 400, '501 selected ids are rejected');
 
-    $atLimit = bulk_delete_request($port, 'admin', ['ids' => array_map('strval', range(1, MAX_BULK_DELETE_SCANS))], $adminToken);
+    $atLimit = scan_endpoint_request($port, 'bulk_delete', 'admin', ['ids' => array_map('strval', range(1, MAX_BULK_DELETE_SCANS))], $adminToken);
     bulk_delete_assert(
         $atLimit['status'] === 404,
         '500 selected ids are accepted for processing (received ' . $atLimit['status'] . ': ' . json_encode($atLimit['body']) . ')'
     );
 
-    $invalid = bulk_delete_request($port, 'admin', ['ids' => ['', ' ', 42, str_repeat('x', 129)]], $adminToken);
+    $invalid = scan_endpoint_request($port, 'bulk_delete', 'admin', ['ids' => ['', ' ', 42, str_repeat('x', 129)]], $adminToken);
     bulk_delete_assert($invalid['status'] === 400, 'a selection containing only invalid ids is rejected');
 
-    $missing = bulk_delete_request($port, 'admin', ['ids' => ['unknown-scan']], $adminToken);
+    $missing = scan_endpoint_request($port, 'bulk_delete', 'admin', ['ids' => ['unknown-scan']], $adminToken);
     bulk_delete_assert($missing['status'] === 404, 'a selection with no matching scans returns not found');
 
-    $unauthorized = bulk_delete_request($port, 'public', ['ids' => ['scan-1']], $adminToken);
+    $unauthorized = scan_endpoint_request($port, 'bulk_delete', 'public', ['ids' => ['scan-1']], $adminToken);
     bulk_delete_assert($unauthorized['status'] === 403, 'non-admin requests are forbidden');
     bulk_delete_assert(
         json_decode((string)file_get_contents($storage), true) === $original,
         'rejected bulk-delete requests leave stored scans unchanged'
     );
 
-    $deleted = bulk_delete_request($port, 'admin', ['ids' => ['scan-1']], $adminToken);
+    $deleted = scan_endpoint_request($port, 'bulk_delete', 'admin', ['ids' => ['scan-1']], $adminToken);
     $remaining = json_decode((string)file_get_contents($storage), true);
     bulk_delete_assert($deleted['status'] === 200 && ($deleted['body']['deleted'] ?? 0) === 1, 'an admin can delete a matching scan');
     bulk_delete_assert(array_column($remaining, 'id') === ['scan-2'], 'successful deletion preserves unselected scans');
 
-    echo "OK: bulk-delete endpoint permissions, limits, validation, and mutations\n";
+    $updated = scan_endpoint_request($port, 'update', 'admin', ['id' => 'scan-2', 'statut' => 'reviewed', 'type_scan' => 'pipeline'], $adminToken);
+    $remaining = json_decode((string)file_get_contents($storage), true);
+    bulk_delete_assert($updated['status'] === 200, 'an admin can update a scan');
+    bulk_delete_assert(($remaining[0]['statut'] ?? '') === 'reviewed' && ($remaining[0]['type_scan'] ?? '') === 'pipeline', 'scan updates persist the requested fields');
+
+    $deletedSingle = scan_endpoint_request($port, 'delete', 'admin', ['id' => 'scan-2'], $adminToken);
+    bulk_delete_assert($deletedSingle['status'] === 200 && json_decode((string)file_get_contents($storage), true) === [], 'an admin can delete one scan');
+
+    $corruptStorage = '{invalid json';
+    file_put_contents($storage, $corruptStorage);
+    $updateFailure = scan_endpoint_request($port, 'update', 'admin', ['id' => 'scan-1', 'statut' => 'reviewed'], $adminToken);
+    $deleteFailure = scan_endpoint_request($port, 'delete', 'admin', ['id' => 'scan-1'], $adminToken);
+    bulk_delete_assert($updateFailure['status'] === 500 && $deleteFailure['status'] === 500, 'single update and delete return 500 when scan history cannot be safely written');
+    bulk_delete_assert((string)file_get_contents($storage) === $corruptStorage, 'failed single-scan mutations preserve the invalid source file');
+
+    echo "OK: scan endpoint permissions, limits, validation, persistence, and rollback handling\n";
 } finally {
     proc_terminate($server);
     proc_close($server);

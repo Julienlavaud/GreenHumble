@@ -107,6 +107,22 @@ try {
         'une suppression conserve les scans ajoutés pendant des opérations voisines et synchronise les anciennes copies'
     );
 
+    $beforeRollbackPrimary = (string)file_get_contents($primary);
+    $beforeRollbackLegacy = (string)file_get_contents($legacy);
+    $rollbackSaved = mutate_all_scans(
+        static fn(array $scans): array => array_values(array_filter($scans, static fn($item) => ($item['id'] ?? '') !== 'scan-legacy')),
+        [$primary, $legacy],
+        static function (string $temporary, string $path) use ($legacy): bool {
+            return $path === $legacy ? false : rename($temporary, $path);
+        }
+    );
+    scan_storage_assert(!$rollbackSaved, 'une erreur simulée lors de l’écriture historique échoue proprement');
+    scan_storage_assert(
+        (string)file_get_contents($primary) === $beforeRollbackPrimary
+            && (string)file_get_contents($legacy) === $beforeRollbackLegacy,
+        'une écriture canonique est annulée si une copie secondaire échoue'
+    );
+
     $beforeCorruptWrite = (string)file_get_contents($primary);
     file_put_contents($legacy, '{json invalide');
     scan_storage_assert(!append_scan_to_json_path($primary, [$primary, $legacy], ['id' => 'must-not-write']), 'un historique invalide bloque une nouvelle écriture');
