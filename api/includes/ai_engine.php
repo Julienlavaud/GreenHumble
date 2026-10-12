@@ -425,6 +425,14 @@ try {
         return json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
+        // Prompt personnalise (kit commercial, contre-analyse) : le JSON libre n'a pas a suivre le schema d'audit.
+    if ($custom_prompt && is_string($aiResponse)) {
+        $freeJson = json_decode(gh_ai_extract_json($aiResponse), true);
+        if (is_array($freeJson) && !array_is_list($freeJson)) {
+            return json_encode($freeJson, JSON_UNESCAPED_UNICODE);
+        }
+    }
+
   foreach (
     AIProviderFactory::instances()
     as $fallbackProviderName => $fallbackProvider
@@ -449,6 +457,13 @@ try {
                 $prompt,
                 $systemInstruction
             );
+
+        if ($custom_prompt && is_string($fallbackResponse)) {
+            $freeFallback = json_decode(gh_ai_extract_json($fallbackResponse), true);
+            if (is_array($freeFallback) && !array_is_list($freeFallback)) {
+                return json_encode($freeFallback, JSON_UNESCAPED_UNICODE);
+            }
+        }
 
         $decodedFallback =
             gh_ai_validate_response(
