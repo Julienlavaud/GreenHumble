@@ -1,27 +1,4 @@
 document.addEventListener('click', async (event) => {
-    const filterButton = event.target.closest('.mission-filter-btn');
-    if (filterButton) {
-        const mode = filterButton.dataset.filter;
-        document.querySelectorAll('#mission-catalogue .mission-pro-card').forEach(card => {
-            card.hidden = mode === 'recommended' && card.dataset.recommended !== '1';
-        });
-        document.querySelectorAll('.mission-filter-btn').forEach(button => {
-            const selected = button === filterButton;
-            button.setAttribute('aria-pressed', selected ? 'true' : 'false');
-            button.classList.toggle('bg-emerald-800', selected);
-            button.classList.toggle('text-white', selected);
-            button.classList.toggle('border', !selected);
-            button.classList.toggle('border-slate-200', !selected);
-            button.classList.toggle('bg-white', !selected);
-            button.classList.toggle('text-slate-700', !selected);
-        });
-        const count = mode === 'all'
-            ? document.querySelectorAll('#mission-catalogue .mission-pro-card').length
-            : document.querySelectorAll('#mission-catalogue .mission-pro-card[data-recommended="1"]').length;
-        const status = document.getElementById('mission-filter-status');
-        if (status) status.textContent = mode === 'all' ? count + ' mission(s) dans le catalogue.' : count + ' mission(s) mise(s) en avant à partir des résultats du scan.';
-        return;
-    }
     const copyButton = event.target.closest('.mission-copy-btn');
     if (copyButton) {
         try {

@@ -787,6 +787,7 @@ include __DIR__ . '/includes/header.php';
         <div id="section_missions" class="space-y-6">
             <?php
             $missions = [];
+            $activeMissionCount = 0;
             $kitForMissions = json_decode((string)($audit['kit_json'] ?? ''), true);
             $kitOffer = is_array($kitForMissions['recommendedOffer'] ?? null) ? $kitForMissions['recommendedOffer'] : [];
             $kitOfferKey = trim((string)($kitOffer['serviceKey'] ?? ''));
@@ -813,6 +814,7 @@ include __DIR__ . '/includes/header.php';
                 if (!is_array($mission) || !($mission['isActive'] ?? true)) continue;
                 $missionTitle = trim((string)($mission['serviceTitle'] ?? ''));
                 if ($missionTitle === '') continue;
+                $activeMissionCount++;
                 $missionText = $missionTitle . ' ' . (string)($mission['description'] ?? '');
                 $missionKey = (string)($mission['serviceKey'] ?? $mission['id'] ?? '');
                 $recommended = ($kitOfferKey !== '' && $kitOfferKey === $missionKey)
@@ -829,41 +831,33 @@ include __DIR__ . '/includes/header.php';
                         }
                     }
                 }
-                $mission['_recommended'] = $recommended;
-                $mission['_id'] = (string)($mission['id'] ?? ('mission_' . $idx));
-                $missions[] = $mission;
+                if ($recommended) {
+                    $mission['_recommended'] = true;
+                    $missions[] = $mission;
+                }
             }
-            $recommendedCount = count(array_filter($missions, static fn($mission) => !empty($mission['_recommended'])));
-            $showAllInitially = $recommendedCount === 0;
+            $recommendedCount = count($missions);
             ?>
             <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                 <div class="flex flex-col gap-5 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <div class="mb-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800">
-                            <span aria-hidden="true">💼</span><span><?php echo count($missions); ?> accompagnement(s) actif(s)</span>
+                            <span aria-hidden="true">💼</span><span><?php echo $recommendedCount; ?> mission(s) préconisée(s)</span>
                         </div>
                         <h2 class="text-xl font-black tracking-tight text-slate-900 sm:text-2xl">Missions recommandées</h2>
                         <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">Sélection basée sur les constats encore à vérifier dans ce dossier. Une recommandation ne signifie pas qu’une infraction est établie.</p>
                     </div>
-                    <div class="flex shrink-0 flex-wrap gap-2" role="group" aria-label="Filtrer les missions">
-                        <?php if ($recommendedCount > 0): ?>
-                            <button type="button" class="mission-filter-btn rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white" data-filter="recommended" aria-pressed="true">Recommandées (<?php echo $recommendedCount; ?>)</button>
-                            <button type="button" class="mission-filter-btn rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50" data-filter="all" aria-pressed="false">Toutes (<?php echo count($missions); ?>)</button>
-                        <?php endif; ?>
-                    </div>
                 </div>
 
                 <?php if ($recommendedCount === 0): ?>
-                    <p class="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-relaxed text-blue-900">Aucune mission ne correspond directement aux constats non écartés du scan. Voici le catalogue complet pour garder le choix au consultant.</p>
+                    <p class="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-relaxed text-blue-900"><?php echo $activeMissionCount === 0 ? 'Aucune mission active dans le catalogue métier.' : 'Aucune mission du catalogue ne correspond aux constats non écartés de ce scan.'; ?></p>
                 <?php else: ?>
-                    <p id="mission-filter-status" class="mt-4 text-xs font-medium text-slate-500" role="status"><?php echo $recommendedCount; ?> mission(s) mise(s) en avant à partir des résultats du scan.</p>
+                    <p class="mt-4 text-xs font-medium text-slate-500"><?php echo $recommendedCount; ?> mission(s) recommandée(s) à partir des résultats du scan.</p>
                 <?php endif; ?>
 
                 <div id="mission-catalogue" class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <?php foreach ($missions as $mission): ?>
-                        <article class="mission-pro-card flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-emerald-300 hover:bg-white hover:shadow-md"
-                                 data-recommended="<?php echo !empty($mission['_recommended']) ? '1' : '0'; ?>"
-                                 <?php echo (!$showAllInitially && empty($mission['_recommended'])) ? 'hidden' : ''; ?>>
+                        <article class="mission-pro-card flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-emerald-300 hover:bg-white hover:shadow-md">
                             <div class="flex items-start justify-between gap-3">
                                 <h3 class="min-w-0 flex-1 break-words text-base font-extrabold leading-snug text-slate-900"><?php echo htmlspecialchars($mission['serviceTitle'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?></h3>
                                 <?php if (!empty($mission['_recommended'])): ?>
@@ -894,9 +888,6 @@ include __DIR__ . '/includes/header.php';
                         </article>
                     <?php endforeach; ?>
                 </div>
-                <?php if (empty($missions)): ?>
-                    <p class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-600">Aucun accompagnement actif. Activez les offres à proposer dans le catalogue métier de l’administration.</p>
-                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>
