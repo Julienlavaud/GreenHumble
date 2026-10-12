@@ -230,6 +230,6 @@ $currentPageKey = basename($_SERVER['PHP_SELF'], '.php');
     </script>
     <?php endif; ?>
     <!-- GreenHumble Viewer & Cockpit JS (Auto-versioned) -->
-    <script src="/admin/assets/js/app.js?v=<?php echo floor(time()/60)*60; ?>"></script>
+    <script src="/api/admin/assets/js/app.js?v=<?php echo floor(time()/60)*60; ?>"></script>
 </body>
 </html>
