@@ -61,16 +61,28 @@
 
 Le ZIP à installer est l’artefact **greenhumble-ovh-php82** produit par GitHub Actions sur la branche `release/ovh-deployment-clean`. Ne pas utiliser les anciennes archives présentes dans l’historique du dépôt.
 
-Le paquet contient le code PHP et les fichiers nécessaires à l’application. Il exclut volontairement les JSON de données d’exécution (comptes, réglages IA, prospects, scans et audits), les sauvegardes et les fichiers `.env`, afin de ne pas écraser ni redistribuer les données privées.
+### Inventaire exact du ZIP
+
+À la racine du ZIP, le workflow place :
+
+- `index.php` — page d’entrée du sous-domaine.
+- `.htaccess` — réécritures et règles de protection/cache du site.
+- `api/` — l’arborescence applicative complète : pages et routes PHP, administration, espace collaborateur, configuration, inclusions, installation et ressources `assets/` (CSS, JavaScript et images). Le CSS Tailwind compilé pour la production est généré dans `api/assets/css/tailwind-compiled.css`.
+- `data/.htaccess` — protection du répertoire de données. Le ZIP ne contient pas les données d’exécution de `data/`.
+- `OVH-INSTALLATION-GUIDE.md` — copie de ce guide, fournie à titre documentaire et non nécessaire au fonctionnement du site.
+
+Les JSON présents à la racine de `data/` et les JSON directement dans `api/data/` ne sont pas inclus. Les fichiers `.env` sont également retirés du paquet. Les workflows, tests, sources de développement et fichiers de configuration nécessaires uniquement à la compilation ne sont pas à transférer.
 
 ### Transfert avec FileZilla
 
 1. Télécharger l’artefact `greenhumble-ovh-php82` depuis l’exécution réussie du workflow **Build OVH PHP 8.2 deployment ZIP** (onglet GitHub **Actions**).
 2. Décompresser le ZIP sur le PC.
 3. Sauvegarder le dossier OVH `doo` et la base GreenHumble avant transfert.
-4. Envoyer le contenu décompressé dans le dossier du sous-domaine `doo`, en écrasant les fichiers de code correspondants si FileZilla le demande.
-5. **Ne pas supprimer les fichiers JSON déjà présents sur OVH**, ne pas téléverser dans la racine WordPress et ne pas remplacer les fichiers de données par des exemples.
-6. Tester dans cet ordre : `/api/index.php`, `/api/login.php`, `/api/admin/index.php`, puis le parcours de scan public et le rapport d’audit.
+4. Décompresser le ZIP sur le PC. Dans FileZilla, ouvrir le dossier `doo` puis envoyer **les éléments à la racine du ZIP** : `index.php`, `.htaccess`, `api/` et `data/`. Ne pas envoyer le dossier qui contient le ZIP, ni son contenu dans un sous-dossier `package/`.
+5. Autoriser l’écrasement des fichiers de code correspondants. Fusionner les ressources dans `api/` avec l’arborescence existante ; ne pas supprimer les autres fichiers de données ou de configuration déjà présents.
+6. **Ne pas supprimer ni remplacer les JSON déjà présents sur OVH** (comptes, réglages IA, prospects, scans, audits, listes et styles). Le dossier `data/` livré ne fournit que son `.htaccess` de protection : ne pas le remplacer par un dossier `data/` vide ni par des exemples.
+7. Ne pas téléverser dans la racine WordPress et ne pas remplacer les fichiers ou bases du site principal.
+8. Tester dans cet ordre : `/api/index.php`, `/api/login.php`, `/api/admin/index.php`, puis le parcours de scan public et le rapport d’audit.
 
 Les pages dynamiques ne sont pas mises en cache par le navigateur et les URL des fichiers CSS/JavaScript changent automatiquement lorsque leur fichier change. Après un transfert FTP, les collaborateurs voient donc les nouveaux assets au prochain rechargement. GitHub Actions prépare le ZIP à chaque mise à jour de la branche de livraison, mais ne le déploie pas sur OVH : le transfert reste manuel.
 
