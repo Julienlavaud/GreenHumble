@@ -364,6 +364,7 @@ if ($method === 'POST') {
             'status' => 'analysis_incomplete',
             'analysisComplete' => false,
             'diagnosticCode' => $validatedAudit['diagnosticCode'] ?? 'analysis_incomplete',
+            'providerError' => $validatedAudit['providerError'] ?? null,
             'error' => 'L’analyse IA est incomplète. Aucun score de risque ni kit de prospection n’a été généré.',
             'summary' => $validatedAudit['clientSummary']['riskVerdict'] ?? 'Vérifiez la configuration du fournisseur IA puis réessayez.',
             'riskScore' => null,
