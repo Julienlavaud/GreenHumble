@@ -55,7 +55,6 @@ $routes = [
     'groups/assign_scanner' => 'groups/assign_scanner.php',
 
     'scans/list' => 'scans/list.php',
-    'scans/create' => 'scans/create.php',
     'scans/assign_group' => 'scans/assign_group.php',
     'scans/by_group' => 'scans/by_group.php',
     'scans/delete' => 'scans/delete.php',
