@@ -103,7 +103,7 @@ include __DIR__ . '/../includes/header.php';
                 <span>Exporter CSV</span>
             </button>
             
-            <?php if (in_array($activeTab, ['missions', 'legal', 'texts', 'team'])): ?>
+            <?php if (in_array($activeTab, ['missions', 'legal', 'texts', 'team', 'scanner'])): ?>
                 <label class="cursor-pointer px-6 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black rounded-2xl border border-indigo-100 transition-all flex items-center space-x-2 shadow-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                     <span>Importer CSV</span>
@@ -1265,6 +1265,10 @@ function saveScanner() {
     appState.scanVars.aiEvidenceInstructions = document.getElementById('ia_evidence').value;
     appState.scanVars.aiRiskInstructions = document.getElementById('ia_risk').value;
     appState.scanVars.aiCommercialInstructions = document.getElementById('ia_commercial').value;
+    appState.scanVars.aiLegalFramework = document.getElementById('ia_compliance').value;
+    appState.scanVars.aiCorrectiveActions = document.getElementById('ia_corrections').value;
+    appState.scanVars.aiUserPrompt = document.getElementById('ia_user_prompt').value;
+    appState.scanVars.aiClaimsDictionary = document.getElementById('ia_dictionary').value;
     appState.scanVars.customBannedKeywords = document.getElementById('ia_banned').value;
     syncState('scanVars', appState.scanVars);
 }
@@ -1360,7 +1364,7 @@ function deleteItem(type, idx) {
 function exportTabCSV(tab) {
     let rows = [];
     let filename = 'climat_local_' + tab + '.csv';
-    const csvCell = value => '"' + String(value ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ') + '"';
+    const csvCell = value => '"' + String(value ?? '').replace(/"/g, '""') + '"';
     if (tab === 'missions') {
         rows = [['ID', 'Clé métier', 'Titre', 'Budget', 'Subvention', 'Description', 'Actif'],
             ...(Array.isArray(appState.serviceOpps) ? appState.serviceOpps : []).map(m => [
@@ -1377,6 +1381,14 @@ function exportTabCSV(tab) {
     } else if (tab === 'team') {
         window.location.href = '/api/admin/export.php?download=team';
         return;
+    } else if (tab === 'scanner') {
+        const promptKeys = [
+            'aiKeywordInstructions', 'aiAnalysisInstructions', 'aiEvidenceInstructions', 'aiRiskInstructions',
+            'aiCommercialInstructions', 'aiLegalFramework', 'aiCorrectiveActions', 'aiUserPrompt',
+            'aiClaimsDictionary', 'customBannedKeywords'
+        ];
+        rows = [['Clé', 'Consigne'],
+            ...promptKeys.map(key => [key, appState.scanVars?.[key] ?? ''])];
     } else if (tab === 'audits') {
         window.location.href = '/api/admin/export.php';
         return;
@@ -1475,13 +1487,48 @@ function importTabCSV(tab, input) {
     if(!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
-        const lines = e.target.result.split('\n');
+        const text = String(e.target.result || '').replace(/^\uFEFF/, '');
+        const lines = [];
+        let row = [];
+        let cell = '';
+        let quoted = false;
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            if (quoted && char === '"' && text[i + 1] === '"') {
+                cell += '"';
+                i++;
+            } else if (char === '"') {
+                quoted = !quoted;
+            } else if (!quoted && char === ';') {
+                row.push(cell);
+                cell = '';
+            } else if (!quoted && (char === '\n' || char === '\r')) {
+                if (char === '\r' && text[i + 1] === '\n') i++;
+                row.push(cell);
+                if (row.some(value => value !== '')) lines.push(row);
+                row = [];
+                cell = '';
+            } else {
+                cell += char;
+            }
+        }
+        if (quoted) {
+            alert('Le fichier CSV contient un champ entre guillemets non terminé.');
+            input.value = '';
+            return;
+        }
+        row.push(cell);
+        if (row.some(value => value !== '')) lines.push(row);
         const imports = [];
         for(let i=1; i<lines.length; i++) {
-            const p = lines[i].split(';').map(x => x.replace(/^"|"$/g, '').replace(/""/g, '"'));
+            const p = lines[i];
+            if (tab === 'scanner') {
+                if (p.length >= 2) imports.push({ key: p[0].trim(), value: p.slice(1).join(';') });
+                continue;
+            }
             if (p.length < 3) continue;
             if (tab === 'missions') {
-                imports.push({ id: p[0], serviceTitle: p[1], defaultBudget: p[2], subsidyAmount: p[3], description: p[4], isActive: p[5] === '1', serviceKey: 'import_'+i });
+                imports.push({ id: p[0], serviceKey: p[1], serviceTitle: p[2], defaultBudget: p[3], subsidyAmount: p[4], description: p[5], isActive: p[6] === '1' });
             } else if (tab === 'legal') {
                 imports.push({ id: p[0], title: p[1], weight: parseInt(p[2]), description: p[3], isActive: p[4] === '1' });
             } else if (tab === 'texts') {
@@ -1489,6 +1536,26 @@ function importTabCSV(tab, input) {
             } else if (tab === 'team') {
                 imports.push({ id: p[0], name: p[1], email: p[2], role: p[3], avatarColor: 'bg-emerald-600' });
             }
+        }
+        if (tab === 'scanner') {
+            const allowedPromptKeys = new Set([
+                'aiKeywordInstructions', 'aiAnalysisInstructions', 'aiEvidenceInstructions', 'aiRiskInstructions',
+                'aiCommercialInstructions', 'aiLegalFramework', 'aiCorrectiveActions', 'aiUserPrompt',
+                'aiClaimsDictionary', 'customBannedKeywords'
+            ]);
+            const promptUpdates = Object.fromEntries(imports
+                .filter(item => allowedPromptKeys.has(item.key))
+                .map(item => [item.key, item.value]));
+            if (Object.keys(promptUpdates).length === 0) {
+                alert('Aucun prompt reconnu. Utilisez les colonnes « Clé » et « Consigne » exportées par le Scanner.');
+                input.value = '';
+                return;
+            }
+            appState.scanVars = { ...(appState.scanVars || {}), ...promptUpdates };
+            syncState('scanVars', appState.scanVars).then(saved => {
+                if (saved) window.location.reload();
+            });
+            return;
         }
         if(imports.length > 0) {
             if (tab === 'missions') { appState.serviceOpps = imports; syncState('serviceOpps', appState.serviceOpps); }
