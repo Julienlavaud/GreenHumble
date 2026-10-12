@@ -6,7 +6,7 @@ const GH_AI_GENERATION_VERSION='1';
 function gh_ai_canonical_url(string $url):?string{$p=parse_url(trim($url));if(!is_array($p)||empty($p['host'])||!in_array(strtolower($p['scheme']??''),['http','https'],true)||isset($p['user'])||isset($p['pass']))return null;$s=strtolower($p['scheme']);$h=strtolower(rtrim($p['host'],'.'));$port=isset($p['port'])?(int)$p['port']:null;if(($s==='https'&&$port===443)||($s==='http'&&$port===80))$port=null;$path=preg_replace('~/+~','/',$p['path']??'/');return $s.'://'.$h.($port?':'.$port:'').($path===''?'/':$path);}
 function gh_ai_corpus_metadata(string $canonicalUrl,array $pages):array{usort($pages,static fn($a,$b)=>strcmp((string)($a['url']??''),(string)($b['url']??'')));$clean=[];foreach($pages as $p){$u=gh_ai_canonical_url((string)($p['url']??''));$t=trim(preg_replace('/\\s+/u',' ',strip_tags((string)($p['text']??''))));if($u!==null&&$t!=='')$clean[]=['url'=>$u,'text'=>$t];}return ['canonicalUrl'=>$canonicalUrl,'pages'=>$clean,'pageCount'=>count($clean),'corpusFingerprint'=>hash('sha256',(string)json_encode(['url'=>$canonicalUrl,'pages'=>$clean],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES))];}
 function gh_ai_extract_provider_text(string $provider,array $e):?string{$v=$provider==='gemini'?($e['candidates'][0]['content']['parts'][0]['text']??null):($e['choices'][0]['message']['content']??null);return is_string($v)&&trim($v)!==''?trim($v):null;}
-function gh_ai_extract_json(string $raw):string{$t=trim($raw);$t=preg_replace('/^\xEF\xBB\xBF/','',$t);if(preg_match('/```(?:json)?\s*(.*?)```/is',$t,$m))$t=trim($m[1]);return $t;}
+function gh_ai_extract_json(string $raw):string{$t=trim($raw);$t=preg_replace('/^\xEF\xBB\xBF/','',$t);if(preg_match('/\A```(?:json)?\s*(.*?)```\z/is',$t,$m))$t=trim($m[1]);return $t;}
 function gh_ai_normalize(array $d):array{
     if(!isset($d['score'])&&isset($d['riskScore']))$d['score']=$d['riskScore'];
     if(isset($d['score'])&&is_string($d['score'])&&preg_match('/-?\d+(?:[.,]\d+)?/',$d['score'],$m))$d['score']=(float)str_replace(',','.',$m[0]);
@@ -16,25 +16,26 @@ function gh_ai_normalize(array $d):array{
         $map=['faible'=>'faible','low'=>'faible','bas'=>'faible','modere'=>'modere','moyen'=>'modere','medium'=>'modere','moderate'=>'modere','eleve'=>'eleve','haut'=>'eleve','high'=>'eleve','critique'=>'critique','critical'=>'critique','a_evaluer'=>'a_evaluer','a evaluer'=>'a_evaluer'];
         $d['riskLevel']=$map[$l]??$d['riskLevel'];
     }
-    if(isset($d['riskLevel'])&&!in_array($d['riskLevel'],['faible','modere','modéré','eleve','élevé','critique','a_evaluer'],true))unset($d['riskLevel']);
     if(!isset($d['riskLevel'])&&isset($d['score'])&&is_numeric($d['score'])){$s=(float)$d['score'];$d['riskLevel']=$s>=75?'critique':($s>=50?'eleve':($s>=25?'modere':'faible'));}elseif(!isset($d['riskLevel']))$d['riskLevel']='a_evaluer';
     if((!isset($d['summary'])||!is_string($d['summary'])||trim($d['summary'])==='')){
         $alt=$d['clientSummary']['riskVerdict']??($d['clientSummary']['headline']??($d['synthese']??null));
         $d['summary']=is_string($alt)&&trim($alt)!==''?$alt:'Synthèse non fournie par le fournisseur IA.';
     }
-    if(!isset($d['claims'])||!is_array($d['claims']))$d['claims']=is_array($d['detectedClaims']??null)?$d['detectedClaims']:[];
-    $claims=[];
-    foreach($d['claims'] as $cl){
-        if(is_string($cl))$cl=['term'=>$cl];
-        if(!is_array($cl))continue;
-        if(!isset($cl['term'])||!is_string($cl['term'])||trim($cl['term'])===''){
-            $cl['term']=null;
-            foreach(['claim','title','phrase','allegation','expression'] as $k)if(isset($cl[$k])&&is_string($cl[$k])&&trim($cl[$k])!==''){$cl['term']=$cl[$k];break;}
-            if($cl['term']===null)continue;
+    if(!isset($d['claims']))$d['claims']=is_array($d['detectedClaims']??null)?$d['detectedClaims']:[];
+    if(is_array($d['claims'])){
+        $claims=[];
+        foreach($d['claims'] as $cl){
+            if(is_string($cl))$cl=['term'=>$cl];
+            if(!is_array($cl))continue;
+            if(!isset($cl['term'])||!is_string($cl['term'])||trim($cl['term'])===''){
+                $cl['term']=null;
+                foreach(['claim','title','phrase','allegation','expression'] as $k)if(isset($cl[$k])&&is_string($cl[$k])&&trim($cl[$k])!==''){$cl['term']=$cl[$k];break;}
+                if($cl['term']===null)continue;
+            }
+            $claims[]=$cl;
         }
-        $claims[]=$cl;
+        $d['claims']=$claims;
     }
-    $d['claims']=$claims;
     if(!array_key_exists('prospection',$d))$d['prospection']=$d['commercialProspectingKit']??null;
     if($d['prospection']!==null&&!is_array($d['prospection']))$d['prospection']=null;
     return $d;
