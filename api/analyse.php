@@ -281,29 +281,29 @@ if (!$audit && !empty($allAudits)) {
     $audit = $allAudits[0];
 }
 
-// Fallback audit démo si base vide
+// Si la base est vide, n’inventer aucun audit de démonstration.
 if (!$audit) {
     $audit = [
-        'id' => 1,
-        'company_id' => 1,
-        'url' => 'https://www.exemple-marque-ethique.fr',
-        'score' => 62,
-        'riskLevel' => 'modere',
-        'company_name' => 'Marque Éthique SAS',
+        'id' => 0,
+        'company_id' => 0,
+        'url' => '',
+        'score' => 0,
+        'riskLevel' => 'a_evaluer',
+        'company_name' => 'Aucun audit enregistré',
         'siren' => null,
         'sector' => null,
         'analyzedAt' => date('Y-m-d H:i:s'),
-        'summary' => 'Audit complet de conformité environnementale selon la directive européenne EmpCO (UE 2024/825) et les exigences CSRD/AGEC.',
-        'financial_impact' => 'Risque de sanctions DGCCRF pouvant atteindre 75 000 € en l\'absence de bilan carbone vérifié.',
-        'pillar_1_score' => 45,
-        'pillar_2_score' => 60,
-        'pillar_3_score' => 80,
-        'pillar_4_score' => 50,
-        'pillar_5_score' => 75,
-        'pillar_6_score' => 70,
-        'assigned_to' => 'Sarah Benali',
-        'status' => 'en_analyse',
-        'notes' => 'Audit croisé intégrant le rapport RSE de l\'entreprise.'
+        'summary' => 'Aucun audit n’est encore disponible. Lancez un premier scan pour alimenter cette analyse.',
+        'financial_impact' => '',
+        'pillar_1_score' => 0,
+        'pillar_2_score' => 0,
+        'pillar_3_score' => 0,
+        'pillar_4_score' => 0,
+        'pillar_5_score' => 0,
+        'pillar_6_score' => 0,
+        'assigned_to' => '',
+        'status' => 'vide',
+        'notes' => ''
     ];
 }
 

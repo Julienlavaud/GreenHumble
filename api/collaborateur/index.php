@@ -101,7 +101,7 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (!$audits): ?>
       <div class="rounded-2xl border border-dashed border-white/20 bg-[#1E1E1E] p-10 text-center">
         <h3 class="text-lg font-semibold">Aucun audit enregistré pour le moment</h3>
-        <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400">Lancez un scan de démonstration sur un site autorisé. Une fois l’analyse validée et sauvegardée, elle apparaîtra ici.</p>
+        <p class="mx-auto mt-2 max-w-xl text-sm text-slate-400">Lancez un premier scan sur un site autorisé. Une fois l’analyse validée et sauvegardée, elle apparaîtra ici.</p>
         <a class="mt-5 inline-block rounded-xl bg-emerald-700 px-5 py-3 font-semibold" href="/api/index.php">Lancer le premier scan</a>
       </div>
     <?php else: ?>
