@@ -11,6 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+require_once __DIR__ . '/../includes/api_guard.php';
+gh_api_guard(true);
+
 require_once __DIR__ . '/../includes/dossiers_manager.php';
 require_once __DIR__ . '/../includes/scans_manager.php';
 
@@ -42,7 +45,11 @@ foreach ($scans as &$s) {
         break;
     }
 }
-save_all_scans($scans);
+if (!save_all_scans($scans)) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Enregistrement impossible (droits d’écriture du dossier data).'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 echo json_encode([
     'success' => true,

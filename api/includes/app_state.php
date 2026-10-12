@@ -9,7 +9,7 @@
 function get_app_state_file_path() {
     $dir = dirname(__DIR__, 2) . '/data';
     if (!file_exists($dir)) {
-        @mkdir($dir, 0777, true);
+        @mkdir($dir, 0750, true);
     }
     return $dir . '/app_state.json';
 }
@@ -28,15 +28,10 @@ function get_default_app_state() {
             "agencyCity" => "Auvergne-Rhône-Alpes / France",
             "agencyWebsite" => "https://climatlocal.com",
             "slogan" => "Bilan Carbone®, Stratégie RSE, ACV, FDES & Projets Territoriaux",
-            "apiKeyWidget" => "cl_live_pub_84729103"
         ],
         "updatedAt" => date('c'),
-        "passwordsMap" => [
-            "collab_1" => "Climatlocal31000",
-            "collab_2" => "collab2026",
-            "collab_3" => "collab2026",
-            "collab_4" => "collab2026"
-        ],
+        // Password hashes are provisioned explicitly; never ship default credentials.
+        "passwordsMap" => [],
         "pageTexts" => [
             "hero_title" => "Scanner de conformité aux allégations environnementales et détection de greenwashing",
             "widget_subtitle" => "Vérifiez en 30 secondes la conformité de vos supports de communication avec la Directive Green Claims (UE) 2024/825 et le Décret n° 2022-539.",
@@ -118,7 +113,15 @@ function get_default_app_state() {
             "criticalThreshold" => 40,
             "bpifranceSubsidy" => 4000,
             "customBannedKeywords" => "neutre en carbone, éco-responsable, vert, bio, naturel, durable",
-            "aiKeywordInstructions" => "Analyser la conformité aux directives EmpCO et Green Claims."
+            "aiKeywordInstructions" => "Tu es l’IA GreenHumble, experte en conformité RSE, allégations environnementales et analyse de sites. Réponds en français, avec précision et sans tirer de conclusion au-delà des preuves.",
+            "aiAnalysisInstructions" => "Analyse les pages accessibles du site et relève chaque allégation environnementale distincte dans son contexte. Signale aussi les limites de couverture du scan.",
+            "aiEvidenceInstructions" => "Pour chaque signal, donne une citation exacte, l’URL de la page source, les éléments justificatifs manquants et les incertitudes à lever. N’invente jamais de citation ni de preuve.",
+            "aiRiskInstructions" => "Distingue un signal à vérifier, une preuve insuffisante, un risque plausible et une non-conformité documentée. Explique le niveau de risque sans présenter une suspicion comme une infraction établie.",
+            "aiCommercialInstructions" => "Propose une prochaine action et une priorité adaptées aux constats vérifiables. Ne recommande qu’une offre active du catalogue et relie chaque argument à une preuve effectivement relevée.",
+            "aiClaimsDictionary" => "ALLÉGATIONS À REPÉRER (signaux, jamais preuves d’infraction) : neutre en carbone ; zéro émission ; 100% écologique ; 100% vert ; éco-responsable ; respectueux de l’environnement ; produit durable ; impact positif ; compensation carbone totale ; empreinte carbone nulle ; biodégradable sans preuve ; recyclable sans preuve ; bon pour la planète ; solution verte ; transition verte ; matériaux naturels sans preuve.\nDÉCLENCHEURS : vocabulaire flou (responsable, vert, durable, écologique) ; superlatifs (le plus vert, totalement neutre, zéro impact) ; absolus (sans impact, zéro déchet, 100% propre) ; comparatifs non sourcés (plus durable que, moins polluant que) ; preuves ou méthodologies non visibles (ACV, FDES, EPD) ; compensation carbone mise en avant comme argument marketing. Examiner le contexte, le périmètre, les réserves et les preuves avant de qualifier.",
+            "aiLegalFramework" => "Référentiels à examiner selon les faits, le secteur, le territoire, la date d’application et le champ de l’entreprise : Directive (UE) 2024/825 dite EmpCo ; Code de la consommation, notamment L.121-2 à L.121-4 ; loi Climat et Résilience et dispositions d’application sur la neutralité carbone publicitaire ; obligations BEGES ; CSRD et ESRS E1 uniquement pour les entités et périodes concernées. Citer l’article ou le texte précisément lorsqu’il est vérifié. Ne jamais transformer l’absence de preuve trouvée en ligne en preuve automatique d’infraction CSRD/ESRS. Ne pas inventer de référence ni conclure sans vérifier l’applicabilité.",
+            "aiUserPrompt" => "Analysez le site et identifiez : 1) chaque allégation environnementale et son contexte ; 2) les preuves associées ou manquantes ; 3) les signaux et risques de greenwashing ; 4) les fondements juridiques potentiellement applicables, avec leurs limites ; 5) les actions correctives ; 6) les opportunités RSE, climat et CSRD pertinentes.",
+            "aiCorrectiveActions" => "Pour chaque risque étayé, proposer une reformulation prudente et vérifiable, les preuves à réunir (ACV, FDES, EPD, BEGES ou audit externe selon le cas), la suppression du claim s’il ne peut être justifié, une recommandation RSE/climat et une étape de mise en conformité. Vérifier exactitude, preuve accessible, méthode transparente, périmètre explicite (produit/service/entreprise), comparatifs sourcés et fraîcheur des données. Traiter la compensation carbone comme un point de vigilance, sans conclure automatiquement à une infraction. Les exemples « neutre en carbone », « 100% écologique », « éco-responsable », « zéro émission » et « durable » imposent une vérification contextualisée, pas un verdict automatique.",
         ],
         "collaborators" => [
             [ "id" => "collab_1", "name" => "Julien Lavaud", "email" => "julien@climatlocal.com", "role" => "Admin", "avatarColor" => "bg-emerald-700", "assignedProspectsCount" => 0 ],
@@ -156,7 +159,10 @@ function save_app_state($data) {
     if (!file_exists($dir)) {
         @mkdir($dir, 0777, true);
     }
-    $res = file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    $res = file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+    if ($res !== false) {
+        @chmod($file, 0640);
+    }
     
     // Purger OPcache après chaque mise à jour
     if (function_exists('opcache_reset')) {

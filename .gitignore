@@ -6,3 +6,30 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# GreenHumble runtime data: never version live settings, credentials, users, leads or audit history.
+data/admin_config.json
+data/app_state.json
+data/cl_users.json
+data/ia_settings.json
+data/leads.json
+data/listes.json
+data/projets.json
+data/scanner_groups.json
+data/scanners.json
+data/scans.json
+data/stored_audits.json
+data/texts.json
+data/user_style.json
+data/backups/
+data/packages/
+api/data/*.json
+api/config/.env
+api/config/.env.*
+!api/config/.env.example
+
+# Runtime data
+data/dossiers.json
+data/*.lock
+api/assets/css/tailwind-compiled.css
+greenhumble-v1.1-full-ovh.zip

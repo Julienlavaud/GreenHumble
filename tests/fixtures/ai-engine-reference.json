@@ -1,0 +1,84 @@
+{
+  "sourceText": "[SOURCE_URL: https://example.org/]\nNous sommes neutres en carbone grâce à la compensation de nos émissions.\n[SOURCE_URL: https://example.org/engagements]\nNos emballages sont 100 % recyclés, certifiés selon notre méthode interne.",
+  "cases": [
+    {
+      "name": "allégations justifiées par citations exactes",
+      "kind": "substantiated",
+      "score": 42,
+      "claims": [
+        {
+          "term": "neutres en carbone",
+          "quoteInText": "Nous sommes neutres en carbone grâce à la compensation de nos émissions.",
+          "evidenceStatus": "signal"
+        },
+        {
+          "term": "emballages recyclés",
+          "quoteInText": "Nos emballages sont 100 % recyclés, certifiés selon notre méthode interne.",
+          "evidenceStatus": "to_review"
+        },
+        {
+          "term": "emballages recyclés",
+          "quoteInText": "Nos emballages sont 100 % recyclés, certifiés selon notre méthode interne.",
+          "evidenceStatus": "to_review"
+        }
+      ],
+      "expectedClaims": 2,
+      "expectedTerms": [
+        "neutres en carbone",
+        "emballages recyclés"
+      ],
+      "expectedMisses": 0,
+      "expectedFalsePositives": 0,
+      "expectedRiskLevel": "modere"
+    },
+    {
+      "name": "allégation ambiguë à citation absente",
+      "kind": "ambiguous",
+      "score": 70,
+      "claims": [
+        {
+          "term": "biodégradable",
+          "quoteInText": "Notre produit se dégrade totalement en 24 heures."
+        }
+      ],
+      "expectedClaims": 1,
+      "expectedEvidenceStatus": "evidence_missing",
+      "expectedTerms": [
+        "biodégradable"
+      ],
+      "expectedMisses": 0,
+      "expectedFalsePositives": 0,
+      "expectedRiskLevel": "faible"
+    },
+    {
+      "name": "citation trompeuse/non retrouvée",
+      "kind": "misleading",
+      "score": 55,
+      "claims": [
+        {
+          "term": "sans plastique",
+          "quoteInText": "100 % sans plastique et neutre en carbone"
+        }
+      ],
+      "expectedClaims": 1,
+      "expectedEvidenceStatus": "evidence_missing",
+      "expectedTerms": [],
+      "expectedMisses": 0,
+      "expectedFalsePositives": 1,
+      "expectedRiskLevel": "modere"
+    },
+    {
+      "name": "allégation omise par le fournisseur",
+      "kind": "missed",
+      "score": 65,
+      "claims": [],
+      "expectedClaims": 0,
+      "expectedTerms": [
+        "compensation carbone"
+      ],
+      "expectedMisses": 1,
+      "expectedFalsePositives": 0,
+      "expectedRiskLevel": "a_evaluer"
+    }
+  ]
+}

@@ -1,73 +1,9 @@
 <?php
-// /api/includes/footer.php
 $isAdminUser = !empty($_SESSION['admin_logged_in']) || (isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
-$currentPageKey = basename($_SERVER['PHP_SELF'], '.php');
 ?>
-    </div>
-    
-    <!-- Footer Global GreenHumble -->
-    <footer class="bg-slate-900 text-slate-400 border-t border-slate-800 py-10 mt-16 no-print">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <?php if ($isLoggedIn): ?>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-                <div>
-                    <div class="flex items-center space-x-2 mb-3">
-                        <div class="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-black text-sm">G</div>
-                        <span class="text-lg font-bold text-white">Green<span class="text-emerald-400">Humble</span></span>
-                    </div>
-                    <p class="text-xs text-slate-400 leading-relaxed">Une marque Climat Local (climatlocal.com). Audit automatisé des allégations environnementales en conformité avec la directive EmpCO (UE 2024/825) et Green Claims.</p>
-                </div>
-                <div>
-                    <h4 class="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-3">Outils RSE & Métier</h4>
-                    <ul class="space-y-2 text-xs">
-                        <li><a href="/api/scan.php" class="hover:text-emerald-400 transition-colors">Scanner Pro Site & Rapport RSE</a></li>
-                        <li><a href="/api/analyse.php" class="hover:text-emerald-400 transition-colors">Dossier d'Analyse & Diagnostic</a></li>
-                        <li><a href="/api/pipeline.php" class="hover:text-emerald-400 transition-colors">Pipeline Commercial</a></li>
-                        <li><a href="/api/dashboard.php" class="hover:text-emerald-400 transition-colors">Tableau de Bord & KPIs</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-3">Console d'Administration</h4>
-                    <ul class="space-y-2 text-xs">
-                        <li><a href="/api/admin/index.php" class="hover:text-emerald-400 transition-colors">Configuration Multi-IA & Modèles</a></li>
-                        <li><a href="/api/admin/users.php" class="hover:text-emerald-400 transition-colors">Collaborateurs & Régénération MDP</a></li>
-                        <li><a href="/api/admin/teams.php" class="hover:text-emerald-400 transition-colors">Pôles & Équipes Régionales</a></li>
-                        <li><a href="/api/admin/companies.php" class="hover:text-emerald-400 transition-colors">Répertoire Clients & SIREN</a></li>
-                        <li><a href="/api/admin/widget.php" class="hover:text-emerald-400 transition-colors">Administration des Widgets</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-3">Conformité Légale</h4>
-                    <p class="text-xs text-slate-400 mb-2">45+ Textes Référencés : EmpCO, Green Claims, CSRD (ESRS), Décret BEGES, RE2020 & Barème DGCCRF.</p>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-950 text-emerald-300 border border-emerald-800">
-                        Directive UE 2024/825 Ready
-                    </span>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <div class="pt-6 border-t border-slate-800 text-center text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
-                <div class="flex flex-wrap items-center justify-center gap-2">
-                    <span>&copy; <?php echo date('Y'); ?> GreenHumble • Une marque Climat Local (<a href="https://climatlocal.com" target="_blank" class="text-emerald-400 hover:underline font-bold">www.climatlocal.com</a>).</span>
-                    <span class="inline-flex items-center text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-800">
-                        🌱 Éco-conçu : 1,5g CO2e / consultation (Note A+)
-                    </span>
-                </div>
-                <?php if ($isLoggedIn): ?>
-                <div class="flex flex-wrap items-center gap-4 text-xs">
-                    <a href="https://www.legifrance.gouv.fr" target="_blank" rel="noopener" class="hover:text-emerald-400 font-semibold transition-colors flex items-center gap-1"><span>🇫🇷</span> Legifrance</a>
-                    <a href="https://eur-lex.europa.eu" target="_blank" rel="noopener" class="hover:text-emerald-400 font-semibold transition-colors flex items-center gap-1"><span>🇪🇺</span> EUR-Lex</a>
-                    <a href="https://cnil.fr" target="_blank" rel="noopener" class="hover:text-emerald-400 font-semibold transition-colors flex items-center gap-1"><span>🔒</span> CNIL (RGPD)</a>
-                    <span class="text-slate-700">|</span>
-                    <a href="/api/admin/texts.php" class="hover:text-slate-300">Dictionnaire des textes</a>
-                    <a href="/api/admin/console.php" class="hover:text-slate-300">Diagnostics Système</a>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </footer>
-
-    <?php if ($isAdminUser): ?>
+</div><!-- .gh-content -->
+<footer class="gh-footer"><span>© <?= date('Y') ?> GreenHumble · Une marque Climat Local</span><span>Les signaux automatisés demandent une vérification humaine.</span></footer>
+<?php if ($isAdminUser): ?>
     <!-- BARRE FLOTTANTE D'ÉDITION DE TEXTE EN DIRECT (MODE ADMIN LIVE CMS) -->
     <div id="cl_cms_toolbar" class="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-700/80 transition-all">
         <div class="flex items-center space-x-2">
@@ -230,6 +166,8 @@ $currentPageKey = basename($_SERVER['PHP_SELF'], '.php');
     </script>
     <?php endif; ?>
     <!-- GreenHumble Viewer & Cockpit JS (Auto-versioned) -->
-    <script src="/admin/assets/js/app.js?v=<?php echo floor(time()/60)*60; ?>"></script>
+    <?php if ($isAdmin && basename((string)($_SERVER['PHP_SELF'] ?? '')) === 'index.php' && (($_GET['tab'] ?? '') === 'style')): ?><script src="/api/assets/js/app.js?v=<?php echo floor(time()/60)*60; ?>"></script><?php endif; ?>
+</div><!-- .gh-main-column -->
+</div><!-- .gh-shell -->
 </body>
 </html>

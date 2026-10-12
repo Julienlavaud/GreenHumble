@@ -3,7 +3,7 @@
 // Traitement de l'Audit Pro : Site Web + Analyse Document / Rapport RSE
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/includes/db.php';
-require_once __DIR__ . '/includes/gemini.php';
+require_once __DIR__ . '/includes/ai_engine.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || (empty($_POST['url']) && empty($_POST['csr_text']) && empty($_FILES['csr_file']['name']))) {
     header('Location: /api/scan.php');
@@ -227,6 +227,10 @@ try {
     }
 } catch (Exception $e) {}
 
-// Redirection directe vers le dossier d'analyse complet
-header("Location: /api/analyse.php?id=" . ($auditId ?: 1) . "&tab=diag");
+// Ne jamais ouvrir un audit arbitraire si l'enregistrement a échoué.
+if (!$auditId) {
+    header('Location: /api/scan.php?error=audit_not_saved', true, 303);
+    exit;
+}
+header('Location: /api/analyse.php?id=' . rawurlencode((string)$auditId) . '&tab=diag', true, 303);
 exit;

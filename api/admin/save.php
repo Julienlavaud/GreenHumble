@@ -3,11 +3,18 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/db.php';
 
-if (!isset($_SESSION['admin_logged_in']) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin')) {
+if (($_SESSION['admin_logged_in'] ?? false) !== true || ($_SESSION['role'] ?? '') !== 'admin') {
     die("Non autorisé.");
 }
 
 $envPath = __DIR__ . '/../config/.env';
+function gh_admin_save_redirect(string $fallbackTab = 'scanner'): void {
+    $allowed = ['audits', 'scans', 'listes', 'agency', 'scanner', 'missions', 'legal', 'texts', 'style'];
+    $tab = trim((string)($_POST['return_tab'] ?? $fallbackTab));
+    if (!in_array($tab, $allowed, true)) $tab = $fallbackTab;
+    header('Location: /api/admin/index.php?tab=' . rawurlencode($tab) . '&saved=1', true, 303);
+    exit;
+}
 
 // 1. Sauvegarde formulaire graphique Configuration IA & Moteur
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_ai_config'])) {
@@ -56,17 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_ai_config'])) {
         $stmt->execute([$aiCustomExceptions]);
     } catch (Exception $e) {}
 
-    header('Location: /api/admin/index.php?saved=1');
-    exit;
+    gh_admin_save_redirect();
 }
 
 // 2. Sauvegarde brute .env
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['env_content'])) {
     $content = trim($_POST['env_content']);
     file_put_contents($envPath, $content);
-    header('Location: /api/admin/index.php?saved=1');
-    exit;
+    gh_admin_save_redirect();
 }
 
-header('Location: /api/admin/index.php');
-exit;
+gh_admin_save_redirect('scans');

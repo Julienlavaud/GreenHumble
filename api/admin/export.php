@@ -3,9 +3,125 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
-require_login();
+require_once __DIR__ . '/../includes/listes_manager.php';
+require_once __DIR__ . '/../includes/scans_manager.php';
+require_login('admin');
 
 $db = get_db_connection();
+$exportLists = load_all_listes();
+
+function gh_export_domain(string $value): string {
+    $host = strtolower((string)(parse_url($value, PHP_URL_HOST) ?: $value));
+    $host = preg_replace('/^www\\./i', '', $host);
+    return trim($host);
+}
+function gh_export_csv_cell($value): string {
+    if (is_array($value) || is_object($value)) $value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $cell = is_scalar($value) ? (string)$value : '';
+    if (preg_match('/^[\\x00-\\x20]*[=+@-]/u', $cell)) $cell = "'" . $cell;
+    return $cell;
+}
+
+if (isset($_GET['download']) && $_GET['download'] === 'prospects') {
+    $selectedListId = trim((string)($_GET['list_id'] ?? ''));
+    $listNames = [];
+    $listItems = [];
+    foreach ($exportLists as $list) {
+        if (!is_array($list) || empty($list['id'])) continue;
+        $listNames[(string)$list['id']] = (string)($list['nom'] ?? 'Liste');
+        $listItems[(string)$list['id']] = is_array($list['items'] ?? null) ? $list['items'] : [];
+    }
+    if ($selectedListId !== '' && !isset($listNames[$selectedListId])) {
+        http_response_code(400);
+        exit('Liste invalide.');
+    }
+
+    $listIdsByScan = [];
+    foreach ($listItems as $listId => $scanIds) {
+        foreach ($scanIds as $scanId) $listIdsByScan[(string)$scanId][] = $listId;
+    }
+    $listIdsByDomain = [];
+    foreach (load_all_scans() as $scan) {
+        if (!is_array($scan)) continue;
+        $domain = gh_export_domain((string)($scan['url'] ?? ''));
+        if ($domain === '') continue;
+        $ids = array_merge(
+            is_array($scan['liste_pre_audit'] ?? null) ? $scan['liste_pre_audit'] : [],
+            $listIdsByScan[(string)($scan['id'] ?? '')] ?? []
+        );
+        foreach (array_unique(array_map('strval', $ids)) as $listId) {
+            if (isset($listNames[$listId])) $listIdsByDomain[$domain][$listId] = $listNames[$listId];
+        }
+    }
+
+    $rows = $db->query(
+        "SELECT c.id AS company_id, c.name AS company_name, c.domain, c.clean_url, c.website, c.sector, c.siren,
+                cc.name AS contact_name, cc.email AS contact_email, cc.phone AS contact_phone, cc.audit_ref,
+                a.id AS audit_id, a.url AS audit_url, a.score, a.riskLevel, a.summary, a.status, a.analyzedAt, a.raw_response
+         FROM cl_companies c
+         INNER JOIN cl_company_contacts cc ON cc.company_id = c.id AND cc.marketing_opt_in = 1
+         LEFT JOIN cl_audits a ON a.company_id = c.id
+         ORDER BY c.name ASC, a.analyzedAt DESC, cc.id ASC"
+    )->fetchAll();
+
+    $csvRows = [];
+    foreach ($rows as $row) {
+        $domain = gh_export_domain((string)($row['domain'] ?: ($row['clean_url'] ?: $row['website'])));
+        $memberships = $listIdsByDomain[$domain] ?? [];
+        if ($selectedListId !== '' && !isset($memberships[$selectedListId])) continue;
+        $listLabel = $memberships ? implode(' | ', array_values($memberships)) : 'Sans liste';
+
+        $raw = json_decode((string)($row['raw_response'] ?? ''), true);
+        $kit = is_array($raw) ? ($raw['commercialProspectingKit'] ?? $raw['prospection'] ?? null) : null;
+        $offer = is_array($kit) ? ($kit['recommendedOffer'] ?? null) : null;
+        $offerTitle = is_array($offer) ? ($offer['serviceTitle'] ?? '') : (is_string($offer) ? $offer : '');
+        $priority = is_array($kit) ? (string)($kit['priority'] ?? '') : '';
+        if ($priority === '') $priority = in_array((string)($row['riskLevel'] ?? ''), ['critique', 'eleve'], true) ? 'haute' : (((string)($row['riskLevel'] ?? '') === 'modere') ? 'moyenne' : 'basse');
+        $claims = is_array($raw) && is_array($raw['detectedClaims'] ?? null)
+            ? implode(' | ', array_filter(array_map(static function ($claim) { return is_array($claim) ? (string)($claim['term'] ?? '') : ''; }, $raw['detectedClaims'])))
+            : '';
+        $auditUrl = (string)($row['audit_url'] ?: $row['website']);
+        $csvRows[] = [
+            'list' => $listLabel,
+            'priority' => $priority,
+            'company' => (string)($row['company_name'] ?? ''),
+            'domain' => $domain,
+            'website' => $auditUrl,
+            'siren' => (string)($row['siren'] ?? ''),
+            'sector' => (string)($row['sector'] ?? ''),
+            'contact' => (string)($row['contact_name'] ?? ''),
+            'email' => (string)($row['contact_email'] ?? ''),
+            'phone' => (string)($row['contact_phone'] ?? ''),
+            'audit_id' => (string)($row['audit_id'] ?? $row['audit_ref'] ?? ''),
+            'score' => (string)($row['score'] ?? ''),
+            'risk' => (string)($row['riskLevel'] ?? ''),
+            'date' => (string)($row['analyzedAt'] ?? ''),
+            'status' => (string)($row['status'] ?? ''),
+            'claims' => $claims,
+            'offer' => (string)$offerTitle,
+            'next_action' => is_array($kit) ? (string)($kit['nextAction'] ?? '') : '',
+            'summary' => (string)($row['summary'] ?? '')
+        ];
+    }
+    $rank = ['haute' => 0, 'high' => 0, 'moyenne' => 1, 'medium' => 1, 'basse' => 2, 'low' => 2];
+    usort($csvRows, static function ($a, $b) use ($rank) {
+        $listCompare = strcmp($a['list'], $b['list']);
+        if ($listCompare !== 0) return $listCompare;
+        $priorityCompare = ($rank[strtolower($a['priority'])] ?? 3) <=> ($rank[strtolower($b['priority'])] ?? 3);
+        if ($priorityCompare !== 0) return $priorityCompare;
+        return ((int)$a['score']) <=> ((int)$b['score']);
+    });
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Cache-Control: no-store');
+    header('Content-Disposition: attachment; filename="greenhumble_prospects_' . date('Y-m-d') . '.csv"');
+    $output = fopen('php://output', 'w');
+    fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
+    fputcsv($output, ['Liste', 'Priorité', 'Entreprise', 'Domaine', 'Site web', 'SIREN', 'Secteur', 'Contact', 'E-mail', 'Téléphone', 'Audit', 'Score', 'Risque', 'Date analyse', 'Statut', 'Allégations à examiner', 'Offre recommandée', 'Prochaine action', 'Synthèse'], ';');
+    foreach ($csvRows as $row) fputcsv($output, array_map('gh_export_csv_cell', array_values($row)), ';');
+    fclose($output);
+    exit;
+}
 
 if (isset($_GET['download']) && $_GET['download'] === 'audits') {
     header('Content-Type: text/csv; charset=utf-8');
@@ -18,7 +134,7 @@ if (isset($_GET['download']) && $_GET['download'] === 'audits') {
     $audits = $db->query("SELECT a.id, c.name as company_name, a.url, a.score, a.riskLevel, a.analyzedAt, a.status, a.notes FROM cl_audits a LEFT JOIN cl_companies c ON a.company_id = c.id ORDER BY a.id DESC")->fetchAll();
     
     foreach ($audits as $row) {
-        fputcsv($output, [$row['id'], $row['company_name'] ?: 'N/A', $row['url'], $row['score'], $row['riskLevel'], $row['analyzedAt'], $row['status'], $row['notes']]);
+        fputcsv($output, array_map('gh_export_csv_cell', [$row['id'], $row['company_name'] ?: 'N/A', $row['url'], $row['score'], $row['riskLevel'], $row['analyzedAt'], $row['status'], $row['notes']]));
     }
     fclose($output);
     exit;
@@ -32,7 +148,7 @@ if (isset($_GET['download']) && $_GET['download'] === 'texts') {
     fputcsv($output, ['Key', 'Title', 'Content']);
     $texts = $db->query("SELECT text_key, title, content FROM cl_texts ORDER BY text_key ASC")->fetchAll();
     foreach ($texts as $row) {
-        fputcsv($output, [$row['text_key'], $row['title'], $row['content']]);
+        fputcsv($output, array_map('gh_export_csv_cell', [$row['text_key'], $row['title'], $row['content']]));
     }
     fclose($output);
     exit;
@@ -47,13 +163,14 @@ if (isset($_GET['download']) && $_GET['download'] === 'team') {
     fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
     fputcsv($output, ['ID', 'Name', 'Email', 'Role']);
     foreach (($st['collaborators'] ?? []) as $c) {
-        fputcsv($output, [$c['id'] ?? '', $c['name'] ?? '', $c['email'] ?? '', $c['role'] ?? '']);
+        fputcsv($output, array_map('gh_export_csv_cell', [$c['id'] ?? '', $c['name'] ?? '', $c['email'] ?? '', $c['role'] ?? '']));
     }
     fclose($output);
     exit;
 }
 
 $page_title = "Exportation des Données & Rapports";
+$activeTab = "exports";
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -116,6 +233,25 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
     </div>
+
+    <section class="mt-8 bg-white rounded-3xl p-8 border border-emerald-200 shadow-sm space-y-5">
+        <div>
+            <h2 class="text-xl font-black text-slate-900">Exporter les prospects par liste</h2>
+            <p class="text-sm text-slate-600 mt-2">Le fichier contient les coordonnées uniquement lorsque la personne a accepté les communications commerciales. Les résultats d’audit sont regroupés par liste et classés par priorité.</p>
+        </div>
+        <form method="GET" action="/api/admin/export.php" class="flex flex-col sm:flex-row gap-3">
+            <input type="hidden" name="download" value="prospects">
+            <label class="sr-only" for="prospect-export-list">Filtrer par liste</label>
+            <select id="prospect-export-list" name="list_id" class="min-w-64 flex-1 px-4 py-3 border border-slate-200 rounded-xl text-sm">
+                <option value="">Toutes les listes</option>
+                <?php foreach ($exportLists as $exportList): ?>
+                    <?php if (!is_array($exportList) || empty($exportList['id'])) continue; ?>
+                    <option value="<?php echo htmlspecialchars((string)$exportList['id'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string)($exportList['nom'] ?? 'Liste'), ENT_QUOTES, 'UTF-8'); ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="submit" class="px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-sm">Télécharger le CSV des prospects</button>
+        </form>
+    </section>
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

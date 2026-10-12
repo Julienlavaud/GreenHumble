@@ -1,0 +1,90 @@
+/* GreenHumble — sobre, lisible, responsive. Compatible PHP/OVH sans build. */
+:root {
+  --gh-ink: #17231e;
+  --gh-muted: #68766f;
+  --gh-green: #16764b;
+  --gh-green-dark: #105c3a;
+  --gh-mint: #eaf5ee;
+  --gh-border: #dce6df;
+  --gh-surface: #ffffff;
+  --gh-canvas: #f5f8f5;
+  --gh-radius: 18px;
+  --gh-shadow: 0 12px 32px rgba(22, 52, 35, .07);
+}
+html { background: var(--gh-canvas); scroll-behavior: smooth; }
+body {
+  font-family: "Inter", "Plus Jakarta Sans", system-ui, sans-serif;
+  letter-spacing: 0;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { text-underline-offset: 3px; }
+button, .btn, input, select, textarea { font: inherit; }
+button, .btn {
+  margin: 0;
+  border-radius: 12px;
+  min-height: 42px;
+  font-weight: 650;
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+button:hover, .btn:hover { transform: translateY(-1px); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgba(22, 118, 75, .32);
+  outline-offset: 2px;
+}
+input[type="text"], input[type="email"], input[type="password"], input[type="url"],
+input[type="number"], input[type="tel"], input[type="search"], select, textarea {
+  max-width: 100%;
+  border-radius: 11px;
+  min-height: 42px;
+}
+textarea { min-height: 110px; }
+.card, .gh-card {
+  border-radius: var(--gh-radius);
+  box-shadow: var(--gh-shadow);
+  transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease;
+}
+.card:hover, .gh-card:hover {
+  box-shadow: 0 16px 38px rgba(22, 52, 35, .10);
+  transform: translateY(-1px);
+}
+/* Public-facing pages: cleaner canvas and navigation; admin's intentionally dark cockpit remains intact. */
+body:has(a[href="/api/index.php"]) > header {
+  background: rgba(255,255,255,.94) !important;
+  color: var(--gh-ink) !important;
+  border-bottom: 1px solid var(--gh-border) !important;
+  box-shadow: 0 3px 16px rgba(23,35,30,.04);
+  backdrop-filter: blur(14px);
+}
+body:has(a[href="/api/index.php"]) > header a { color: var(--gh-ink); }
+body:has(a[href="/api/index.php"]) > header a:hover { color: var(--gh-green); }
+body:has(#public_scan_form) { background: var(--gh-canvas); color: var(--gh-ink); }
+body:has(#public_scan_form) > div:first-of-type {
+  background: linear-gradient(135deg, #123d2b 0%, #176443 52%, #0d3024 100%) !important;
+}
+body:has(#public_scan_form) #public_scan_form {
+  background: #fff;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.32);
+  box-shadow: 0 24px 60px rgba(4, 31, 19, .24);
+}
+body:has(#public_scan_form) #public_scan_form input {
+  min-height: 52px;
+  font-size: 15px;
+}
+body:has(#public_scan_form) #public_scan_btn {
+  min-height: 52px;
+  border-radius: 14px;
+  white-space: nowrap;
+}
+body:has(#public_scan_form) #public_result_panel {
+  box-shadow: 0 24px 70px rgba(0,0,0,.18);
+}
+@media (max-width: 640px) {
+  button, .btn { max-width: 100%; }
+  body:has(#public_scan_form) #public_scan_form { padding: 8px; }
+  body:has(#public_scan_form) #public_scan_btn { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

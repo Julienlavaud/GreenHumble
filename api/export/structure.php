@@ -6,6 +6,9 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
+require_once __DIR__ . '/../includes/api_guard.php';
+gh_api_guard(false);
+
 echo json_encode([
     'success' => true,
     'exported_at' => date('c'),

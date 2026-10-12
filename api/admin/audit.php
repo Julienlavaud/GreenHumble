@@ -6,8 +6,8 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/ai_engine.php';
 
-if (!isset($_SESSION['admin_logged_in']) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin')) {
-    header('Location: /api/admin/index.php');
+if (($_SESSION['admin_logged_in'] ?? false) !== true || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: /api/login.php?next=' . rawurlencode('/api/scan.php'), true, 303);
     exit;
 }
 
@@ -131,7 +131,7 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<script src="/admin/assets/js/audit.js?v=<?php echo floor(time()/60)*60; ?>"></script>
+<script src="/api/assets/js/admin-audit.js?v=<?php echo floor(time()/60)*60; ?>"></script>
 <script>
 // Chargement automatique des audits archivés
 async function loadStoredAudits() {

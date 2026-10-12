@@ -2,11 +2,11 @@
 // /api/admin/test_ai_ajax.php
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/gemini.php';
+require_once __DIR__ . '/../includes/ai_engine.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-if (!isset($_SESSION['admin_logged_in']) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin')) {
+if (($_SESSION['admin_logged_in'] ?? false) !== true || ($_SESSION['role'] ?? '') !== 'admin') {
     echo json_encode(['success' => false, 'error' => 'Non autorisé.']);
     exit;
 }

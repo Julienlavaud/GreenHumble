@@ -1,6 +1,14 @@
 <?php
 // /api/config/config.php
+require_once __DIR__ . '/../includes/error_handler.php';
 if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    ini_set('session.cookie_secure', $isHttps ? '1' : '0');
     session_start();
 }
 
@@ -56,18 +64,19 @@ require_once __DIR__ . '/../includes/app_state.php';
 $appState = load_app_state();
 
 // Fallback constantes par défaut ou depuis app_state.json
-if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
-if (!defined('DB_NAME')) define('DB_NAME', 'climatlocal');
-if (!defined('DB_USER')) define('DB_USER', 'root');
+// Fail closed: never fall back to a local/root database account on production hosting.
+if (!defined('DB_HOST')) define('DB_HOST', '');
+if (!defined('DB_NAME')) define('DB_NAME', '');
+if (!defined('DB_USER')) define('DB_USER', '');
 if (!defined('DB_PASS')) define('DB_PASS', '');
 
 // Réglages IA (Priorité State > Constantes > Defaults)
 $stAI = $appState['scanVars'] ?? [];
 if (!defined('AI_PROVIDER')) define('AI_PROVIDER', $stAI['aiProvider'] ?? 'gemini');
-if (!defined('AI_MODEL')) define('AI_MODEL', $stAI['aiModel'] ?? 'gemini-3.8-flash');
+if (!defined('AI_MODEL')) define('AI_MODEL', $stAI['aiModel'] ?? 'gemini-flash-latest');
 if (!defined('AI_API_KEY')) define('AI_API_KEY', $stAI['aiApiKey'] ?? '');
 if (!defined('GEMINI_API_KEY')) define('GEMINI_API_KEY', defined('AI_API_KEY') ? AI_API_KEY : '');
 if (!defined('ADMIN_PASSWORD_HASH')) {
-    // Par défaut 'password'
-    define('ADMIN_PASSWORD_HASH', '$2y$10$Nqm3ErRyHkVEySDv7muzJ.nn02KKdC7Rg9j8o/KgeITPzeku8Q4eu');
+    // Fail closed: no default admin password hash is shipped in source control.
+    define('ADMIN_PASSWORD_HASH', '');
 }

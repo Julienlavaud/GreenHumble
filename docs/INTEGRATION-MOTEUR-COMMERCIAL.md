@@ -1,0 +1,120 @@
+# Intégration du moteur commercial — contrat v0.1
+
+## État
+
+Le moteur de qualification (`api/includes/commercial_engine.php`), le préparateur de dossier (`api/includes/commercial_dossier.php`) et l'adaptateur défensif (`api/includes/commercial_adapter.php`) sont des fonctions PHP isolées. Ils ne sont pas encore branchés aux routes d'audit, à la base de données, ni à l'interface.
+
+L'adaptateur bloque la préparation si l'audit n'est pas explicitement complet et si les signaux n'ont pas été revus. Il n'effectue aucun scraping, accès réseau, envoi de message ou enregistrement. Le booléen de revue doit être défini par un processus de validation réel côté application ; il ne doit jamais être considéré comme une autorisation implicite venant de l'IA.
+
+## Compatibilité observée avec `api/audit.php`
+
+La revue du code existant a identifié deux blocages à résoudre avant tout branchement :
+
+1. Le chemin de succès de `validateIAResponse()` normalise `riskScore`, mais ne garantit pas d'ajouter `analysisComplete: true`. L'adaptateur strict peut donc rejeter une réponse que la route considère comme complète. Ne pas affaiblir l'adaptateur : normaliser explicitement l'état de complétude après validation stricte et ajouter des tests.
+2. Quand la réponse IA ne fournit pas de kit commercial, `validateIAResponse()` construit actuellement un kit par défaut avec une offre et un prix estimatif. Ce contenu n'est pas une donnée validée du catalogue GreenHumble. Il faut supprimer ce fallback commercial fabriqué ou le remplacer par `null`, et ne présenter que des offres/prix provenant d'un catalogue approuvé.
+
+Autre limite : la route produit des données de secteur, de salariés et de chiffre d'affaires avec des valeurs de repli heuristiques. Elles ne doivent pas être considérées comme des données vérifiées pour la qualification commerciale.
+
+## Parcours cible
+
+1. Recevoir une URL et appliquer les protections SSRF existantes avant toute récupération.
+2. Analyser uniquement le contenu effectivement récupéré. En cas d'échec de récupération ou d'analyse IA incomplète, ne pas inventer de signaux.
+3. Construire un registre de preuves. Chaque élément doit avoir un identifiant stable, une URL source, un titre ou extrait, et un statut de vérification.
+4. Transformer les signaux en entrées du moteur. Un signal n'est admissible que si `verified === true` et que `evidence_id` référence un élément existant.
+5. Après revue humaine effective, appeler `gh_prepare_commercial_result($audit, $lead, true)`.
+6. Afficher la recommandation, les raisons et les sources dans l'interface. L'utilisateur peut corriger ou rejeter le résultat.
+7. Avant tout enregistrement, définir le schéma et la politique de conservation. Avant tout contact, appliquer les règles de prospection et exiger une validation explicite.
+
+## Contrat minimal d'entrée
+
+- `audit.analysisComplete`: doit être strictement `true`.
+- `audit.riskScore`: score numérique produit par le parcours d'audit validé.
+- `company_name`: nom de l'entreprise si confirmé.
+- `website`: URL de l'entreprise, validée par le parcours existant.
+- `company_size`: valeur contrôlée (`tpe`, `micro`, `small`, `unknown`).
+- `evidence`: tableau indexé par identifiant de preuve; chaque entrée peut inclure `url`, `title`, `excerpt`.
+- `signals`: liste d'objets avec `type`, `verified` et `evidence_id`.
+
+Les types de signaux doivent venir d'une liste contrôlée : `environmental_claim`, `rse_request`, `customer_requirements`, `carbon_request`, `carbon_data`, `general_environmental_need`.
+
+## Contrôles bloquants avant intégration
+
+- Corriger et tester la normalisation du statut complet et supprimer les offres/prix commerciaux de repli non validés.
+- Ne pas appeler le moteur avec un résultat IA incomplet comme s'il était vérifié.
+- Ne pas confondre présence d'une allégation et preuve qu'elle est fausse ou trompeuse.
+- Vérifier que les extraits sont fidèles aux sources et limiter leur longueur.
+- Ajouter des tests d'intégration couvrant l'échec du scraping, l'absence de clé IA, le JSON malformé, les preuves manquantes et les entreprises sans signal.
+- Corriger et tester l'authentification existante avant toute exposition publique. Ne pas contourner les contrôles de connexion actuels.
+- Ne pas écrire en base ni envoyer d'e-mail tant que les autorisations, le schéma, la conservation et les règles de prospection ne sont pas définis.
+- Ne pas fusionner ou déployer le prototype avant revue du code et validation des tests.
+
+## Prochaine étape technique
+
+Isoler la normalisation de la réponse IA dans une fonction testable, corriger ces deux problèmes avec tests unitaires, puis seulement ensuite préparer un appel optionnel depuis la route d'audit. Garder le moteur commercial hors de la persistance et de l'envoi jusqu'à ce que l'authentification soit revue.
+
+
+## Mise à jour du 9 octobre 2026
+
+Les changements suivants sont maintenant présents sur la branche de développement :
+
+- La validation de réponse IA est isolée dans `api/includes/audit_response.php`, puis appelée depuis `api/audit.php`.
+- Le succès normalisé porte explicitement `analysisComplete: true`; une réponse incomplète reste bloquée avec un score nul.
+- Le kit commercial est `null` lorsqu'il n'est pas explicitement fourni. Aucun prix ou forfait n'est fabriqué par le validateur.
+- `tests/audit_response_test.php` couvre les réponses valides, l'absence de score, les scores non numériques, les réponses explicitement incomplètes et l'absence d'offre inventée.
+- Le workflow GitHub Actions exécute désormais ce nouveau jeu de tests. Les exécutions observées sur les commits concernés sont réussies.
+
+## Blocage de sécurité prioritaire avant toute mise en ligne
+
+La revue statique a également révélé plusieurs défauts d'authentification dans le code actuel :
+
+- `api/includes/auth.php` contient des comptes système et des mots de passe codés en dur.
+- La détection du rôle via l'en-tête Authorization accepte des correspondances partielles de jetons statiques.
+- `api/admin/index.php` dispose d'un chemin d'accès administrateur indépendant avec un secret codé en dur.
+- `api/config/config.php` prévoit un hash administrateur de repli connu et une configuration de base de données de démonstration.
+
+Ces chemins ne doivent pas être exposés publiquement en l'état. Les valeurs sensibles ne sont pas reproduites dans cette documentation. Avant de modifier l'authentification, il faut établir le mécanisme de connexion réellement utilisé et prévoir une configuration de remplacement, afin de corriger les contournements sans créer un verrouillage accidentel de l'administration.
+
+Plan de correction recommandé :
+
+1. Supprimer les comptes et jetons statiques; utiliser une authentification explicite avec mots de passe hachés et vérification constante des jetons lorsque ceux-ci sont nécessaires.
+2. Faire appliquer les mêmes contrôles de session et de rôle à l'interface d'administration et aux API.
+3. Refuser l'accès administrateur si aucun secret/hash n'est configuré, plutôt que d'utiliser une valeur par défaut.
+4. Vérifier les protections CSRF, la régénération de l'identifiant de session après connexion, la limitation des tentatives et les autorisations de chaque endpoint.
+5. Ajouter des tests négatifs pour accès anonyme, rôle insuffisant, jeton partiel, secret non configuré et session expirée.
+6. Si les secrets codés en dur ont été utilisés ou réutilisés ailleurs, les remplacer avant le déploiement.
+
+**État :** les tests automatisés du validateur et du moteur commercial passent dans GitHub Actions. La revue ci-dessus est statique; aucune connexion réelle, aucun test d'intrusion et aucun déploiement de production n'ont été effectués.
+
+
+## Compléments de revue statique — administration et état applicatif
+
+Une lecture des routes d'administration a identifié d'autres points à corriger avant toute exposition publique :
+
+- `api/admin/save_state.php` vérifie la présence d'une session administrateur, mais renvoie actuellement un statut HTTP 200 en cas de refus et ne met pas en place de jeton CSRF. La vérification de rôle doit être centralisée et les requêtes mutantes protégées contre le CSRF.
+- `api/admin/index.php` rend les valeurs de `passwordsMap` dans des champs de formulaire visibles et inclut l'état applicatif complet dans JavaScript. Les mots de passe ne doivent jamais être récupérables en clair dans l'interface, le JSON d'état ou les réponses réseau ; il faut remplacer ce mécanisme par une gestion de comptes dédiée avec hachage côté serveur.
+- `api/includes/app_state.php` crée le dossier de données avec des permissions très larges. Réduire les permissions au minimum compatible avec l'hébergement et vérifier que le dossier de données et les fichiers de configuration ne sont pas accessibles via HTTP.
+- `api/includes/db.php` tente des modifications de schéma à la connexion et affiche des détails d'exception en cas d'échec. Séparer les migrations des requêtes de production et renvoyer un message d'erreur générique côté client, avec détails conservés uniquement dans des journaux non publics.
+- La page d'administration exécute des opérations de modification/suppression sur la base et l'état applicatif. Chaque endpoint doit vérifier la méthode HTTP, le rôle exact, le CSRF et les données autorisées avant toute écriture.
+
+Ces constats sont issus d'une lecture du code, pas d'un test d'exploitation. Aucune modification de base de données ou du site en production n'a été réalisée. Les corrections d'authentification doivent rester incrémentales, accompagnées de tests de non-régression et d'un plan de récupération d'accès administrateur.
+
+
+## Pré-détection des allégations environnementales — 9 octobre 2026
+
+Le module isolé `api/includes/green_claims_rules.php` et son test `tests/green_claims_rules_test.php` fournissent une première base de dictionnaire pour cinq familles : neutralité/compensation carbone, allégations absolues, vocabulaire vague, caractéristiques à justifier et comparaisons environnementales.
+
+**Limite volontaire :** ce module est lexical, non sémantique. Il ne prouve ni la présence d'une allégation commerciale au sens juridique, ni une infraction. Chaque résultat porte le statut `to_review`, des éléments de preuve à demander et des références candidates. Il ne faut pas l'afficher comme un verdict juridique ni considérer l'absence de signal comme une preuve de conformité.
+
+Avant de brancher le module au parcours d'audit, il faut :
+1. confronter les règles et les références aux textes officiels en vigueur et au secteur concerné ;
+2. améliorer la détection du contexte, des négations, des citations, du périmètre produit/service/entreprise et des comparaisons ;
+3. distinguer preuve absente, preuve non consultée, preuve présente mais non validée et preuve contradictoire ;
+4. faire vérifier les conclusions sensibles par une personne compétente ;
+5. vérifier les dispositions nationales françaises applicables à la date du scan : la directive (UE) 2024/825 prévoit une application à partir du 27 septembre 2026, mais la directive et sa transposition nationale ne doivent pas être confondues.
+
+Références publiques de départ :
+- Directive (UE) 2024/825 : https://eur-lex.europa.eu/eli/dir/2024/825
+- Code de la consommation, article L.121-2 : https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044563114
+- DGCCRF, allégations environnementales : https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/allegations-environnementales-ce-quil-faut-retenir
+
+Le module n'est pas encore connecté à `api/audit.php` ni à l'interface publique ; aucun changement n'a été déployé sur l'hébergement.

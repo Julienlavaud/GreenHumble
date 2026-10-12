@@ -1,555 +1,166 @@
 <?php
-/**
- * GreenHumble v1.1 — Console d'Accès Ultime Serveur (Mode Secours)
- * /api/admin/ultimate-access.php
- * 
- * Fonctionne de manière 100% autonome et isolée.
- * ZÉRO dépendance externe (ni CSS, ni JS, ni IA, ni base de données, ni fichiers d'authentification).
- * Utilisable même si tout le reste du serveur ou du frontend est corrompu ou cassé.
- */
-
-if (session_status() === PHP_SESSION_NONE) {
-    // Configurer des cookies de session ultra-sécurisés
-    ini_set('session.cookie_httponly', 1);
-    ini_set('session.use_only_cookies', 1);
-    session_start();
-}
-
-// Déconnexion
-if (isset($_GET['logout'])) {
-    $_SESSION['rescue_auth'] = false;
-    unset($_SESSION['rescue_auth']);
-    session_destroy();
-    header('Location: ?');
-    exit;
-}
-
-// Authentification autonome
-$error = null;
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rescue_password'])) {
-    $passwordInput = trim($_POST['rescue_password']);
-    if ($passwordInput === 'Climatlocal31000') {
-        $_SESSION['rescue_auth'] = true;
-        header('Location: ?');
-        exit;
-    } else {
-        $error = "Identifiants incorrects";
-    }
-}
-
-// Vérifier l'accès
-$isAuthenticated = isset($_SESSION['rescue_auth']) && $_SESSION['rescue_auth'] === true;
-
-// Auto-découverte résiliente du dossier /data/
-$dataDir = null;
-$possibleDirs = [
-    __DIR__ . '/../../data/',
-    __DIR__ . '/../data/',
-    __DIR__ . '/data/',
-    dirname(__DIR__) . '/data/',
-    dirname(dirname(__DIR__)) . '/data/'
-];
-foreach ($possibleDirs as $dir) {
-    if (is_dir($dir)) {
-        $dataDir = realpath($dir) . '/';
-        break;
-    }
-}
-if (!$dataDir) {
-    $dataDir = realpath(__DIR__) . '/data/';
-}
-
-$filesToManage = [
-    'scans' => 'scans.json',
-    'dossiers' => 'dossiers.json',
-    'listes' => 'listes.json',
-    'scanner_groups' => 'scanner_groups.json',
-    'user_style' => 'user_style.json'
-];
-
-// Si authentifié et action d'export complet demandée
-if ($isAuthenticated && isset($_GET['export_all'])) {
-    $exportData = [
-        'platform' => 'GreenHumble Rescue Export',
-        'exported_at' => date('c'),
-        'data' => []
-    ];
-    foreach ($filesToManage as $key => $fileName) {
-        $path = $dataDir . $fileName;
-        if (file_exists($path)) {
-            $content = file_get_contents($path);
-            $parsed = json_decode($content, true);
-            $exportData['data'][$key] = (json_last_error() === JSON_ERROR_NONE) ? $parsed : $content;
-        } else {
-            $exportData['data'][$key] = null;
-        }
-    }
-    header('Content-Type: application/json; charset=utf-8');
-    header('Content-Disposition: attachment; filename=greenhumble-rescue-export-all-' . time() . '.json');
-    echo json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-// Si authentifié et action de téléchargement individuel demandée
-if ($isAuthenticated && isset($_GET['download']) && isset($filesToManage[$_GET['download']])) {
-    $fileName = $filesToManage[$_GET['download']];
-    $filePath = $dataDir . $fileName;
-    if (file_exists($filePath)) {
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/app_state.php';
+require_once __DIR__ . '/../includes/gemini.php';
+require_once __DIR__ . '/../includes/groq.php';
+require_once __DIR__ . '/../includes/mistral.php';
+if (empty($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true || ($_SESSION['role'] ?? '') !== 'admin') {
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+        http_response_code(401);
         header('Content-Type: application/json; charset=utf-8');
-        header('Content-Disposition: attachment; filename=' . $fileName);
-        readfile($filePath);
+        echo json_encode(['success' => false, 'error' => 'Session administrateur requise.']);
         exit;
-    } else {
-        die("Erreur : Fichier " . htmlspecialchars($fileName) . " introuvable sur le serveur.");
     }
+    header('Location: /api/login.php?next=' . rawurlencode('/api/admin/ai_providers.php'), true, 303);
+    exit;
 }
+$defs = [
+    'gemini' => [
+        'label' => 'Google Gemini',
+        'model' => 'gemini-flash-latest',
+        'models' => [
+            'gemini-flash-latest' => 'Gemini Flash — dernière version',
+            'gemini-flash-lite-latest' => 'Gemini Flash-Lite — rapide et économique',
+            'gemini-pro-latest' => 'Gemini Pro — raisonnement avancé',
+        ],
+        'key' => 'geminiApiKey'
+    ],
+    'mistral' => [
+        'label' => 'Mistral AI',
+        'model' => 'mistral-large-latest',
+        'models' => [
+            'mistral-large-latest' => 'Mistral Large — dernière version',
+            'mistral-small-latest' => 'Mistral Small — rapide et économique',
+        ],
+        'key' => 'mistralApiKey'
+    ],
+    'groq' => [
+        'label' => 'Groq',
+        'model' => 'openai/gpt-oss-120b',
+        'models' => [
+            'openai/gpt-oss-120b' => 'GPT-OSS 120B — qualité maximale',
+            'openai/gpt-oss-20b' => 'GPT-OSS 20B — rapide et économique',
+            'qwen/qwen3.8-27b' => 'Qwen 3.8 27B',
+        ],
+        'key' => 'groqApiKey'
+    ],
+];
+$state = load_app_state();
+if (!isset($state['scanVars']) || !is_array($state['scanVars'])) $state['scanVars'] = [];
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    header('Content-Type: application/json; charset=utf-8');
+    $in = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($in)) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'JSON invalide']); exit; }
+    $provider = strtolower((string)($in['provider'] ?? ''));
+    $action = $in['action'] ?? 'save';
+    if ($action === 'default') {
+        if (!isset($defs[$provider])) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Fournisseur invalide']); exit; }
+        $state['scanVars']['aiProvider'] = $provider;
+        if (!save_app_state($state)) { http_response_code(500); echo json_encode(['success' => false, 'error' => 'Sauvegarde impossible']); exit; }
+        echo json_encode(['success' => true, 'message' => 'Fournisseur principal enregistré.']); exit;
+    }
+    if (!isset($defs[$provider])) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Fournisseur invalide']); exit; }
+    if ($action === 'test') {
+        $key = trim((string)($state['scanVars'][$defs[$provider]['key']] ?? ''));
+        if ($key === '') { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Enregistrez d’abord une clé API.']); exit; }
+        $model = trim((string)($in['model'] ?? ($state['scanVars'][$provider . 'Model'] ?? $defs[$provider]['model'])));
+        if (!array_key_exists($model, $defs[$provider]['models'])) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Modèle non disponible. Choisis un modèle proposé et réessaie.']);
+            exit;
+        }
+        if ($provider === 'gemini') $reply = call_gemini($model, ['contents' => [['parts' => [['text' => 'Réponds uniquement OK']]]], 'generationConfig' => ['temperature' => 0]], $key);
+        elseif ($provider === 'mistral') $reply = call_mistral(['model' => $model, 'messages' => [['role' => 'user', 'content' => 'Réponds uniquement OK']], 'temperature' => 0], $key);
+        else $reply = call_groq(['model' => $model, 'messages' => [['role' => 'user', 'content' => 'Réponds uniquement OK']], 'temperature' => 0], $key);
+        $ok = is_string($reply) && trim($reply) !== '' && stripos($reply, 'Erreur') !== 0 && stripos($reply, 'HTTP ') === false;
+        if ($ok) {
+            echo json_encode(['success' => true, 'message' => 'Connexion fournisseur réussie.']);
+            exit;
+        }
 
-// Analyse d'intégrité et de conformité des schémas
-$reports = [];
-if ($isAuthenticated) {
-    foreach ($filesToManage as $key => $fileName) {
-        $path = $dataDir . $fileName;
-        $report = [
-            'file' => $fileName,
-            'path' => $path,
-            'exists' => false,
-            'size' => 0,
-            'valid_json' => false,
-            'corrupted' => false,
-            'item_count' => 0,
-            'schema_version' => '1.1.0',
-            'warnings' => [],
-            'errors' => []
-        ];
-
-        if (file_exists($path)) {
-            $report['exists'] = true;
-            $report['size'] = filesize($path);
-            $rawContent = file_get_contents($path);
-            
-            if (empty(trim($rawContent))) {
-                $report['warnings'][] = "Le fichier est vide.";
-                $report['valid_json'] = true;
-                $parsed = [];
-            } else {
-                $parsed = json_decode($rawContent, true);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $report['valid_json'] = true;
-                    if (is_array($parsed)) {
-                        $report['item_count'] = count($parsed);
-                        
-                        // Analyse de schéma et détection des corruptions d'enregistrements
-                        if ($key === 'scans') {
-                            foreach ($parsed as $idx => $item) {
-                                if (!is_array($item)) {
-                                    $report['errors'][] = "Ligne #$idx : Enregistrement non-structuré (doit être un objet).";
-                                    $report['corrupted'] = true;
-                                    continue;
-                                }
-                                if (!isset($item['id']) || empty($item['id'])) {
-                                    $report['errors'][] = "Enregistrement #$idx : ID système manquant.";
-                                    $report['corrupted'] = true;
-                                }
-                                if (!isset($item['url']) || empty($item['url'])) {
-                                    $report['errors'][] = "Scan ID " . ($item['id'] ?? "#$idx") . " : URL manquante ou vide.";
-                                }
-                                if (!isset($item['type_scan']) || !in_array($item['type_scan'], ['diagnostic', 'pipeline', 'widget'])) {
-                                    $report['warnings'][] = "Scan ID " . ($item['id'] ?? "#$idx") . " : 'type_scan' non standard ou manquant.";
-                                }
-                                if (!isset($item['date_scan'])) {
-                                    $report['warnings'][] = "Scan ID " . ($item['id'] ?? "#$idx") . " : 'date_scan' temporelle manquante.";
-                                }
-                            }
-                        } elseif ($key === 'dossiers') {
-                            foreach ($parsed as $idx => $item) {
-                                if (!is_array($item)) {
-                                    $report['errors'][] = "Ligne #$idx : Enregistrement non-structuré.";
-                                    $report['corrupted'] = true;
-                                    continue;
-                                }
-                                if (!isset($item['id']) || empty($item['id'])) {
-                                    $report['errors'][] = "Dossier #$idx : ID manquant.";
-                                    $report['corrupted'] = true;
-                                }
-                                if (!isset($item['domaine']) || empty($item['domaine'])) {
-                                    $report['errors'][] = "Dossier " . ($item['id'] ?? "#$idx") . " : Domaine manquant.";
-                                    $report['corrupted'] = true;
-                                }
-                                if (!isset($item['scans']) || !is_array($item['scans'])) {
-                                    $report['warnings'][] = "Dossier " . ($item['id'] ?? "#$idx") . " : Liste de scans 'scans' absente ou invalide.";
-                                }
-                            }
-                        } elseif ($key === 'listes') {
-                            foreach ($parsed as $idx => $item) {
-                                if (!is_array($item) || !isset($item['id']) || !isset($item['nom'])) {
-                                    $report['errors'][] = "Liste #$idx : Structure invalide ou clés obligatoires absentes.";
-                                    $report['corrupted'] = true;
-                                }
-                            }
-                        } elseif ($key === 'scanner_groups') {
-                            foreach ($parsed as $idx => $item) {
-                                if (!is_array($item) || !isset($item['id']) || !isset($item['nom'])) {
-                                    $report['errors'][] = "Groupe #$idx : Clés système ID/Nom manquantes.";
-                                    $report['corrupted'] = true;
-                                }
-                            }
-                        }
-                    } else if (is_object($parsed)) {
-                        $report['item_count'] = 1;
-                    } else {
-                        $report['errors'][] = "Format JSON valide mais le conteneur racine n'est pas un tableau ou un objet standard.";
-                        $report['corrupted'] = true;
-                    }
-                } else {
-                    $report['corrupted'] = true;
-                    $report['errors'][] = "JSON Corrompu : " . json_last_error_msg();
-                }
-            }
+        // Keep provider diagnostics useful while never returning request headers, keys, or raw bodies.
+        $replyText = is_string($reply) ? $reply : '';
+        $httpStatus = 0;
+        if (preg_match('/HTTP\\s*([0-9]{3})/i', $replyText, $matches)) $httpStatus = (int)$matches[1];
+        $diagnosticCode = 'provider_error';
+        if (in_array($httpStatus, [401, 403], true)) {
+            $diagnosticCode = 'provider_key_rejected';
+            $message = 'Le fournisseur a refusé l’authentification. Vérifie la clé enregistrée et les droits du projet.';
+        } elseif ($httpStatus === 404) {
+            $diagnosticCode = 'provider_model_unavailable';
+            $message = 'Le modèle ou l’endpoint est indisponible pour ce fournisseur. Vérifie le modèle sélectionné.';
+        } elseif ($httpStatus === 429) {
+            $diagnosticCode = 'provider_quota';
+            $message = 'Le fournisseur a atteint une limite de quota ou de débit. Vérifie les quotas et réessaie plus tard.';
+        } elseif ($httpStatus >= 500) {
+            $diagnosticCode = 'provider_unavailable';
+            $message = 'Le fournisseur rencontre une erreur temporaire. Réessaie dans quelques instants.';
+        } elseif ($httpStatus === 0 && preg_match('/timeout|timed out|resolve|connect|SSL|network/i', $replyText)) {
+            $diagnosticCode = 'server_network_error';
+            $message = 'Le serveur OVH n’a pas pu joindre le fournisseur. Vérifie les connexions sortantes et le certificat TLS.';
+        } elseif ($httpStatus === 400) {
+            $diagnosticCode = 'provider_request_rejected';
+            $message = 'Le fournisseur a refusé la requête. Vérifie le modèle et sa disponibilité pour cette clé.';
         } else {
-            $report['errors'][] = "Fichier absent du disque dans " . htmlspecialchars($path);
+            $message = 'Le fournisseur n’a pas répondu correctement. Vérifie la configuration et les journaux PHP côté OVH.';
         }
-        $reports[$key] = $report;
+        error_log('GreenHumble provider test failed: ' . $provider . '; status=' . $httpStatus . '; code=' . $diagnosticCode . '; key omitted');
+        http_response_code(502);
+        echo json_encode(['success' => false, 'diagnosticCode' => $diagnosticCode, 'message' => $message]);
+        exit;
     }
+    $model = trim((string)($in['model'] ?? $defs[$provider]['model']));
+    if (!array_key_exists($model, $defs[$provider]['models'])) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Modèle non autorisé']); exit; }
+    $newKey = trim((string)($in['apiKey'] ?? ''));
+    $state['scanVars'][$provider . 'Model'] = $model;
+    if ($newKey !== '') $state['scanVars'][$defs[$provider]['key']] = $newKey;
+    if (!save_app_state($state)) { http_response_code(500); echo json_encode(['success' => false, 'error' => 'Sauvegarde impossible']); exit; }
+    echo json_encode(['success' => true, 'message' => 'Configuration sauvegardée. La clé ne sera pas renvoyée.', 'configured' => !empty($state['scanVars'][$defs[$provider]['key']])]); exit;
 }
-
-// Charger le contenu brut pour l'affichage à l'écran
-$viewContent = '';
-$viewTitle = '';
-if ($isAuthenticated && isset($_GET['view']) && isset($filesToManage[$_GET['view']])) {
-    $fileKey = $_GET['view'];
-    $fileName = $filesToManage[$fileKey];
-    $filePath = $dataDir . $fileName;
-    $viewTitle = $fileName;
-    if (file_exists($filePath)) {
-        $viewContent = file_get_contents($filePath);
-    } else {
-        $viewContent = "Erreur : Fichier introuvable.";
-    }
-}
+$state = load_app_state();
+$vars = $state['scanVars'] ?? [];
+$active = $vars['aiProvider'] ?? 'gemini';
+$page_title = 'Fournisseurs IA';
+$activeTab = 'ai_providers';
+require_once __DIR__ . '/../includes/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Console Secours — Accès Ultime Serveur</title>
-    <style>
-        /* Thème sombre ultra-sobre et résilient (Zéro dépendance) */
-        body {
-            background-color: #0b0b0b;
-            color: #d1d5db;
-            font-family: 'Courier New', Courier, monospace;
-            padding: 20px;
-            margin: 0;
-            line-height: 1.5;
-        }
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-        .header {
-            border-bottom: 2px solid #2a7ae2;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        h1 {
-            color: #ffffff;
-            font-size: 20px;
-            margin: 0;
-            font-weight: bold;
-            letter-spacing: -0.5px;
-        }
-        .logout-link {
-            color: #fca5a5;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 13px;
-            border: 1px solid #7f1d1d;
-            padding: 4px 10px;
-            background: #1f1212;
-            border-radius: 4px;
-        }
-        .logout-link:hover {
-            background: #7f1d1d;
-            color: #ffffff;
-        }
-        .card {
-            background: #121212;
-            border: 1px solid #2a2a2a;
-            border-radius: 6px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .grid {
-            display: grid;
-            grid-template-cols: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-        }
-        .file-title {
-            color: #ffffff;
-            font-size: 15px;
-            margin-top: 0;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #222;
-            padding-bottom: 6px;
-        }
-        .badge {
-            display: inline-block;
-            padding: 2px 6px;
-            font-size: 10px;
-            font-weight: bold;
-            border-radius: 3px;
-            text-transform: uppercase;
-        }
-        .badge-success { background: #064e3b; color: #34d399; border: 1px solid #047857; }
-        .badge-warning { background: #78350f; color: #fcd34d; border: 1px solid #b45309; }
-        .badge-danger { background: #7f1d1d; color: #fca5a5; border: 1px solid #b91c1c; }
-        
-        .btn {
-            display: inline-block;
-            background-color: #2a7ae2;
-            color: #ffffff;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-        }
-        .btn:hover { background-color: #1d5bbf; }
-        .btn-secondary { background-color: #2b2b2b; color: #e5e7eb; border: 1px solid #444; }
-        .btn-secondary:hover { background-color: #444; }
-        .btn-danger { background-color: #991b1b; }
-        .btn-danger:hover { background-color: #b91c1c; }
-        
-        .alert-box {
-            background-color: #1a0f0f;
-            border-left: 4px solid #b91c1c;
-            color: #fca5a5;
-            padding: 10px;
-            font-size: 11px;
-            margin-top: 10px;
-            max-height: 120px;
-            overflow-y: auto;
-        }
-        .warning-box {
-            background-color: #1c150c;
-            border-left: 4px solid #d97706;
-            color: #fde047;
-            padding: 10px;
-            font-size: 11px;
-            margin-top: 10px;
-            max-height: 100px;
-            overflow-y: auto;
-        }
-        
-        /* Formulaire de login noir minimaliste */
-        .login-box {
-            max-width: 380px;
-            margin: 100px auto;
-            background: #121212;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            padding: 30px;
-            text-align: center;
-        }
-        .form-control {
-            width: 100%;
-            background: #000000;
-            border: 1px solid #333333;
-            color: #ffffff;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 14px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            box-sizing: border-box;
-        }
-        .form-control:focus {
-            border-color: #2a7ae2;
-            outline: none;
-        }
-        .login-error {
-            color: #ef4444;
-            font-size: 12px;
-            margin-bottom: 15px;
-        }
-        
-        pre {
-            background-color: #050505;
-            color: #34d399;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #222;
-            font-size: 11px;
-            overflow-x: auto;
-            max-height: 400px;
-            white-space: pre-wrap;
-        }
-        .action-bar {
-            margin-bottom: 25px;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        code {
-            background: #222;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-size: 11px;
-            color: #e5e7eb;
-        }
-    </style>
-</head>
-<body>
-<div class="container">
-
-    <?php if (!$isAuthenticated): ?>
-        <!-- Formulaire de secours d'Accès Ultime (Indépendant) -->
-        <div class="login-box">
-            <h2 style="color:#ffffff; font-size: 16px; margin-bottom: 25px; font-weight: bold; text-transform: uppercase;">
-                🔒 Mode Secours Administrateur
-            </h2>
-            <?php if ($error): ?>
-                <div class="login-error"><?php echo htmlspecialchars($error); ?></div>
-            <?php endif; ?>
-            <form method="POST" action="?">
-                <input 
-                    type="password" 
-                    name="rescue_password" 
-                    class="form-control" 
-                    placeholder="Mot de passe système" 
-                    required 
-                    autofocus
-                />
-                <button type="submit" class="btn" style="width: 100%; padding: 12px; font-size: 13px;">
-                    S'authentifier sur le serveur
-                </button>
-            </form>
-        </div>
-    <?php else: ?>
-        <!-- Console d'administration autonome connectée -->
-        <div class="header">
-            <h1>🛠️ CONSOLE SOUVERAINE DE SECOURS — ACCÈS ULTIME SERVEUR</h1>
-            <a href="?logout=true" class="logout-link">Quitter le Mode Secours</a>
-        </div>
-
-        <div class="card" style="border-left: 4px solid #2a7ae2;">
-            <p style="margin: 0; font-size: 12px;">
-                💡 <strong>Mode Secours Actif</strong> : Cet utilitaire fonctionne sans base de données tierce, sans javascript complexe, sans styles cloud, ni moteurs IA. Il lit et écrit directement dans le dossier local <code><?php echo htmlspecialchars($dataDir); ?></code>.
-            </p>
-        </div>
-
-        <div class="action-bar">
-            <a href="?export_all=true" class="btn" style="background-color: #047857; font-size: 12px; padding: 10px 18px;">
-                📦 EXPORTER TOUT EN UN FICHIER JSON GLOBAL
-            </a>
-            <a href="?" class="btn btn-secondary" style="font-size: 12px; padding: 10px 18px;">
-                🔄 Actualiser l'analyse
-            </a>
-        </div>
-
-        <div class="grid">
-            <?php foreach ($reports as $key => $rep): ?>
-                <div class="card">
-                    <div class="file-title">📄 <?php echo htmlspecialchars($rep['file']); ?></div>
-                    
-                    <table style="width: 100%; font-size: 11px; border-collapse: collapse; margin-bottom: 15px;">
-                        <tr>
-                            <td style="padding: 4px 0; color: #888;">Présence disque :</td>
-                            <td style="text-align: right;">
-                                <?php if ($rep['exists']): ?>
-                                    <span class="badge badge-success">OK</span>
-                                <?php else: ?>
-                                    <span class="badge badge-danger">MANQUANT</span>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0; color: #888;">Taille fichier :</td>
-                            <td style="text-align: right; font-weight: bold;">
-                                <?php echo number_format($rep['size'] / 1024, 2); ?> Ko
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0; color: #888;">Enregistrements :</td>
-                            <td style="text-align: right; font-weight: bold; color: #2a7ae2;">
-                                <?php echo $rep['item_count']; ?>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0; color: #888;">Format JSON :</td>
-                            <td style="text-align: right;">
-                                <?php if ($rep['valid_json']): ?>
-                                    <span class="badge badge-success">VALIDE</span>
-                                <?php else: ?>
-                                    <span class="badge badge-danger">ERREUR</span>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0; color: #888;">État d'intégrité :</td>
-                            <td style="text-align: right;">
-                                <?php if ($rep['corrupted']): ?>
-                                    <span class="badge badge-danger">CORROMPU</span>
-                                <?php else: ?>
-                                    <span class="badge badge-success">SÉCURISÉ</span>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <!-- Alertes d'Intégrité / Schéma -->
-                    <?php if (!empty($rep['errors'])): ?>
-                        <div class="alert-box">
-                            <strong>❌ Erreurs de schéma détectées :</strong>
-                            <?php foreach ($rep['errors'] as $err): ?>
-                                <div style="margin-top: 3px;">• <?php echo htmlspecialchars($err); ?></div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if (!empty($rep['warnings'])): ?>
-                        <div class="warning-box">
-                            <strong>⚠️ Avertissements (Non standard) :</strong>
-                            <?php foreach ($rep['warnings'] as $warn): ?>
-                                <div style="margin-top: 3px;">• <?php echo htmlspecialchars($warn); ?></div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <div style="display: flex; gap: 8px; margin-top: 15px; border-t: 1px solid #222; padding-top: 12px;">
-                        <a href="?view=<?php echo urlencode($key); ?>#viewer" class="btn btn-secondary" style="flex: 1;">
-                            👁️ Lire le brut
-                        </a>
-                        <a href="?download=<?php echo urlencode($key); ?>" class="btn" style="flex: 1;">
-                            📥 Télécharger
-                        </a>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-
-        <!-- Afficheur de Fichier Brut (100% PHP, pas de JS requis pour afficher) -->
-        <?php if (!empty($viewContent)): ?>
-            <div id="viewer" class="card" style="margin-top: 25px; border-top: 3px solid #34d399;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <h3 style="color:#ffffff; font-size:14px; margin:0;">
-                        🔎 Contenu brut en lecture seule : <code><?php echo htmlspecialchars($viewTitle); ?></code>
-                    </h3>
-                    <a href="?" class="btn btn-secondary" style="padding: 4px 10px; font-size: 10px;">Masquer</a>
-                </div>
-                <pre><?php echo htmlspecialchars($viewContent); ?></pre>
-            </div>
-        <?php endif; ?>
-
-    <?php endif; ?>
-
-</div>
-</body>
-</html>
+<main class="gh-workspace gh-provider-page">
+  <div class="gh-provider-top"><div><p class="gh-eyebrow">Configuration système</p><h1>Fournisseurs d’intelligence artificielle</h1><p>Configurez séparément les clés, modèles et fournisseur principal.</p></div><span class="gh-provider-badge">Console administrateur</span></div>
+  <div class="gh-provider-layout"><section>
+    <?php foreach ($defs as $p => $d): $configured = !empty($vars[$d['key']]); ?>
+    <article class="gh-provider-card"><div class="gh-provider-card__head"><div><h2><?= htmlspecialchars($d['label'], ENT_QUOTES, 'UTF-8') ?></h2><p><?= htmlspecialchars($p === 'gemini' ? 'Analyse Google' : ($p === 'mistral' ? 'Modèles Mistral AI' : 'Inférence Groq'), ENT_QUOTES, 'UTF-8') ?></p></div><span class="gh-provider-status <?= $configured ? 'is-configured' : '' ?>"><?= $configured ? 'Clé configurée' : 'À configurer' ?></span></div>
+      <div class="gh-provider-fields"><div class="gh-provider-field"><label for="key-<?= $p ?>">Clé API</label><input id="key-<?= $p ?>" type="password" autocomplete="new-password" placeholder="<?= $configured ? 'Clé enregistrée — saisir pour remplacer' : 'Collez votre clé API' ?>"><small>La clé enregistrée n’est jamais affichée.</small></div>
+      <div class="gh-provider-field"><label for="model-<?= $p ?>">Modèle</label><?php $configuredModel = (string)($vars[$p . 'Model'] ?? ''); $modelOutdated = $configuredModel !== '' && !array_key_exists($configuredModel, $d['models']); $selectedModel = $modelOutdated ? $d['model'] : ($configuredModel ?: $d['model']); ?><select id="model-<?= $p ?>"><?php foreach ($d['models'] as $modelId => $modelLabel): ?><option value="<?= htmlspecialchars($modelId, ENT_QUOTES, 'UTF-8') ?>" <?= $selectedModel === $modelId ? 'selected' : '' ?>><?= htmlspecialchars($modelLabel, ENT_QUOTES, 'UTF-8') ?></option><?php endforeach; ?></select><?php if ($modelOutdated): ?><small class="text-amber-700">Le modèle enregistré (<?= htmlspecialchars($configuredModel, ENT_QUOTES, 'UTF-8') ?>) n’est plus proposé. Le modèle actuel sera utilisé après enregistrement.</small><?php endif; ?></div></div>
+      <div class="gh-provider-actions"><button class="gh-button gh-button--primary" onclick="saveProvider('<?= $p ?>')">Enregistrer</button><button class="gh-button gh-button--secondary" onclick="testProvider('<?= $p ?>')">Tester la connexion</button></div><div class="gh-provider-result" id="result-<?= $p ?>" role="status" aria-live="polite"></div>
+    </article><?php endforeach; ?>
+    <article class="gh-provider-card"><h2>Fournisseur utilisé par défaut</h2><p>Ce fournisseur sera utilisé pour les nouveaux audits.</p><div class="gh-provider-field"><label for="active-provider">Fournisseur principal</label><select id="active-provider"><?php foreach ($defs as $p => $d): ?><option value="<?= $p ?>" <?= $active === $p ? 'selected' : '' ?>><?= htmlspecialchars($d['label'], ENT_QUOTES, 'UTF-8') ?></option><?php endforeach; ?></select></div><div class="gh-provider-actions"><button class="gh-button gh-button--primary" onclick="saveDefault()">Enregistrer le fournisseur principal</button></div><div class="gh-provider-result" id="result-default" role="status" aria-live="polite"></div></article>
+  </section><aside><article class="gh-provider-panel"><h3>État des fournisseurs</h3><?php foreach ($defs as $p => $d): ?><p><strong><?= htmlspecialchars($d['label'], ENT_QUOTES, 'UTF-8') ?></strong><br><span class="gh-provider-status <?= !empty($vars[$d['key']]) ? 'is-configured' : '' ?>"><?= !empty($vars[$d['key']]) ? 'Clé présente' : 'Clé absente' ?></span></p><?php endforeach; ?></article>
+  <article class="gh-provider-panel"><h3>Sécurité</h3><p>Les clés ne sont jamais renvoyées au navigateur après sauvegarde. Ne les partagez pas par e-mail.</p></article><article class="gh-provider-panel"><h3>À savoir</h3><p>Un test réussi vérifie l’accès fournisseur, pas l’exactitude juridique d’un audit.</p></article></aside></div>
+  <p class="gh-provider-note">Configuration enregistrée dans l’état applicatif serveur.</p>
+</main>
+<script>
+async function api(payload) {
+  const response = await fetch('/api/admin/ai_providers.php', {method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});
+  let data;
+  try { data = await response.json(); } catch (_) { throw new Error('Réponse serveur invalide.'); }
+  if (!response.ok || !data.success) throw new Error(data.error || data.message || 'Erreur serveur');
+  return data;
+}
+async function saveProvider(provider) {
+  const el = document.getElementById('result-' + provider); el.textContent = 'Enregistrement…';
+  try { const data = await api({action:'save',provider,apiKey:document.getElementById('key-' + provider).value,model:document.getElementById('model-' + provider).value}); document.getElementById('key-' + provider).value = ''; el.textContent = data.message; setTimeout(() => location.reload(), 700); }
+  catch (error) { el.textContent = error.message; }
+}
+async function testProvider(provider) {
+  const el = document.getElementById('result-' + provider); el.textContent = 'Test en cours…';
+  try { const data = await api({action:'test',provider,model:document.getElementById('model-' + provider).value}); el.textContent = data.message; el.dataset.state = data.success ? 'success' : 'error'; }
+  catch (error) { el.textContent = error.message; el.dataset.state = 'error'; }
+}
+async function saveDefault() {
+  const el = document.getElementById('result-default'); el.textContent = 'Enregistrement…';
+  try { const data = await api({action:'default',provider:document.getElementById('active-provider').value}); el.textContent = data.message; el.dataset.state = 'success'; }
+  catch (error) { el.textContent = error.message; el.dataset.state = 'error'; }
+}
+</script>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

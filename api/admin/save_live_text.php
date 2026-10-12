@@ -6,7 +6,7 @@ require_once __DIR__ . '/../includes/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-if (!isset($_SESSION['admin_logged_in']) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin')) {
+if (($_SESSION['admin_logged_in'] ?? false) !== true || ($_SESSION['role'] ?? '') !== 'admin') {
     echo json_encode(['success' => false, 'error' => 'Accès réservé aux administrateurs.']);
     exit;
 }

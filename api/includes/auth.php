@@ -5,9 +5,14 @@
  */
 
 if (session_status() === PHP_SESSION_NONE) {
-    // Session sécurisée
-    ini_set('session.cookie_httponly', 1);
-    ini_set('session.use_only_cookies', 1);
+    // Secure session defaults must be applied before session_start().
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    ini_set('session.cookie_secure', $isHttps ? '1' : '0');
     session_start();
 }
 
@@ -15,24 +20,40 @@ if (session_status() === PHP_SESSION_NONE) {
  * Comptes prédéfinis sécurisés
  */
 function get_system_accounts() {
-    return [
+    // No credentials are stored in source control. Configure usernames and password hashes
+    // in the hosting environment before enabling these system accounts.
+    $accounts = [];
+    $definitions = [
         'admin' => [
-            'id' => 'usr_admin',
-            'username' => 'admin',
-            'password' => 'Climatlocal31000',
+            'username_env' => 'GREENHUMBLE_ADMIN_USERNAME',
+            'hash_env' => 'GREENHUMBLE_ADMIN_PASSWORD_HASH',
             'role' => 'admin',
+            'id' => 'usr_admin',
             'name' => 'Administrateur GreenHumble'
         ],
         'pipeline' => [
-            'id' => 'usr_pipeline',
-            'username' => 'pipeline',
-            'password' => 'PipelinePass2026!',
+            'username_env' => 'GREENHUMBLE_PIPELINE_USERNAME',
+            'hash_env' => 'GREENHUMBLE_PIPELINE_PASSWORD_HASH',
             'role' => 'pipeline',
+            'id' => 'usr_pipeline',
             'name' => 'Service Pipeline Automatique'
         ]
     ];
-}
 
+    foreach ($definitions as $key => $definition) {
+        $username = getenv($definition['username_env']);
+        $passwordHash = getenv($definition['hash_env']);
+        if (!is_string($username) || trim($username) === '' ||
+            !is_string($passwordHash) || $passwordHash === '') {
+            continue;
+        }
+        $definition['username'] = trim($username);
+        $definition['password_hash'] = $passwordHash;
+        $accounts[$key] = $definition;
+    }
+
+    return $accounts;
+}
 /**
  * Tente d'authentifier un utilisateur
  */
@@ -41,7 +62,14 @@ function authenticate_user($username, $password) {
     $cleanUser = strtolower(trim($username));
     
     foreach ($accounts as $acc) {
-        if (strtolower($acc['username']) === $cleanUser && $acc['password'] === $password) {
+        $matchesUsername = strtolower($acc['username']) === $cleanUser;
+        $matchesPassword = isset($acc['password_hash']) && is_string($acc['password_hash'])
+            && password_verify($password, $acc['password_hash']);
+        if ($matchesUsername && $matchesPassword) {
+            // Prevent session fixation by rotating the session identifier after authentication.
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_regenerate_id(true);
+            }
             $_SESSION['user_id'] = $acc['id'];
             $_SESSION['username'] = $acc['username'];
             $_SESSION['role'] = $acc['role'];
@@ -58,22 +86,94 @@ function authenticate_user($username, $password) {
  * Retourne le rôle courant
  */
 function get_current_role() {
-    if (isset($_SESSION['role'])) {
+    if (isset($_SESSION['role']) && is_string($_SESSION['role'])) {
         return $_SESSION['role'];
     }
     if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
         return 'admin';
     }
-    // Check Authorization header for token or Bearer
-    $headers = getallheaders();
-    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
-    if (strpos($authHeader, 'Bearer admin_token') !== false || strpos($authHeader, 'Bearer Climatlocal31000') !== false) {
+
+    // Optional API tokens must be configured in the hosting environment.
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
+    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
+    if (!is_string($authHeader) || preg_match('/^Bearer\s+(.+)$/i', trim($authHeader), $matches) !== 1) {
+        return 'public';
+    }
+    $providedToken = $matches[1];
+    $adminToken = getenv('GREENHUMBLE_ADMIN_API_TOKEN');
+    $pipelineToken = getenv('GREENHUMBLE_PIPELINE_API_TOKEN');
+
+    if (is_string($adminToken) && $adminToken !== '' && hash_equals($adminToken, $providedToken)) {
         return 'admin';
     }
-    if (strpos($authHeader, 'Bearer pipeline_token') !== false) {
+    if (is_string($pipelineToken) && $pipelineToken !== '' && hash_equals($pipelineToken, $providedToken)) {
         return 'pipeline';
     }
     return 'public';
+}
+
+function gh_get_csrf_token(): string {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (empty($_SESSION['csrf_token']) || !is_string($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return (string)$_SESSION['csrf_token'];
+}
+
+/**
+ * Bloque les mutations de session admin déclenchées depuis une autre origine.
+ * Les requêtes POST admin du navigateur doivent envoyer Origin ou Referer same-origin.
+ */
+function gh_require_same_origin_mutation(): void {
+    $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    if (in_array($method, ['GET', 'HEAD', 'OPTIONS'], true)) {
+        return;
+    }
+
+    $expectedHost = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
+    $source = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
+    if ($source === '' && !empty($_SERVER['HTTP_REFERER'])) {
+        $refererParts = parse_url((string)$_SERVER['HTTP_REFERER']);
+        if (is_array($refererParts) && !empty($refererParts['scheme']) && !empty($refererParts['host'])) {
+            $source = $refererParts['scheme'] . '://' . $refererParts['host'] . ((isset($refererParts['port']) && $refererParts['port'] !== '') ? ':' . $refererParts['port'] : '');
+        }
+    }
+
+    if ($expectedHost !== '' && $source !== '') {
+        $parts = parse_url($source);
+        $sourceHost = is_array($parts)
+            ? strtolower((string)($parts['host'] ?? '') . ((isset($parts['port']) && $parts['port'] !== '') ? ':' . $parts['port'] : ''))
+            : '';
+
+        if ($sourceHost !== '' && !hash_equals($expectedHost, $sourceHost)) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Origine de requête refusée.'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+    }
+
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $csrfSession = $_SESSION['csrf_token'] ?? null;
+    if (!is_string($csrfSession) || $csrfSession === '') {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        $csrfSession = $_SESSION['csrf_token'];
+    }
+
+    $requestToken = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_SERVER['HTTP_X_CSRF-Token'] ?? '';
+    if (!is_string($requestToken) || !hash_equals((string)$csrfSession, (string)$requestToken)) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'error' => 'Token CSRF invalide.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 
 /**
@@ -88,12 +188,15 @@ function is_logged_in() {
  */
 function require_login($required_role = 'admin') {
     $role = get_current_role();
+    $requestUri = (string)($_SERVER['REQUEST_URI'] ?? '');
+    $next = (strpos($requestUri, '/api/') === 0 || strpos($requestUri, '/admin/') === 0) ? $requestUri : '';
+    $loginUrl = '/api/login.php' . ($next !== '' ? '?next=' . rawurlencode($next) : '');
     if ($role === 'public') {
-        header('Location: /api/login.php');
+        header('Location: ' . $loginUrl, true, 303);
         exit;
     }
     if ($required_role === 'admin' && $role !== 'admin') {
-        header('Location: /api/login.php?error=unauthorized');
+        header('Location: ' . $loginUrl, true, 303);
         exit;
     }
 }
