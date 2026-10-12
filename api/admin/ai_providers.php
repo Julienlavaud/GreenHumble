@@ -1,122 +1,387 @@
 <?php
+
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/app_state.php';
-require_once __DIR__ . '/../includes/gemini.php';
-require_once __DIR__ . '/../includes/groq.php';
-require_once __DIR__ . '/../includes/mistral.php';
-if (empty($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true || ($_SESSION['role'] ?? '') !== 'admin') {
-    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-        http_response_code(401);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['success' => false, 'error' => 'Session administrateur requise.']);
+
+require_once __DIR__ . '/../includes/ai/AIProviderInterface.php';
+require_once __DIR__ . '/../includes/ai/AIProviderRegistry.php';
+require_once __DIR__ . '/../includes/ai/AIProviderFactory.php';
+require_api_role(['admin']);
+$defs = [];
+
+foreach (
+    AIProviderRegistry::all()
+    as $providerId => $providerConfig
+) {
+
+    $models = [];
+
+    foreach (
+        ($providerConfig['models'] ?? [])
+        as $model
+    ) {
+
+        $models[$model] = $model;
+    }
+
+    $defs[$providerId] = [
+
+        'label' =>
+            $providerConfig['label'],
+
+        'model' =>
+            $providerConfig['default_model'],
+
+        'models' =>
+            $models,
+
+        'key' =>
+            $providerConfig['state_key']
+
+    ];
+}
+$state = load_app_state();
+
+if (
+    !isset($state['scanVars'])
+    || !is_array($state['scanVars'])
+) {
+    $state['scanVars'] = [];
+}
+
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? 'GET')
+    === 'POST'
+) {
+
+    header(
+        'Content-Type: application/json; charset=utf-8'
+    );
+
+    $in = json_decode(
+        file_get_contents('php://input'),
+        true
+    );
+
+    if (!is_array($in)) {
+
+        http_response_code(400);
+
+        echo json_encode([
+            'success' => false,
+            'error' => 'JSON invalide'
+        ]);
+
         exit;
     }
-    header('Location: /api/login.php?next=' . rawurlencode('/admin/ai_providers.php'), true, 303);
-    exit;
-}
-$defs = [
-    'gemini' => [
-        'label' => 'Google Gemini',
-        'model' => 'gemini-flash-latest',
-        'models' => [
-            'gemini-flash-latest' => 'Gemini Flash — dernière version',
-            'gemini-flash-lite-latest' => 'Gemini Flash-Lite — rapide et économique',
-            'gemini-pro-latest' => 'Gemini Pro — raisonnement avancé',
-        ],
-        'key' => 'geminiApiKey'
-    ],
-    'mistral' => [
-        'label' => 'Mistral AI',
-        'model' => 'mistral-large-latest',
-        'models' => [
-            'mistral-large-latest' => 'Mistral Large — dernière version',
-            'mistral-small-latest' => 'Mistral Small — rapide et économique',
-        ],
-        'key' => 'mistralApiKey'
-    ],
-    'groq' => [
-        'label' => 'Groq',
-        'model' => 'openai/gpt-oss-120b',
-        'models' => [
-            'openai/gpt-oss-120b' => 'GPT-OSS 120B — qualité maximale',
-            'openai/gpt-oss-20b' => 'GPT-OSS 20B — rapide et économique',
-            'qwen/qwen3.8-27b' => 'Qwen 3.8 27B',
-        ],
-        'key' => 'groqApiKey'
-    ],
-];
-$state = load_app_state();
-if (!isset($state['scanVars']) || !is_array($state['scanVars'])) $state['scanVars'] = [];
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
-    header('Content-Type: application/json; charset=utf-8');
-    $in = json_decode(file_get_contents('php://input'), true);
-    if (!is_array($in)) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'JSON invalide']); exit; }
-    $provider = strtolower((string)($in['provider'] ?? ''));
-    $action = $in['action'] ?? 'save';
-    if ($action === 'default') {
-        if (!isset($defs[$provider])) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Fournisseur invalide']); exit; }
-        $state['scanVars']['aiProvider'] = $provider;
-        if (!save_app_state($state)) { http_response_code(500); echo json_encode(['success' => false, 'error' => 'Sauvegarde impossible']); exit; }
-        echo json_encode(['success' => true, 'message' => 'Fournisseur principal enregistré.']); exit;
+
+    $provider = strtolower(
+        trim(
+            (string)($in['provider'] ?? '')
+        )
+    );
+
+    $action =
+        (string)($in['action'] ?? 'save');
+
+    if (
+        !AIProviderFactory::exists(
+            $provider
+        )
+    ) {
+
+        http_response_code(400);
+
+        echo json_encode([
+            'success' => false,
+            'error' => 'Fournisseur invalide'
+        ]);
+
+        exit;
     }
-    if (!isset($defs[$provider])) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Fournisseur invalide']); exit; }
-    if ($action === 'test') {
-        $key = trim((string)($state['scanVars'][$defs[$provider]['key']] ?? ''));
-        if ($key === '') { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Enregistrez d’abord une clé API.']); exit; }
-        $model = trim((string)($in['model'] ?? ($state['scanVars'][$provider . 'Model'] ?? $defs[$provider]['model'])));
-        if (!array_key_exists($model, $defs[$provider]['models'])) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Modèle non disponible. Choisis un modèle proposé et réessaie.']);
-            exit;
-        }
-        if ($provider === 'gemini') $reply = call_gemini($model, ['contents' => [['parts' => [['text' => 'Réponds uniquement OK']]]], 'generationConfig' => ['temperature' => 0]], $key);
-        elseif ($provider === 'mistral') $reply = call_mistral(['model' => $model, 'messages' => [['role' => 'user', 'content' => 'Réponds uniquement OK']], 'temperature' => 0], $key);
-        else $reply = call_groq(['model' => $model, 'messages' => [['role' => 'user', 'content' => 'Réponds uniquement OK']], 'temperature' => 0], $key);
-        $ok = is_string($reply) && trim($reply) !== '' && stripos($reply, 'Erreur') !== 0 && stripos($reply, 'HTTP ') === false;
-        if ($ok) {
-            echo json_encode(['success' => true, 'message' => 'Connexion fournisseur réussie.']);
+
+    $providerConfig =
+        AIProviderRegistry::get(
+            $provider
+        );
+
+    if (!$providerConfig) {
+
+        http_response_code(400);
+
+        echo json_encode([
+            'success' => false,
+            'error' => 'Configuration fournisseur introuvable'
+        ]);
+
+        exit;
+    }
+
+    if ($action === 'default') {
+
+        $state['scanVars']['aiProvider'] =
+            $provider;
+
+        if (!save_app_state($state)) {
+
+            http_response_code(500);
+
+            echo json_encode([
+                'success' => false,
+                'error' => 'Sauvegarde impossible'
+            ]);
+
             exit;
         }
 
-        // Keep provider diagnostics useful while never returning request headers, keys, or raw bodies.
-        $replyText = is_string($reply) ? $reply : '';
-        $httpStatus = 0;
-        if (preg_match('/HTTP\\s*([0-9]{3})/i', $replyText, $matches)) $httpStatus = (int)$matches[1];
-        $diagnosticCode = 'provider_error';
-        if (in_array($httpStatus, [401, 403], true)) {
-            $diagnosticCode = 'provider_key_rejected';
-            $message = 'Le fournisseur a refusé l’authentification. Vérifie la clé enregistrée et les droits du projet.';
-        } elseif ($httpStatus === 404) {
-            $diagnosticCode = 'provider_model_unavailable';
-            $message = 'Le modèle ou l’endpoint est indisponible pour ce fournisseur. Vérifie le modèle sélectionné.';
-        } elseif ($httpStatus === 429) {
-            $diagnosticCode = 'provider_quota';
-            $message = 'Le fournisseur a atteint une limite de quota ou de débit. Vérifie les quotas et réessaie plus tard.';
-        } elseif ($httpStatus >= 500) {
-            $diagnosticCode = 'provider_unavailable';
-            $message = 'Le fournisseur rencontre une erreur temporaire. Réessaie dans quelques instants.';
-        } elseif ($httpStatus === 0 && preg_match('/timeout|timed out|resolve|connect|SSL|network/i', $replyText)) {
-            $diagnosticCode = 'server_network_error';
-            $message = 'Le serveur OVH n’a pas pu joindre le fournisseur. Vérifie les connexions sortantes et le certificat TLS.';
-        } elseif ($httpStatus === 400) {
-            $diagnosticCode = 'provider_request_rejected';
-            $message = 'Le fournisseur a refusé la requête. Vérifie le modèle et sa disponibilité pour cette clé.';
-        } else {
-            $message = 'Le fournisseur n’a pas répondu correctement. Vérifie la configuration et les journaux PHP côté OVH.';
-        }
-        error_log('GreenHumble provider test failed: ' . $provider . '; status=' . $httpStatus . '; code=' . $diagnosticCode . '; key omitted');
-        http_response_code(502);
-        echo json_encode(['success' => false, 'diagnosticCode' => $diagnosticCode, 'message' => $message]);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Fournisseur principal enregistré.'
+        ]);
+
         exit;
     }
-    $model = trim((string)($in['model'] ?? $defs[$provider]['model']));
-    if (!array_key_exists($model, $defs[$provider]['models'])) { http_response_code(400); echo json_encode(['success' => false, 'error' => 'Modèle non autorisé']); exit; }
-    $newKey = trim((string)($in['apiKey'] ?? ''));
-    $state['scanVars'][$provider . 'Model'] = $model;
-    if ($newKey !== '') $state['scanVars'][$defs[$provider]['key']] = $newKey;
-    if (!save_app_state($state)) { http_response_code(500); echo json_encode(['success' => false, 'error' => 'Sauvegarde impossible']); exit; }
-    echo json_encode(['success' => true, 'message' => 'Configuration sauvegardée. La clé ne sera pas renvoyée.', 'configured' => !empty($state['scanVars'][$defs[$provider]['key']])]); exit;
+
+    if ($action === 'test') {
+
+        $keyField =
+            $providerConfig['state_key'];
+
+        $key = trim(
+            (string)(
+                $state['scanVars'][$keyField]
+                ?? ''
+            )
+        );
+
+        if ($key === '') {
+
+            http_response_code(400);
+
+            echo json_encode([
+                'success' => false,
+                'error' => 'Enregistrez d’abord une clé API.'
+            ]);
+
+            exit;
+        }
+
+        $model = trim(
+            (string)(
+                $in['model']
+                ?? (
+                    $state['scanVars'][$provider . 'Model']
+                    ?? $providerConfig['default_model']
+                )
+            )
+        );
+
+        if (
+            !in_array(
+                $model,
+                $providerConfig['models'],
+                true
+            )
+        ) {
+
+            http_response_code(400);
+
+            echo json_encode([
+                'success' => false,
+                'message' => 'Modèle non disponible.'
+            ]);
+
+            exit;
+        }
+
+        try {
+
+            $providerInstance =
+                AIProviderFactory::make(
+                    $provider
+                );
+
+            $reply =
+                $providerInstance->generate(
+                    'Réponds uniquement OK',
+                    'Réponds uniquement OK',
+                    $model
+                );
+
+        } catch (Throwable $e) {
+
+            $reply =
+                'Erreur : '
+                . $e->getMessage();
+        }
+
+        $ok =
+            is_string($reply)
+            && trim($reply) !== ''
+            && stripos($reply, 'Erreur') !== 0
+            && stripos($reply, 'HTTP ') === false;
+
+        if ($ok) {
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Connexion fournisseur réussie.'
+            ]);
+
+            exit;
+        }
+
+        $replyText =
+            is_string($reply)
+            ? $reply
+            : '';
+
+        $httpStatus = 0;
+
+        if (
+            preg_match(
+                '/HTTP\\s*([0-9]{3})/i',
+                $replyText,
+                $matches
+            )
+        ) {
+            $httpStatus =
+                (int)$matches[1];
+        }
+
+        $diagnosticCode =
+            'provider_error';
+
+        if (
+            in_array(
+                $httpStatus,
+                [401, 403],
+                true
+            )
+        ) {
+
+            $diagnosticCode =
+                'provider_key_rejected';
+
+            $message =
+                'Le fournisseur a refusé l’authentification.';
+
+        } elseif ($httpStatus === 404) {
+
+            $diagnosticCode =
+                'provider_model_unavailable';
+
+            $message =
+                'Le modèle ou l’endpoint est indisponible.';
+
+        } elseif ($httpStatus === 429) {
+
+            $diagnosticCode =
+                'provider_quota';
+
+            $message =
+                'Quota ou limite atteinte.';
+
+        } elseif ($httpStatus >= 500) {
+
+            $diagnosticCode =
+                'provider_unavailable';
+
+            $message =
+                'Le fournisseur rencontre une erreur temporaire.';
+
+        } else {
+
+            $message =
+                'Le fournisseur n’a pas répondu correctement.';
+        }
+
+        error_log(
+            'GreenHumble provider test failed: '
+            . $provider
+            . '; status='
+            . $httpStatus
+            . '; code='
+            . $diagnosticCode
+        );
+
+        http_response_code(502);
+
+        echo json_encode([
+            'success' => false,
+            'diagnosticCode' => $diagnosticCode,
+            'message' => $message
+        ]);
+
+        exit;
+    }
+
+    $model = trim(
+        (string)(
+            $in['model']
+            ?? $providerConfig['default_model']
+        )
+    );
+
+    if (
+        !in_array(
+            $model,
+            $providerConfig['models'],
+            true
+        )
+    ) {
+
+        http_response_code(400);
+
+        echo json_encode([
+            'success' => false,
+            'error' => 'Modèle non autorisé'
+        ]);
+
+        exit;
+    }
+
+    $newKey = trim(
+        (string)($in['apiKey'] ?? '')
+    );
+
+    $state['scanVars'][$provider . 'Model'] =
+        $model;
+
+    if ($newKey !== '') {
+
+        $state['scanVars'][
+            $providerConfig['state_key']
+        ] = $newKey;
+    }
+
+    if (!save_app_state($state)) {
+
+        http_response_code(500);
+
+        echo json_encode([
+            'success' => false,
+            'error' => 'Sauvegarde impossible'
+        ]);
+
+        exit;
+    }
+
+    $configured =
+        !empty(
+            $state['scanVars'][
+                $providerConfig['state_key']
+            ]
+        );
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Configuration sauvegardée.',
+        'configured' => $configured
+    ]);
+
+    exit;
 }
 $state = load_app_state();
 $vars = $state['scanVars'] ?? [];
