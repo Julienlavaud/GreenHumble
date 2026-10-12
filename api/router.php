@@ -36,7 +36,6 @@ $routes = [
     'prospect' => 'prospect.php',
 
     'scan' => 'scan.php',
-    'scan/process' => 'scan_process.php',
 
     'analyse' => 'analyse.php',
     'pipeline' => 'pipeline.php',
