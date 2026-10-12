@@ -25,7 +25,7 @@ check(str_contains($admin, 'gh_require_same_origin_mutation();'), 'Admin databas
 check(str_contains($workspace, 'Derniers audits'), 'Collaborator cockpit exposes recent audits');
 check(str_contains($workspace, 'Demandes de diagnostic public'), 'Collaborator cockpit exposes public diagnostic leads');
 check(str_contains($workspace, 'cl_company_contacts') && str_contains($workspace, 'marketing_opt_in'), 'Cockpit lead list reads stored contacts and consent state');
-check(str_contains($workspace, 'Signaux à vérifier'), 'Collaborator cockpit shows signals for human review');
+check(str_contains($workspace, 'À confirmer par un collaborateur avant toute conclusion juridique'), 'Collaborator cockpit marks scan signals for human review');
 check(str_contains($provision, 'get_current_role() !== \'admin\''), 'Collaborator password provisioning is admin-only');
 check(str_contains($provision, 'password_hash($password, PASSWORD_DEFAULT)'), 'Collaborator password is stored as a hash');
 check(str_contains($adminUi, 'setCollaboratorPassword'), 'Admin team UI provides secure password setup/reset');
