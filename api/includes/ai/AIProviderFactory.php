@@ -10,26 +10,33 @@ require_once __DIR__ . '/providers/OpenRouterProvider.php';
 
 final class AIProviderFactory
 {
-    public static function make(
-        string $provider
-    ): AIProviderInterface {
+ public static function instances(): array
+{
+    $instances = [];
 
-        $provider = strtolower(
-            trim($provider)
-        );
+    foreach (
+        self::available()
+        as $provider
+    ) {
 
-        $config =
-            AIProviderRegistry::get(
-                $provider
+        try {
+
+            $instances[$provider] =
+                self::make($provider);
+
+        } catch (Throwable $e) {
+
+            error_log(
+                'AIProviderFactory: impossible de charger '
+                . $provider
+                . ' : '
+                . $e->getMessage()
             );
+        }
+    }
 
-        if (!$config) {
-            throw new RuntimeException(
-                sprintf(
-                    'Provider IA inconnu : %s',
-                    $provider
-                )
-            );
+    return $instances;
+}
         }
 
         $class =
